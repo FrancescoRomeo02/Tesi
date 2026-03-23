@@ -1,0 +1,132 @@
+\documentclass{report}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage{physics}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{url}
+\usepackage{dirtytalk}
+\usepackage{color}
+\usepackage{calc}
+\usepackage{float}
+\usepackage{epsfig}
+\usepackage{dsfont}
+\usepackage{lipsum}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{MnSymbol}%\sumint
+\usepackage{wrapfig}
+\usepackage{textpos}
+\usepackage{biblatex}
+ \usepackage{booktabs}
+\usepackage[italian]{babel}
+\usepackage[integrals]{wasysym}
+\addbibresource{bibliography/bibliography.bib}
+\usepackage{fancyhdr}
+%custom page style for report class
+\fancypagestyle{mystyle}{
+\pagestyle{fancy}
+\fancyhf{} % clear all headers      
+\fancyhead[R]{\rmfamily \small \nouppercase \rightmark}
+\fancyhead[L]{\rmfamily \small \nouppercase \leftmark}  
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}}
+\newcommand{\alert}[1]{{\color{pinegreen} #1}}
+
+
+% macros for fast scaling parentheses
+\newcommand{\lp}{\left(}
+\newcommand{\rp}{\right)}
+
+\newcommand{\lsb}{\left[}
+\newcommand{\rsb}{\right]}
+
+\newcommand{\lcb}{\left\{}
+\newcommand{\rcb}{\right\}}
+
+\newcommand{\la}{\left\langle}
+\newcommand{\ra}{\right\rangle}
+\definecolor{pinegreen}{rgb}{0.0, 0.35, 0.25}
+\begin{document}
+
+%%% TITLE PAGE %%%
+
+\thispagestyle{empty}
+\begin{textblock*}{\textwidth}(-2cm,-2.5cm)
+\includegraphics[height=0.1\paperheight]{logos/Bicocca_transparent.png}	
+\end{textblock*}
+\begin{textblock*}{\textwidth}(1.9cm,-2.6cm)
+\begin{flushleft}
+{\color{pinegreen}\Large{LAUREA MAGISTRALE}}\\[2mm]
+{\color{pinegreen}\large{UNIVERSIT\`A DEGLI STUDI DI MILANO-BICOCCA}}
+\end{flushleft}
+\end{textblock*}
+\vspace{2cm}
+\centerline{\Large{Dipartimento di \textbf{\alert{Informatica, Sistemistica e Comunicazione}}}}
+\vspace{0.5cm}
+\centerline{\Large{Laurea magistrale in \textbf{\alert{informatica}}}}
+\vspace{2cm}
+\centerline{\huge{Titolo da decidere}}
+\vspace{2cm}
+\centerline{\LARGE{Francesco Romeo}}
+\vspace{2mm}
+\centerline{\Large{Matricola: 885880}}
+\vspace{2cm}
+\begin{flushleft}
+\LARGE{Relatrice: \alert{\textbf{Dott.ssa Elisabetta Fersini}}}\\[1.5mm]
+\LARGE{Co-relatore: \alert{\textbf{Dottor Marco Lorengian}}}\\[2cm]
+\end{flushleft}
+\vfill
+
+\begin{flushright}
+\LARGE{Anno Accademico \alert{\textbf{2025/2026}}}
+\end{flushright}
+%%%%%%%%%%%%%%%%%
+%%% ABSTRACT (Techincal)%%%%
+\begin{abstract}
+   A one-page \say{technical} abstract that summarizes
+   your research work	
+\end{abstract}
+%%% PUBLICATIONS %%%
+\pagenumbering{roman}
+
+
+\tableofcontents
+\pagestyle{mystyle}
+
+\addcontentsline{toc}{chapter}{Introduzione}
+\include{preface/preface}
+
+\pagenumbering{arabic}
+
+\include{chapter1/chapter1}
+
+% \include{chapter2/chapter2}
+
+% \include{chapter3/chapter3}
+
+% \include{chapter4/chapter4}
+
+% \include{chapter5/chapter5}
+
+\addcontentsline{toc}{chapter}{Conclusioni e Sviluppi Futuri}
+\include{conclusions/conclusions}
+
+\appendix
+\include{appendices/conventions}
+\include{appendices/code}
+
+%%%% BIBLIOGRAPHY %%%%%
+\addcontentsline{toc}{chapter}{Bibliografia}
+\printbibliography
+
+\addcontentsline{toc}{chapter}{Ringraziamenti}
+% \include{thankyou/thankyou}
+\end{document}
+
