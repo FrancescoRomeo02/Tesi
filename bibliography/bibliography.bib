@@ -1,105 +1,153 @@
 % ============================================================
-% RIFERIMENTI BIBLIOGRAFICI — Capitolo 1
-% Sostituire con le voci complete nel file .bib del progetto
+% BIBLIOGRAFIA — Capitolo 1
+% Citazioni ridotte a 30 voci (da 46 originali).
+% Ordinate per sezione di primo utilizzo nel testo.
 % ============================================================
 
-@article{vaswani2017attention,
+% --- §1.1 Architetture Transformer ---
+
+@inproceedings{vaswani2017attention,
   author    = {Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and
                Uszkoreit, Jakob and Jones, Llion and Gomez, Aidan N. and
-               Kaiser, Łukasz and Polosukhin, Illia},
+               Kaiser, {\L}ukasz and Polosukhin, Illia},
   title     = {Attention Is All You Need},
-  journal   = {Advances in Neural Information Processing Systems},
+  booktitle = {Advances in Neural Information Processing Systems},
   volume    = {30},
   year      = {2017},
+  url       = {https://arxiv.org/abs/1706.03762}
 }
 
 @article{hochreiter1997lstm,
-  author    = {Hochreiter, Sepp and Schmidhuber, J{\"u}rgen},
-  title     = {Long Short-Term Memory},
-  journal   = {Neural Computation},
-  volume    = {9},
-  number    = {8},
-  pages     = {1735--1780},
-  year      = {1997},
-}
-
-@inproceedings{bengio1994learning,
-  author    = {Bengio, Yoshua and Simard, Patrice and Frasconi, Paolo},
-  title     = {Learning Long-Term Dependencies with Gradient Descent is Difficult},
-  journal   = {IEEE Transactions on Neural Networks},
-  volume    = {5},
-  number    = {2},
-  pages     = {157--166},
-  year      = {1994},
+  author  = {Hochreiter, Sepp and Schmidhuber, J{\"u}rgen},
+  title   = {Long Short-Term Memory},
+  journal = {Neural Computation},
+  volume  = {9},
+  number  = {8},
+  pages   = {1735--1780},
+  year    = {1997},
+  doi     = {10.1162/neco.1997.9.8.1735}
 }
 
 @article{ji2023survey,
-  author    = {Ji, Ziwei and Lee, Nayeon and Frieske, Rita and Yu, Tiezheng and
-               Su, Dan and Xu, Yan and Ishii, Etsuko and Bang, Yejin Joyce and
-               Madotto, Andrea and Fung, Pascale},
-  title     = {Survey of Hallucination in Natural Language Generation},
-  journal   = {ACM Computing Surveys},
-  volume    = {55},
-  number    = {12},
-  pages     = {1--38},
-  year      = {2023},
+  author  = {Ji, Ziwei and Lee, Nayeon and Frieske, Rita and Yu, Tiezheng and
+             Su, Dan and Xu, Yan and Ishii, Etsuko and Bang, Yejin Joyce and
+             Madotto, Andrea and Fung, Pascale},
+  title   = {Survey of Hallucination in Natural Language Generation},
+  journal = {ACM Computing Surveys},
+  volume  = {55},
+  number  = {12},
+  pages   = {1--38},
+  year    = {2023},
+  doi     = {10.1145/3571730}
 }
+
+% --- §1.2 LLM: panorama e analisi comparativa ---
 
 @techreport{openai2023gpt4,
   author      = {{OpenAI}},
-  title       = {{GPT-4 Technical Report}},
+  title       = {{GPT-4} Technical Report},
   institution = {OpenAI},
   year        = {2023},
-  url         = {https://openai.com/research/gpt-4},
+  url         = {https://arxiv.org/abs/2303.08774}
 }
 
-@article{team2023gemini,
-  author    = {{Gemini Team} and {Google DeepMind}},
-  title     = {Gemini: A Family of Highly Capable Multimodal Models},
-  journal   = {arXiv preprint arXiv:2312.11805},
-  year      = {2023},
+@misc{openai2024o1,
+  author = {{OpenAI}},
+  title  = {Learning to Reason with {LLM}s},
+  year   = {2024},
+  url    = {https://openai.com/index/learning-to-reason-with-llms/}
+}
+
+@article{bai2022constitutional,
+  author  = {Bai, Yuntao and Jones, Andy and Ndousse, Kamal and Askell, Amanda and
+             Chen, Anna and DasSarma, Nova and Drain, Dawn and Fort, Stanislav and
+             Ganguli, Deep and Henighan, Tom and others},
+  title   = {Constitutional {AI}: Harmlessness from {AI} Feedback},
+  journal = {arXiv preprint arXiv:2212.08073},
+  year    = {2022},
+  url     = {https://arxiv.org/abs/2212.08073}
+}
+
+@misc{anthropic2025claude4,
+  author = {{Anthropic}},
+  title  = {Claude 4 Model Card},
+  year   = {2025},
+  url    = {https://www.anthropic.com/claude/claude-4}
+}
+
+@misc{google2025gemini25,
+  author = {{Google DeepMind}},
+  title  = {Gemini 2.5: Our Most Intelligent Model},
+  year   = {2025},
+  url    = {https://deepmind.google/technologies/gemini/}
+}
+
+@misc{regulation2016gdpr,
+  author = {{European Parliament} and {Council of the European Union}},
+  title  = {Regulation ({EU}) 2016/679 of the {European Parliament} and of the
+            {Council} --- General Data Protection Regulation},
+  year   = {2016},
+  url    = {https://eur-lex.europa.eu/eli/reg/2016/679/oj}
+}
+
+@article{bommasani2021opportunities,
+  author  = {Bommasani, Rishi and Hudson, Drew A. and Aditi, Ermon and
+             Altman, Russ and Arora, Simran and others},
+  title   = {On the Opportunities and Risks of Foundation Models},
+  journal = {arXiv preprint arXiv:2108.07258},
+  year    = {2021},
+  url     = {https://arxiv.org/abs/2108.07258}
 }
 
 @article{touvron2023llama,
-  author    = {Touvron, Hugo and Lavril, Thibaut and Izacard, Gautier and
-               Martinet, Xavier and Lachaux, Marie-Anne and Lacroix, Timoth{\'e}e
-               and Rozi{\`e}re, Baptiste and Goyal, Naman and Hambro, Eric and
-               Azhar, Faisal and others},
-  title     = {{LLaMA}: Open and Efficient Foundation Language Models},
-  journal   = {arXiv preprint arXiv:2302.13971},
-  year      = {2023},
+  author  = {Touvron, Hugo and Lavril, Thibaut and Izacard, Gautier and
+             Martinet, Xavier and Lachaux, Marie-Anne and Lacroix,
+             Timoth{\'e}e and Rozi{\`e}re, Baptiste and Goyal, Naman and
+             Hambro, Eric and Azhar, Faisal and others},
+  title   = {{LLaMA}: Open and Efficient Foundation Language Models},
+  journal = {arXiv preprint arXiv:2302.13971},
+  year    = {2023},
+  url     = {https://arxiv.org/abs/2302.13971}
 }
 
-@misc{meta2024llama3,
-  author    = {{Meta AI}},
-  title     = {Introducing Meta {Llama} 3},
-  year      = {2024},
-  url       = {https://ai.meta.com/blog/meta-llama-3/},
+@misc{meta2025llama4,
+  author = {{Meta AI}},
+  title  = {Llama 4: The Next Generation of Open Foundation Models},
+  year   = {2025},
+  url    = {https://ai.meta.com/blog/llama-4-multimodal-intelligence/}
 }
 
 @article{jiang2023mistral,
-  author    = {Jiang, Albert Q. and Sablayrolles, Alexandre and Mensch, Arthur and
-               Bamford, Chris and Chaplot, Devendra Singh and de las Casas, Diego and
-               Bressand, Florian and Lengyel, Gianna and Lample, Guillaume and
-               others},
-  title     = {Mistral 7B},
-  journal   = {arXiv preprint arXiv:2310.06825},
-  year      = {2023},
+  author  = {Jiang, Albert Q. and Sablayrolles, Alexandre and Mensch, Arthur and
+             Bamford, Chris and Chaplot, Devendra Singh and de las Casas, Diego and
+             Bressand, Florian and Lengyel, Gianna and Lample, Guillaume and
+             others},
+  title   = {Mistral 7{B}},
+  journal = {arXiv preprint arXiv:2310.06825},
+  year    = {2023},
+  url     = {https://arxiv.org/abs/2310.06825}
 }
 
-@article{jiang2024mixtral,
-  author    = {Jiang, Albert Q. and Sablayrolles, Alexandre and Roux, Antoine and
-               Mensch, Arthur and Savary, Blanche and Bamford, Chris and others},
-  title     = {Mixtral of Experts},
-  journal   = {arXiv preprint arXiv:2401.04088},
-  year      = {2024},
+@misc{mistral2025large3,
+  author = {{Mistral AI}},
+  title  = {Mistral Large 3},
+  year   = {2025},
+  url    = {https://mistral.ai/news/mistral-large-3/}
 }
 
 @misc{qwen2024,
-  author    = {{Qwen Team} and {Alibaba Cloud}},
-  title     = {Qwen2 Technical Report},
-  journal   = {arXiv preprint arXiv:2407.10671},
-  year      = {2024},
+  author  = {{Qwen Team} and {Alibaba Cloud}},
+  title   = {Qwen2 Technical Report},
+  journal = {arXiv preprint arXiv:2407.10671},
+  year    = {2024},
+  url     = {https://arxiv.org/abs/2407.10671}
+}
+
+@misc{qwen2025qwen3,
+  author = {{Qwen Team} and {Alibaba Cloud}},
+  title  = {Qwen3 Technical Report},
+  year   = {2025},
+  url    = {https://qwenlm.github.io/blog/qwen3/}
 }
 
 @inproceedings{frantar2022gptq,
@@ -109,21 +157,17 @@
                Pre-trained Transformers},
   booktitle = {International Conference on Learning Representations},
   year      = {2023},
-}
-
-@misc{gerganov2023llamacpp,
-  author    = {Gerganov, Georgi},
-  title     = {llama.cpp},
-  year      = {2023},
-  url       = {https://github.com/ggerganov/llama.cpp},
+  url       = {https://arxiv.org/abs/2210.17323}
 }
 
 @misc{ollama2023,
-  author    = {{Ollama Contributors}},
-  title     = {Ollama: Get Up and Running With Large Language Models Locally},
-  year      = {2023},
-  url       = {https://ollama.com},
+  author = {{Ollama Contributors}},
+  title  = {Ollama: Get Up and Running With Large Language Models Locally},
+  year   = {2023},
+  url    = {https://ollama.com}
 }
+
+% --- §1.3 Retrieval-Augmented Generation ---
 
 @inproceedings{lewis2020retrieval,
   author    = {Lewis, Patrick and Perez, Ethan and Piktus, Aleksandra and
@@ -133,57 +177,64 @@
   title     = {Retrieval-Augmented Generation for Knowledge-Intensive {NLP} Tasks},
   booktitle = {Advances in Neural Information Processing Systems},
   volume    = {33},
+  pages     = {9459--9474},
   year      = {2020},
+  url       = {https://arxiv.org/abs/2005.11401}
 }
 
 @inproceedings{shuster2021retrieval,
   author    = {Shuster, Kurt and Poff, Spencer and Chen, Moya and Kiela, Douwe and
                Weston, Jason},
   title     = {Retrieval Augmentation Reduces Hallucination in Conversation},
-  booktitle = {Findings of the Association for Computational Linguistics: EMNLP 2021},
+  booktitle = {Findings of the Association for Computational Linguistics: {EMNLP} 2021},
+  pages     = {3784--3803},
   year      = {2021},
+  url       = {https://arxiv.org/abs/2104.07567}
 }
 
-@inproceedings{chen2023benchmarking,
-  author    = {Chen, Jiawei and Lin, Hongyu and Han, Xianpei and Sun, Le},
-  title     = {Benchmarking Large Language Models in Retrieval-Augmented
-               Generation},
-  journal   = {arXiv preprint arXiv:2309.01431},
-  year      = {2023},
-}
-
-@article{muennighoff2022mteb,
-  author    = {Muennighoff, Niklas and Tazi, Nouamane and Magne, Lo{\"i}c and
-               Reimers, Nils},
-  title     = {{MTEB}: Massive Text Embedding Benchmark},
-  journal   = {arXiv preprint arXiv:2210.07316},
-  year      = {2022},
-}
-
-@article{nussbaum2024nomic,
-  author    = {Nussbaum, Zach and Morris, John X. and Duderstadt, Brandon and
-               Mulyar, Andriy},
-  title     = {Nomic Embed: Training a Reproducible Long Context Text Embedder},
-  journal   = {arXiv preprint arXiv:2402.01613},
-  year      = {2024},
+@article{chen2023benchmarking,
+  author  = {Chen, Jiawei and Lin, Hongyu and Han, Xianpei and Sun, Le},
+  title   = {Benchmarking Large Language Models in Retrieval-Augmented Generation},
+  journal = {arXiv preprint arXiv:2309.01431},
+  year    = {2023},
+  url     = {https://arxiv.org/abs/2309.01431}
 }
 
 @article{malkov2018efficient,
-  author    = {Malkov, Yury A. and Yashunin, Dmitry A.},
-  title     = {Efficient and Robust Approximate Nearest Neighbor Search Using
-               Hierarchical Navigable Small World Graphs},
-  journal   = {IEEE Transactions on Pattern Analysis and Machine Intelligence},
-  volume    = {42},
-  number    = {4},
-  pages     = {824--836},
-  year      = {2018},
+  author  = {Malkov, Yury A. and Yashunin, Dmitry A.},
+  title   = {Efficient and Robust Approximate Nearest Neighbor Search Using
+             Hierarchical Navigable Small World Graphs},
+  journal = {IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  volume  = {42},
+  number  = {4},
+  pages   = {824--836},
+  year    = {2018},
+  doi     = {10.1109/TPAMI.2018.2889473}
 }
 
 @misc{qdrant2023,
-  author    = {{Qdrant Contributors}},
-  title     = {Qdrant: Vector Database for the Next Generation of {AI} Applications},
-  year      = {2023},
-  url       = {https://qdrant.tech},
+  author = {{Qdrant Contributors}},
+  title  = {Qdrant: Vector Database for the Next Generation of {AI} Applications},
+  year   = {2023},
+  url    = {https://qdrant.tech}
+}
+
+@article{muennighoff2022mteb,
+  author  = {Muennighoff, Niklas and Tazi, Nouamane and Magne, Lo{\"i}c and
+             Reimers, Nils},
+  title   = {{MTEB}: Massive Text Embedding Benchmark},
+  journal = {arXiv preprint arXiv:2210.07316},
+  year    = {2022},
+  url     = {https://arxiv.org/abs/2210.07316}
+}
+
+@article{nussbaum2024nomic,
+  author  = {Nussbaum, Zach and Morris, John X. and Duderstadt, Brandon and
+             Mulyar, Andriy},
+  title   = {Nomic Embed: Training a Reproducible Long Context Text Embedder},
+  journal = {arXiv preprint arXiv:2402.01613},
+  year    = {2024},
+  url     = {https://arxiv.org/abs/2402.01613}
 }
 
 @article{hu2022lora,
@@ -193,41 +244,49 @@
   title     = {{LoRA}: Low-Rank Adaptation of Large Language Models},
   booktitle = {International Conference on Learning Representations},
   year      = {2022},
+  url       = {https://arxiv.org/abs/2106.09685}
 }
 
-@article{dettmers2023qlora,
+@inproceedings{dettmers2023qlora,
   author    = {Dettmers, Tim and Pagnoni, Artidoro and Holtzman, Ari and
                Zettlemoyer, Luke},
   title     = {{QLoRA}: Efficient Finetuning of Quantized {LLM}s},
-  journal   = {Advances in Neural Information Processing Systems},
+  booktitle = {Advances in Neural Information Processing Systems},
   volume    = {36},
   year      = {2023},
+  url       = {https://arxiv.org/abs/2305.14314}
 }
 
 @inproceedings{brown2020language,
   author    = {Brown, Tom and Mann, Benjamin and Ryder, Nick and Subbiah, Melanie
-               and Kaplan, Jared D and Dhariwal, Prafulla and Neelakantan, Arvind
+               and Kaplan, Jared D. and Dhariwal, Prafulla and Neelakantan, Arvind
                and others},
   title     = {Language Models are Few-Shot Learners},
   booktitle = {Advances in Neural Information Processing Systems},
   volume    = {33},
+  pages     = {1877--1901},
   year      = {2020},
+  url       = {https://arxiv.org/abs/2005.14165}
 }
 
 @inproceedings{wei2022chain,
   author    = {Wei, Jason and Wang, Xuezhi and Schuurmans, Dale and Bosma, Maarten
-               and Ichter, Brian and Xia, Fei and Chi, Ed and Le, Quoc V and
+               and Ichter, Brian and Xia, Fei and Chi, Ed and Le, Quoc V. and
                Zhou, Denny},
-  title     = {Chain-of-Thought Prompting Elicits Reasoning in Large Language
-               Models},
+  title     = {Chain-of-Thought Prompting Elicits Reasoning in Large Language Models},
   booktitle = {Advances in Neural Information Processing Systems},
   volume    = {35},
+  pages     = {24824--24837},
   year      = {2022},
+  url       = {https://arxiv.org/abs/2201.11903}
 }
 
+% --- §1.4 Framework di orchestrazione ---
+
 @misc{haystack2023,
-  author    = {{deepset GmbH}},
-  title     = {Haystack: Open Source {NLP} Framework},
-  year      = {2023},
-  url       = {https://haystack.deepset.ai},
+  author = {{deepset GmbH}},
+  title  = {Haystack: Open Source {NLP} Framework to Build Production-Ready
+            {LLM} Applications},
+  year   = {2023},
+  url    = {https://haystack.deepset.ai}
 }
