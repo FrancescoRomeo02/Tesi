@@ -1,0 +1,83 @@
+############################
+# LaTeX build artifacts
+############################
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.brf
+*.fls
+*.fdb_latexmk
+*.idx
+*.ilg
+*.ind
+*.lof
+*.log
+*.lot
+*.out
+*.toc
+*.run.xml
+*.synctex.gz
+*.synctex(busy)
+*.nav
+*.snm
+*.vrb
+
+############################
+# Latexmk
+############################
+latexmkrc
+
+############################
+# Minted (syntax highlight)
+############################
+_minted*
+
+############################
+# Glossaries / acronyms
+############################
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+
+############################
+# TikZ / PGF cache
+############################
+*.tikz
+*.pgf-plot.gnuplot
+*.pgf-plot.table
+
+############################
+# Altri output
+############################
+*.dvi
+*.ps
+
+############################
+# VS Code
+############################
+.vscode/
+
+############################
+# OS files
+############################
+.DS_Store
+Thumbs.db
+
+############################
+# Backup editor
+############################
+*~
+*.swp
+*.swo
+*.bak
+
+############################
+# Cartelle build comuni
+############################
+/build/
+/out/
+/dist/
