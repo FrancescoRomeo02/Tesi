@@ -6,7 +6,7 @@ Questo repository contiene il codice sorgente LaTeX per la tesi di Laurea Magist
 
 - **Candidato:** Francesco Romeo (Matricola: 885880)
 - **Relatrice:** Dott.ssa Elisabetta Fersini
-- **Co-relatore:** Dottor Marco Lorengian
+- **Co-relatore:** Dottor Marco Loregian
 - **Anno Accademico:** 2025/2026
 
 ## Struttura del Progetto
