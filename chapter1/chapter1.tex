@@ -308,6 +308,33 @@ tecniche su memoria e qualità per un modello da 7B parametri.
 
 L'impatto della quantizzazione sulla qualità della generazione in contesti
 domain-specific viene analizzato nel Capitolo~\ref{chap:ottimizzazione}.
+\begin{quote}
+In data 24 marzo 2026, Google Research ha presentato TurboQuant\cite{google2026turboquant}, un framework 
+di compressione data-oblivious progettato per abbattere i colli di bottiglia 
+mnemonici della KV Cache\footnote{KV Cache: Struttura dati utilizzata per memorizzare 
+i tensori Key e Value durante l'inferenza autoregressiva degli LLM. 
+Poiché la sua dimensione cresce linearmente con la lunghezza del contesto $(O(n))$, 
+essa rappresenta il principale limite fisico per il deployment di modelli a lungo 
+contesto su hardware con VRAM limitata.} nei Large Language Models (LLM). La tecnologia si 
+distingue per la capacità di ridurre il footprint della memoria di un fattore di 
+almeno 6x, garantendo al contempo uno speedup computazionale fino a 8x su acceleratori 
+hardware di ultima generazione, senza degradazione apprezzabile della precisione.
+
+Il core metodologico di TurboQuant si articola in due stadi sequenziali: PolarQuant \footnote{
+PolarQuant: Tecnica di quantizzazione vettoriale che trasforma i dati dallo spazio cartesiano 
+a quello polare. Applicando una rotazione casuale, i vettori vengono mappati su una distribuzione 
+Beta altamente prevedibile, eliminando l'overhead di memorizzare costanti di quantizzazione 
+(scale e zero-point) per ogni blocco di dati.}, che normalizza la distribuzione dei dati tramite 
+una proiezione in coordinate polari, e il Quantized Johnson-Lindenstrauss (QJL)\footnote{QJL (Quantized Johnson-Lindenstrauss): 
+Un'applicazione del lemma di Johnson-Lindenstrauss che permette di proiettare vettori in 
+uno spazio a bassa dimensione preservando quasi isometricamente le distanze $L^2$. 
+In TurboQuant, funge da termine di correzione per minimizzare l'errore sistematico 
+introdotto dalla quantizzazione aggressiva (fino a 3.5 bit per canale).}, un correttore 
+di errore a 1-bit che agisce come stimatore non distorto per i prodotti scalari. 
+Data la sua natura training-free e l'efficienza nel preservare la fedeltà dei logit di attenzione, 
+l'integrazione di TurboQuant apre prospettive inedite per l'estensione delle finestre di contesto in locale, 
+risultando un pilastro tecnologico per l'evoluzione del sistema proposto in questo lavoro.
+\end{quote}
 
 \subsection{Ollama: server di inferenza locale}
 
@@ -338,7 +365,7 @@ senza un nuovo ciclo di addestramento o fine-tuning.
 In un sistema RAG, il processo di generazione è arricchito da una fase di
 \textit{retrieval} dinamico: prima di invocare l'LLM viene eseguita una ricerca
 in una base di conoscenza esterna per recuperare i documenti pertinenti alla
-query. Tali documenti vengono iniettati nel contesto del prompt
+query. Tali documenti vengono iniettati nel contesto del prompt 
 (\textit{prompt augmentation}), permettendo al modello di fondare la propria
 risposta su informazioni aggiornate e verificabili, riducendo il rischio di
 allucinazioni \cite{shuster2021retrieval}.
@@ -347,8 +374,8 @@ allucinazioni \cite{shuster2021retrieval}.
 \label{subsec:rag_arch}
 
 Un sistema RAG si compone di due macro-pipeline distinte, messe a confronto
-nella Tabella~\ref{tab:rag_pipelines}: la pipeline di \textbf{ingestione}
-(\textit{ingestion pipeline}), eseguita offline, e la pipeline di
+nella Tabella~\ref{tab:rag_pipelines} e illustrate nella Figura~\ref{fig:rag_pipeline}: 
+la pipeline di \textbf{ingestione} (\textit{ingestion pipeline}), eseguita offline, e la pipeline di
 \textbf{inferenza} (\textit{query pipeline}), eseguita in tempo reale per ogni
 richiesta.
 
