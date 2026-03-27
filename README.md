@@ -40,7 +40,3 @@ biber main
 pdflatex main.tex
 pdflatex main.tex
 ```
-
-## Note
-
-Le macro matematiche personalizzate (come quelle per le parentesi scalabili e colori specifici dell'università) e lo stile delle intestazioni (`mystyle` usando il pacchetto `fancyhdr`) sono definiti direttamente nel preambolo del file `main.tex`.
