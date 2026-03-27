@@ -22,7 +22,7 @@
 \usepackage{MnSymbol}%\sumint
 \usepackage{wrapfig}
 \usepackage{textpos}
-\usepackage{biblatex}
+\usepackage[defernumbers=true]{biblatex}
  \usepackage{booktabs}
 \usepackage[italian]{babel}
 \usepackage[integrals]{wasysym}
@@ -122,8 +122,10 @@
 \include{appendices/code}
 
 %%%% BIBLIOGRAPHY %%%%%
+\printbibheading[title={Bibliografia}]
 \addcontentsline{toc}{chapter}{Bibliografia}
-\printbibliography
+\printbibliography[heading=subbibliography, title={Riferimenti Bibliografici}, nottype=online]
+\printbibliography[heading=subbibliography, title={Sitografia}, type=online]
 
 \addcontentsline{toc}{chapter}{Ringraziamenti}
 % \include{thankyou/thankyou}
