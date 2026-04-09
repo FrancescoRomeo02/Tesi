@@ -5,15 +5,13 @@
 \chapter{Stato dell'Arte e Background Tecnologico}
 \label{chap:background}
 
-Il presente capitolo fornisce le fondamenta teoriche e tecnologiche necessarie
-alla comprensione del sistema progettato nei capitoli successivi. Vengono discusse
-le architetture Transformer, su cui si basano tutti i modelli linguistici
-(\textit{Large Language Models}, LLM) considerati nel progetto, analizzando sia
-i modelli aperti sia quelli proprietari, con particolare attenzione alle soluzioni
-adatte all'esecuzione on-premise; viene poi illustrato il paradigma
-\textit{Retrieval-Augmented Generation} (RAG) nella sua architettura complessiva
-e nelle tecniche di adattamento al dominio, come risposta strutturata ai limiti
-intrinseci dei LLM.
+Il presente capitolo fornisce le basi teoriche e tecnologiche necessarie alla comprensione del
+sistema descritto nei capitoli successivi. Si esaminano le architetture
+Transformer, alla base dei modelli linguistici (\textit{Large Language Models}, LLM)
+considerati nel progetto, confrontando modelli open source e proprietari e valutando le soluzioni
+idonee all'esecuzione on‑premise. Si presenta inoltre il paradigma \textit{Retrieval‑Augmented Generation} (RAG),
+ne viene descritta l'architettura e sono illustrate le principali
+tecniche di adattamento al dominio per mitigare i limiti intrinseci degli LLM.
 
 % -------------------------------------------------------------
 \section{Architetture Transformer}
@@ -22,20 +20,18 @@ intrinseci dei LLM.
 
 \subsection{Dalle reti neurali ricorrenti ai Transformer}
 
-Il modello Transformer, introdotto da Vaswani et al.\ nel 2017
-\cite{vaswani2017attention}, ha ridefinito lo stato dell'arte nel trattamento
+Il modello Transformer, introdotto da Vaswani et al.\ nel 2017 \cite{vaswani2017attention}, ha ridefinito lo stato dell'arte nel trattamento
 del linguaggio naturale (\textit{Natural Language Processing}, NLP). I sistemi
-precedenti erano basati su reti neurali ricorrenti (\textit{Recurrent Neural
+precedenti si basavano su reti neurali ricorrenti (\textit{Recurrent Neural
 Networks}, RNN) e, più specificamente, su architetture LSTM (\textit{Long
 Short-Term Memory}) \cite{hochreiter1997lstm}, che elaboravano i dati in modo
 sequenziale, accumulando uno stato nascosto ad ogni passo temporale.
-Tale formulazione introduceva due limitazioni strutturali: l'impossibilità di
+Questa formulazione presentava due limitazioni principali: l'impossibilità di
 parallelizzare il calcolo durante l'addestramento e la difficoltà di mantenere
-dipendenze a lungo termine in sequenze di lunghezza elevata, problema noto come
-\textit{vanishing gradient}.
+dipendenze a lungo termine in sequenze molto lunghe (\textit{vanishing gradient}).
 
-Il Transformer risolve entrambi i problemi abbandonando la ricorrenza in favore
-di un meccanismo di \textit{self-attention} globale, che consente a ciascun
+Il Transformer affronta entrambe le limitazioni abbandonando la ricorrenza a
+favore di un meccanismo di \textit{self-attention} globale, che consente a ciascun
 elemento di una sequenza di relazionarsi direttamente con tutti gli altri,
 indipendentemente dalla distanza posizionale.
 
@@ -44,7 +40,7 @@ indipendentemente dalla distanza posizionale.
 
 Il nucleo computazionale del Transformer è il meccanismo di \textit{attention}
 scalato. Data una sequenza di token rappresentati come vettori di dimensione
-$d_{\text{model}}$, vengono calcolate tre proiezioni lineari per ogni elemento:
+$d_{\text{model}}$, si calcolano tre proiezioni lineari per ogni elemento:
 la query $\mathbf{Q}$, la chiave $\mathbf{K}$ e il valore $\mathbf{V}$. Il
 punteggio di attenzione è definito come \cite{vaswani2017attention}:
 
@@ -54,15 +50,15 @@ punteggio di attenzione è definito come \cite{vaswani2017attention}:
   \label{eq:attention}
 \end{equation}
 
-dove $d_k$ è la dimensione dei vettori di chiave e il fattore $1/\sqrt{d_k}$
+dove $d_k$ è la dimensione dei vettori di chiave; il fattore $1/\sqrt{d_k}$
 previene la saturazione della funzione softmax in presenza di prodotti scalari
-di grande magnitudine.
+molto grandi.
 
 Il meccanismo viene replicato su più \textit{teste} in parallelo, ciascuna delle
-quali apprende una proiezione diversa dello stesso spazio di input:
-si parla di \textit{Multi-Head Attention} (MHA). La concatenazione degli output
-di $h$ teste permette al modello di catturare simultaneamente relazioni
-sintattiche, semantiche e posizionali:
+quali apprende una proiezione diversa dello stesso spazio di input
+(\textit{Multi-Head Attention}). La concatenazione degli output di $h$ teste
+permette al modello di catturare simultaneamente relazioni sintattiche,
+semantiche e posizionali:
 
 \begin{equation}
   \text{MultiHead}(\mathbf{Q}, \mathbf{K}, \mathbf{V})
@@ -74,32 +70,30 @@ con $\text{head}_i = \text{Attention}(\mathbf{Q}\mathbf{W}^Q_i,
 \mathbf{K}\mathbf{W}^K_i, \mathbf{V}\mathbf{W}^V_i)$.
 
 La posizione dei token nella sequenza non è catturata dall'attention; viene
-iniettata tramite \textit{positional encoding}: vettori sommati agli embedding
-di input che forniscono al modello informazioni sull'ordine relativo degli
-elementi.
+iniettata tramite \textit{positional encoding}, ossia vettori sommati agli embedding
+di input che forniscono informazioni sull'ordine relativo degli elementi.
 
 \subsection{Architettura encoder-decoder e varianti decoder-only}
 
 L'architettura originale del Transformer è di tipo encoder-decoder: un encoder
 trasforma la sequenza di input in una rappresentazione contestuale densa, mentre
 un decoder la utilizza — attraverso un meccanismo di \textit{cross-attention} —
-per generare la sequenza di output, ed è particolarmente adatta a task
-\textit{sequence-to-sequence} come la traduzione automatica
+per generare la sequenza di output. Questa struttura è particolarmente adatta a
+compiti \textit{sequence-to-sequence}, come la traduzione automatica
 \cite{vaswani2017attention}.
 
-I modelli linguistici generativi contemporanei adottano prevalentemente
-un'architettura \textit{decoder-only}, nella quale l'attenzione è applicata in
-modo \textit{causale} (o \textit{masked}): ogni token dipende esclusivamente dai
-token che lo precedono nella sequenza. Questo vincolo è necessario per
-l'addestramento autoregressivo, dove il modello apprende a predire il token
-successivo dato il contesto precedente.
+I modelli linguistici generativi contemporanei adottano prevalentemente un'
+architettura \textit{decoder-only}, nella quale l'attenzione è applicata in modo
+\textit{causale} (o \textit{masked}): ogni token dipende esclusivamente dai
+precedenti. Questo vincolo è necessario per l'addestramento autoregressivo,
+nel quale il modello impara a predire il token successivo dato il contesto.
 
 \subsection{Limiti in contesto zero-shot e motivazione del RAG}
 \label{subsec:llm_limits}
 
 Nonostante l'efficacia dei modelli Transformer pre-addestrati, la loro
-applicazione in contesti aziendali specifici presenta limitazioni strutturali
-non trascurabili, sintetizzate nella Tabella~\ref{tab:llm_limits}.
+applicazione in contesti aziendali specifici presenta limiti pratici, sintetizzati
+nella Tabella~\ref{tab:llm_limits}.
 
 \begin{table}[ht]
   \centering
@@ -117,22 +111,22 @@ non trascurabili, sintetizzate nella Tabella~\ref{tab:llm_limits}.
         senza riaddestrare il modello. \\
     \addlinespace
     Allucinazioni \cite{ji2023survey}
-      & Il modello genera testo plausibile ma fattualmente errato su informazioni
+      & Il modello può generare testo plausibile ma fattualmente errato su informazioni
         assenti dalla distribuzione di addestramento.
       & RAG con \textit{grounding}: la risposta è ancorata a documenti
         recuperati e verificabili. \\
     \addlinespace
     Privacy dei dati
-      & Il fine-tuning su modelli cloud espone dati riservati a infrastrutture
+      & Il fine-tuning su modelli cloud può esporre dati riservati a infrastrutture
         di terze parti, con rischi di conformità normativa.
-      & Esecuzione on-premise con modelli open-weight; nessuna trasmissione
+      & Esecuzione on-premise con modelli open-weight: nessuna trasmissione
         di dati verso servizi esterni. \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-Questi tre fattori motivano l'adozione del paradigma RAG, discusso nella
-Sezione~\ref{sec:rag}, come alternativa pragmatica al fine-tuning per
+Questi fattori motivano l'adozione del paradigma RAG, discusso nella
+Sezione~\ref{sec:rag}, come alternativa pratica al fine-tuning per
 l'adattamento al dominio.
 
 % -------------------------------------------------------------
@@ -141,11 +135,10 @@ l'adattamento al dominio.
 % -------------------------------------------------------------
 
 L'ecosistema degli LLM si è diversificato rapidamente a partire dal 2022, con
-una netta polarizzazione tra modelli proprietari, accessibili esclusivamente
-tramite API, e modelli open-weight, i cui pesi sono pubblicamente scaricabili e
-utilizzabili on-premise — talvolta con licenze che ne limitano l'uso commerciale.
-La Tabella~\ref{tab:llm_comparison} fornisce una visione d'insieme dei principali
-modelli considerati.
+una distinzione netta tra modelli proprietari, accessibili tramite API cloud,
+e modelli open-weight i cui pesi sono scaricabili e utilizzabili on-premise —
+spesso con vincoli di licenza per l'uso commerciale. La Tabella~\ref{tab:llm_comparison}
+fornisce una panoramica dei principali modelli considerati.
 
 \begin{table}[ht]
   \centering
@@ -157,7 +150,7 @@ modelli considerati.
   \begin{tabular}{llllp{2cm}cc}
     \toprule
     \textbf{Modello} & \textbf{Sviluppatore} & \textbf{Licenza}
-      & \textbf{Accesso} & \textbf{Architettura / Param.\ attivi}
+      & \textbf{Accesso} & \textbf{Architettura / Param. attivi}
       & \textbf{Ctx} & \textbf{Multi-modale} \\
     \midrule
     GPT-5 / o3       & OpenAI        & Proprietaria  & API cloud
@@ -179,41 +172,39 @@ modelli considerati.
 
 \subsection{Modelli proprietari}
 
-I modelli proprietari rappresentano lo stato dell'arte sulle prestazioni su
-benchmark generali, ma presentano vincoli rilevanti per l'adozione aziendale in
-contesti con requisiti di riservatezza.
+I modelli proprietari offrono prestazioni elevate sui benchmark generali, ma
+presentano vincoli rilevanti per l'adozione in contesti con requisiti di
+riservatezza.
 
 \paragraph{GPT-5 e OpenAI o-series.}
-La famiglia GPT-5 \cite{openai2023gpt4} rappresenta l'attuale frontiera per la
-pianificazione complessa e l'integrazione multimodale avanzata. La serie ``o''
-(o1, o3) integra nativamente il \textit{chain-of-thought} durante l'inferenza,
-migliorando le prestazioni in ambito scientifico e logico-matematico
-\cite{openai2024o1}. L'erogazione è vincolata ad API cloud proprietarie; in
-contesti enterprise è possibile operare tramite \textit{Azure OpenAI Service},
-che garantisce isolamento logico dei dati e assenza di utilizzo per il
-riaddestramento dei modelli base.
+La famiglia GPT-5 \cite{openai2023gpt4} rappresenta un riferimento per la
+pianificazione complessa e l'integrazione multimodale. La serie "o"
+(\texttt{o1}, \texttt{o3}) integra tecniche di ragionamento come il
+\textit{chain-of-thought} durante l'inferenza, migliorando le prestazioni in
+compiti scientifici e logico-matematici \cite{openai2024o1}. L'erogazione è
+vincolata ad API cloud proprietarie; in ambito enterprise è possibile operare
+tramite servizi dedicati (es. Azure OpenAI Service) che offrono garanzie
+contrattuali di isolamento dei dati.
 
 \paragraph{Claude 4 (Anthropic).}
-I modelli Claude si distinguono per l'approccio alla \textit{Constitutional AI}
+I modelli Claude adottano approcci come la \textit{Constitutional AI}
 \cite{bai2022constitutional}, un protocollo di addestramento guidato da principi
-etici per garantire l'allineamento del modello. Come per GPT-5, l'architettura
-è nativamente cloud-only; Anthropic offre garanzie contrattuali enterprise tramite
-la modalità \textit{Zero Data Retention} e l'integrazione con Amazon Bedrock e
-Google Cloud Vertex AI \cite{anthropic2025claude4}.
+per migliorare l'allineamento. Anche questi modelli sono erogati in modalità
+cloud; Anthropic propone modalità contrattuali (ad esempio \textit{Zero Data Retention})
+per rispondere a esigenze enterprise \cite{anthropic2025claude4}.
 
 \paragraph{Gemini (Google DeepMind).}
-La famiglia Gemini \cite{google2025gemini25} si distingue per la multimodalità
-nativa e per context window fino a 1M di token (Gemini 3 Pro), con capacità
-agentiche avanzate. Come gli altri modelli proprietari, è disponibile
-esclusivamente in modalità cloud-hosted.
+La famiglia Gemini \cite{google2025gemini25} è caratterizzata da multimodalità
+nativa e da finestre di contesto molto estese (fino a 1M di token per Gemini 3 Pro).
+Anche in questo caso l'accesso è fornito tramite servizi cloud.
 
 \subsection{Motivazioni per l'adozione di modelli locali}
 \label{subsec:onpremise_motivations}
 
-Nonostante le prestazioni dei modelli proprietari analizzati, il sistema
-descritto in questa tesi adotta modelli eseguiti interamente in locale
-(\textit{self-hosted}). La decisione poggia su tre motivazioni strutturali,
-sintetizzate nella Tabella~\ref{tab:onpremise_motivations}.
+Nonostante le prestazioni dei modelli proprietari, il sistema descritto in
+questa tesi utilizza modelli eseguiti interamente in locale (\textit{self-hosted}).
+La scelta si basa su tre motivazioni principali, sintetizzate nella
+Tabella~\ref{tab:onpremise_motivations}.
 
 \begin{table}[ht]
   \centering
@@ -225,66 +216,60 @@ sintetizzate nella Tabella~\ref{tab:onpremise_motivations}.
     \textbf{Motivazione} & \textbf{Descrizione} & \textbf{Riferimento normativo / letteratura} \\
     \midrule
     Sovranità del dato e conformità
-      & L'esecuzione locale elimina la trasmissione dei dati verso infrastrutture
+      & L'esecuzione locale evita la trasmissione di dati verso infrastrutture
         di terze parti, anche in presenza di garanzie contrattuali (ZDR, DPA).
-      & GDPR \cite{regulation2016gdpr}; rischi del cloud nella trattazione di dati sensibili. \\
+      & GDPR \cite{regulation2016gdpr}; rischi del cloud nella gestione di dati sensibili. \\
     \addlinespace
     Costi operativi nel lungo periodo
-      & Il modello di pricing a consumo (per token) dei provider cloud può
-        risultare più oneroso rispetto all'ammortamento dell'infrastruttura
-        hardware locale in scenari ad alto volume.
+      & Il pricing a consumo dei provider cloud può risultare più oneroso rispetto
+        all'ammortamento dell'hardware locale in scenari ad alto volume.
       & \cite{bommasani2021opportunities}; rischio di \textit{vendor lock-in}. \\
     \addlinespace
     Controllo e personalizzazione
       & I modelli open-weight (LLaMA, Mistral, Qwen) consentono fine-tuning
-        supervisionato e allineamento su dati propri, senza restrizioni
-        imposte dalle policy d'uso dei sistemi proprietari.
+        supervisionato e allineamento su dati propri, senza le restrizioni delle policy
+        dei sistemi proprietari.
       & \cite{touvron2023llama,jiang2023mistral,qwen2024} \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-Per queste ragioni, la trattazione si concentra nelle sezioni successive
-sull'analisi di modelli eseguibili localmente, riservando ai sistemi proprietari
-il ruolo di riferimento comparativo per la valutazione delle prestazioni nel
+Per queste ragioni, la trattazione si concentra successivamente sull'analisi
+di modelli eseguibili localmente, riservando ai sistemi proprietari il ruolo di
+riferimento comparativo per la valutazione delle prestazioni nel
 Capitolo~\ref{chap:valutazione}.
 
 \subsection{Modelli open-weight per uso on-premise}
 
 \paragraph{Llama 4 (Meta AI).}
-Rilasciata nell'aprile 2025, la famiglia Llama 4 \cite{meta2025llama4} segna il
-passaggio definitivo di Meta all'architettura nativa \textit{Mixture of Experts}
-(MoE) e alla multimodalità integrata. Le varianti \textit{Scout} e
-\textit{Maverick} bilanciano parametri attivi (17B) e densità di esperti per
-gestire contesti fino a 10 milioni di token. La licenza open-weight adottata da
-Meta presenta clausole restrittive per i grandi operatori e limitazioni per i
-soggetti residenti nell'Unione Europea, un fattore critico da valutare in fase
-di adozione.
+Rilasciata nell'aprile 2025, la famiglia Llama 4 \cite{meta2025llama4} adotta
+architetture \textit{Mixture of Experts} (MoE) e supporta la multimodalità.
+Le varianti \textit{Scout} e \textit{Maverick} bilanciano parametri effettivi e
+numero di esperti per gestire contesti estesi fino a 10 milioni di token. La
+licenza open-weight presenta clausole specifiche da valutare in fase di adozione,
+in particolare per operatori e per l'Unione Europea.
 
 \paragraph{Mistral 3 (Mistral AI).}
-Mistral AI ha consolidato nel 2025 un'offerta orientata alla massima flessibilità
-d'integrazione \cite{mistral2025large3}. Il modello di punta,
-\textit{Mistral Large 3}, è un modello MoE multilingue affiancato dalla serie
-\textit{Ministral} (3B--14B), ottimizzata per l'esecuzione su hardware locale.
-La distribuzione sotto licenza Apache 2.0 rende l'intera famiglia la soluzione
-di riferimento per lo sviluppo di sistemi aperti e personalizzabili.
+Nel 2025 Mistral AI ha ampliato la propria offerta con modelli orientati
+all'integrazione locale \cite{mistral2025large3}. Il modello di punta,
+\textit{Mistral Large 3}, è un modello MoE multilingue; la famiglia include
+varianti ottimizzate per l'esecuzione su hardware locale. La distribuzione sotto
+licenza Apache 2.0 facilita l'impiego in progetti aperti.
 
 \paragraph{Qwen3 (Alibaba Cloud).}
-La generazione Qwen3 \cite{qwen2025qwen3} introduce un approccio ibrido al
-ragionamento, alternando modalità \textit{thinking} per task logici e modalità
-diretta per l'efficienza. La famiglia spazia da modelli ultra-compatti (0.6B) a
-varianti MoE con finestre di contesto estese. Come approfondito nel
-Capitolo~\ref{chap:implementazione}, la variante da 8B è stata selezionata per
-il sistema qui presentato per il favorevole rapporto tra qualità semantica e
-velocità di inferenza su hardware CPU-only.
+La generazione Qwen3 \cite{qwen2025qwen3} introduce modalità operative differenziate
+per task logici ed efficienza. La famiglia copre modelli da dimensioni molto
+ridotte fino a varianti MoE con finestre di contesto estese. Nel Capitolo~\ref{chap:implementazione}
+si descrive la scelta della variante 8B per il sistema proposto, motivata dal
+bilancio tra qualità semantica e velocità di inferenza su CPU-only.
 
 \subsection{Quantizzazione e inferenza on-premise}
 
-Un aspetto centrale per l'esecuzione locale di LLM è la
-\textbf{quantizzazione}: la riduzione della precisione numerica dei pesi del
-modello da FP32 o FP16/BF16 a rappresentazioni a bassa precisione (8-bit,
-4-bit). La Tabella~\ref{tab:quantization} riassume l'impatto delle principali
-tecniche su memoria e qualità per un modello da 7B parametri.
+Un elemento centrale per l'esecuzione locale di LLM è la quantizzazione: la
+riduzione della precisione numerica dei pesi del modello da FP32 o FP16/BF16 a
+rappresentazioni a bassa precisione (8-bit, 4-bit). La Tabella~\ref{tab:quantization}
+riassume l'impatto delle principali tecniche su memoria e qualità per un modello
+da 7B parametri.
 
 \begin{table}[ht]
   \centering
@@ -295,7 +280,7 @@ tecniche su memoria e qualità per un modello da 7B parametri.
   \small
   \begin{tabular}{lcccp{4cm}}
     \toprule
-    \textbf{Formato} & \textbf{Bit/peso} & \textbf{VRAM (7B)} & \textbf{Degr.\ qualità} & \textbf{Tecnica} \\
+    \textbf{Formato} & \textbf{Bit/peso} & \textbf{VRAM (7B)} & \textbf{Degr. qualità} & \textbf{Tecnica} \\
     \midrule
     FP32        & 32 & $\sim$28 GB & baseline ($0\%$) & Standard \\
     FP16/BF16   & 16 & $\sim$14 GB & $\approx 0\%$   & Standard \\
@@ -307,33 +292,32 @@ tecniche su memoria e qualità per un modello da 7B parametri.
 \end{table}
 
 L'impatto della quantizzazione sulla qualità della generazione in contesti
-domain-specific viene analizzato nel Capitolo~\ref{chap:ottimizzazione}.
-\begin{quote}
-In data 24 marzo 2026, Google Research ha presentato TurboQuant\cite{google2026turboquant}, un framework 
-di compressione data-oblivious progettato per abbattere i colli di bottiglia 
-mnemonici della KV Cache\footnote{KV Cache: Struttura dati utilizzata per memorizzare 
-i tensori Key e Value durante l'inferenza autoregressiva degli LLM. 
-Poiché la sua dimensione cresce linearmente con la lunghezza del contesto $(O(n))$, 
-essa rappresenta il principale limite fisico per il deployment di modelli a lungo 
-contesto su hardware con VRAM limitata.} nei Large Language Models (LLM). La tecnologia si 
-distingue per la capacità di ridurre il footprint della memoria di un fattore di 
-almeno 6x, garantendo al contempo uno speedup computazionale fino a 8x su acceleratori 
-hardware di ultima generazione, senza degradazione apprezzabile della precisione.
+specifici è analizzato nel Capitolo~\ref{chap:ottimizzazione}.
 
-Il core metodologico di TurboQuant si articola in due stadi sequenziali: PolarQuant \footnote{
-PolarQuant: Tecnica di quantizzazione vettoriale che trasforma i dati dallo spazio cartesiano 
-a quello polare. Applicando una rotazione casuale, i vettori vengono mappati su una distribuzione 
-Beta altamente prevedibile, eliminando l'overhead di memorizzare costanti di quantizzazione 
-(scale e zero-point) per ogni blocco di dati.}, che normalizza la distribuzione dei dati tramite 
-una proiezione in coordinate polari, e il Quantized Johnson-Lindenstrauss (QJL)\footnote{QJL (Quantized Johnson-Lindenstrauss): 
-Un'applicazione del lemma di Johnson-Lindenstrauss che permette di proiettare vettori in 
-uno spazio a bassa dimensione preservando quasi isometricamente le distanze $L^2$. 
-In TurboQuant, funge da termine di correzione per minimizzare l'errore sistematico 
-introdotto dalla quantizzazione aggressiva (fino a 3.5 bit per canale).}, un correttore 
-di errore a 1-bit che agisce come stimatore non distorto per i prodotti scalari. 
-Data la sua natura training-free e l'efficienza nel preservare la fedeltà dei logit di attenzione, 
-l'integrazione di TurboQuant apre prospettive inedite per l'estensione delle finestre di contesto in locale, 
-risultando un pilastro tecnologico per l'evoluzione del sistema proposto in questo lavoro.
+\begin{quote}
+Il 24 marzo 2026 Google Research ha presentato TurboQuant \cite{google2026turboquant},
+un framework di compressione data‑oblivious progettato per ridurre i colli di
+bottiglia mnemonici della KV Cache\footnote{KV Cache: struttura dati che
+memorizza i tensori Key e Value durante l'inferenza autoregressiva degli LLM.
+Poiché la sua dimensione cresce linearmente con la lunghezza del contesto $(O(n))$,
+essa rappresenta il principale limite fisico per il deployment di modelli a
+lungo contesto su hardware con VRAM limitata.} nei Large Language Models (LLM).
+La tecnologia mostra la capacità di ridurre il footprint della memoria di un
+fattore rilevante (ordine di grandezza riportato dagli autori) e di migliorare
+l'efficienza computazionale su acceleratori recenti, senza degradazione
+apprezzabile della precisione nelle valutazioni pubblicate.
+
+Il metodo si struttura in due stadi principali: PolarQuant, che normalizza la
+distribuzione dei dati mediante una proiezione in coordinate polari, e il
+Quantized Johnson-Lindenstrauss (QJL), un correttore che applica
+dimensionamento proiettivo per limitare l'errore introdotto dalla quantizzazione.
+PolarQuant evita di memorizzare per ogni blocco scale e zero-point grazie a una
+rotazione seguita da una quantizzazione vettoriale; QJL fornisce una correzione
+a bassa complessità per preservare le distanze rilevanti nei prodotti scalari.
+Data la natura training-free e l'efficienza nella gestione dei tensori di
+attenzione, l'integrazione di TurboQuant può facilitare l'estensione delle
+finestre di contesto in locale, rendendolo un elemento rilevante per il
+progetto presentato in questo lavoro.
 \end{quote}
 
 \subsection{Ollama: server di inferenza locale}
@@ -342,12 +326,12 @@ Per il progetto in esame, l'infrastruttura di inferenza è gestita tramite
 \textbf{Ollama} \cite{ollama2023}, un server open source che espone modelli
 locali in formato GGUF tramite un'API REST compatibile con la specifica
 \textit{OpenAI Chat Completions}. Ollama semplifica il ciclo di vita dei modelli
-locali: l'installazione avviene tramite singolo comando
-(\texttt{ollama pull <modello>}), la gestione del contesto e del formato di
-prompt è automatizzata, e il server è distribuibile come container Docker.
-Nel contesto di questo progetto, Ollama serve sia il modello di chat
-(\texttt{qwen3:8b}) sia il modello di embedding (\texttt{nomic-embed-text}),
-il cui ruolo è descritto nella Sezione~\ref{subsec:embedding_models}.
+locali: l'installazione avviene tramite un comando semplice (\texttt{ollama pull <modello>}),
+la gestione del contesto e del formato di prompt è automatizzata, e il server
+può essere distribuito come container Docker. Nel contesto di questo progetto,
+Ollama serve sia il modello di chat (\texttt{qwen3:8b}) sia il modello di
+embedding (\texttt{nomic-embed-text}), il cui ruolo è descritto nella
+Sezione~\ref{subsec:embedding_models}.
 
 % -------------------------------------------------------------
 \section{Retrieval-Augmented Generation (RAG)}
@@ -357,27 +341,25 @@ il cui ruolo è descritto nella Sezione~\ref{subsec:embedding_models}.
 \subsection{Motivazione e definizione}
 
 Il paradigma \textit{Retrieval-Augmented Generation} (RAG), formalizzato da
-Lewis et al.\ \cite{lewis2020retrieval}, nasce per superare il limite
-fondamentale dei LLM come sistemi a conoscenza chiusa (\textit{closed-book}):
-la conoscenza del modello è codificata nei parametri e non può essere aggiornata
-senza un nuovo ciclo di addestramento o fine-tuning.
+Lewis et al. \cite{lewis2020retrieval}, nasce per superare il limite dei LLM
+come sistemi a conoscenza chiusa (\textit{closed-book}): la conoscenza del
+modello è codificata nei parametri e non può essere aggiornata senza un nuovo
+ciclo di addestramento o fine-tuning.
 
-In un sistema RAG, il processo di generazione è arricchito da una fase di
-\textit{retrieval} dinamico: prima di invocare l'LLM viene eseguita una ricerca
-in una base di conoscenza esterna per recuperare i documenti pertinenti alla
-query. Tali documenti vengono iniettati nel contesto del prompt 
-(\textit{prompt augmentation}), permettendo al modello di fondare la propria
-risposta su informazioni aggiornate e verificabili, riducendo il rischio di
-allucinazioni \cite{shuster2021retrieval}.
+In un sistema RAG, la generazione è affiancata da una fase di \textit{retrieval}
+dinamico: prima di invocare l'LLM si esegue una ricerca in una base di conoscenza
+esterna per recuperare documenti pertinenti alla query. I documenti recuperati
+vengono inseriti nel contesto del prompt (\textit{prompt augmentation}), in modo
+che la risposta del modello si basi anche su informazioni aggiornate e
+verificabili, riducendo il rischio di allucinazioni \cite{shuster2021retrieval}.
 
 \subsection{Architettura del sistema RAG}
 \label{subsec:rag_arch}
 
-Un sistema RAG si compone di due macro-pipeline distinte, messe a confronto
-nella Tabella~\ref{tab:rag_pipelines} e illustrate nella Figura~\ref{fig:rag_pipeline}: 
-la pipeline di \textbf{ingestione} (\textit{ingestion pipeline}), eseguita offline, e la pipeline di
-\textbf{inferenza} (\textit{query pipeline}), eseguita in tempo reale per ogni
-richiesta.
+Un sistema RAG si compone di due pipeline distinte, messe a confronto nella
+Tabella~\ref{tab:rag_pipelines} e illustrate nella Figura~\ref{fig:rag_pipeline}:
+la pipeline di \textbf{ingestione} (offline) e la pipeline di
+\textbf{inferenza} (real-time).
 
 \begin{table}[ht]
   \centering
@@ -398,7 +380,7 @@ richiesta.
     3 & Indicizzazione in Qdrant con payload di metadati strutturati
       & Augmented generation: contesto recuperato + query $\rightarrow$ LLM \\
     \addlinespace
-    \textit{Trigger}  & Esecuzione manuale o schedulata (es.\ giornaliera)
+    \textit{Trigger}  & Esecuzione manuale o schedulata (es. giornaliera)
       & Ad ogni richiesta utente \\
     \addlinespace
     \textit{Latenza}  & Minuti / ore (elaborazione batch)
@@ -414,15 +396,14 @@ nel database vettoriale. Le fasi principali sono le seguenti.
 
 \textbf{Pre-processing e chunking.} Il documento viene suddiviso in unità
 testuali (\textit{chunk}) di dimensione controllata. La strategia di chunking
-impatta direttamente sulla qualità del retrieval: chunk troppo piccoli perdono
-il contesto locale, chunk troppo grandi diluiscono il segnale semantico e
-rischiano di superare la finestra di contesto del modello di embedding
-\cite{chen2023benchmarking}.
+influisce direttamente sulla qualità del retrieval: chunk troppo piccoli perdono
+contesto, mentre chunk troppo grandi possono diluire il segnale semantico e
+superare la finestra di contesto del modello di embedding \cite{chen2023benchmarking}.
 
 \textbf{Generazione degli embedding.} Ogni chunk viene trasformato in un
 vettore denso da un modello di embedding $f\colon \mathcal{T} \rightarrow
-\mathbb{R}^d$, tale che documenti semanticamente simili producano vettori vicini
-secondo la similarità coseno:
+\mathbb{R}^d$, in modo che documenti semanticamente simili producano vettori
+vicini secondo la similarità coseno:
 
 \begin{equation}
   \text{sim}(\mathbf{u}, \mathbf{v})
@@ -434,23 +415,23 @@ secondo la similarità coseno:
 \textbf{Qdrant} \cite{qdrant2023}, che implementa l'algoritmo HNSW
 (\textit{Hierarchical Navigable Small World}) \cite{malkov2018efficient} per
 la ricerca approssimata (\textit{Approximate Nearest Neighbor}, ANN). La scelta
-di Qdrant rispetto ad alternative quali pgvector, Chroma e Milvus è motivata nel
-Capitolo~\ref{chap:progettazione}.
+di Qdrant rispetto ad alternative quali pgvector, Chroma e Milvus è motivata
+nel Capitolo~\ref{chap:progettazione}.
 
 \subsubsection{Pipeline di inferenza}
 
-\textbf{Embedding della query.} La query dell'utente viene proiettata nel
-medesimo spazio vettoriale dei documenti indicizzati con lo stesso modello di
+\textbf{Embedding della query.} La query dell'utente viene proiettata nello
+stesso spazio vettoriale dei documenti indicizzati con lo stesso modello di
 embedding.
 
-\textbf{Retrieval.} Viene eseguita una ricerca ANN in Qdrant per recuperare i
-$k$ documenti più simili alla query. La ricerca può essere ristretta tramite
-\textit{metadata filtering} a sottoinsiemi strutturalmente coerenti (ad esempio,
-documenti appartenenti a una specifica epoca temporale nel sistema i3Guild).
+\textbf{Retrieval.} Si esegue una ricerca ANN in Qdrant per recuperare i
+$k$ documenti più simili alla query. La ricerca può essere limitata tramite
+\textit{metadata filtering} a sottoinsiemi coerenti (ad esempio, documenti
+appartenenti a una specifica epoca temporale).
 
 \textbf{Augmented generation.} Il contesto recuperato viene concatenato alla
-query nel prompt inviato all'LLM. Il modello genera la risposta basandosi sia
-sulla propria conoscenza parametrica sia sulle informazioni esterne fornite.
+query nel prompt inviato all'LLM. Il modello genera la risposta basandosi sulla
+propria conoscenza parametrica e sulle informazioni esterne fornite.
 
 \begin{figure}[ht]
   \centering
@@ -464,14 +445,13 @@ sulla propria conoscenza parametrica sia sulle informazioni esterne fornite.
 \subsection{Modelli di embedding}
 \label{subsec:embedding_models}
 
-La scelta del modello di embedding è una decisione architetturale con impatto
-diretto sulla qualità del retrieval. Il vincolo di esecuzione on-premise
-restringe la scelta a modelli distribuibili localmente tramite Ollama. La
-valutazione comparativa è stata condotta su quattro candidati ---
-\texttt{nomic-embed-text}, \texttt{mxbai-embed-large}, \texttt{all-minilm} e
-\texttt{multilingual-e5-large} --- secondo criteri di qualità in lingua
-italiana, occupazione di memoria, compatibilità con Ollama e punteggi sul
-benchmark MTEB (\textit{Massive Text Embedding Benchmark})
+La scelta del modello di embedding influisce sulla qualità del retrieval. Il
+vincolo di esecuzione on-premise restringe la scelta a modelli distribuibili
+localmente tramite Ollama. La valutazione comparativa è stata condotta su quattro
+candidati --- \texttt{nomic-embed-text}, \texttt{mxbai-embed-large},
+\texttt{all-minilm} e \texttt{multilingual-e5-large} --- secondo criteri di
+qualità per la lingua italiana, occupazione di memoria, compatibilità con
+Ollama e punteggi sul benchmark MTEB (\textit{Massive Text Embedding Benchmark})
 \cite{muennighoff2022mteb}. L'analisi completa e la motivazione della scelta
 finale di \texttt{nomic-embed-text} \cite{nussbaum2024nomic} sono presentate
 nel Capitolo~\ref{chap:progettazione}.
@@ -480,16 +460,16 @@ nel Capitolo~\ref{chap:progettazione}.
 \label{subsec:vector_db}
 
 Un database vettoriale è un sistema di storage specializzato per vettori densi
-ad alta dimensionalità, progettato per rispondere efficientemente a query di
-tipo \textit{k-nearest neighbor} (kNN). A differenza dei database relazionali,
-dove le query sono esatte, la ricerca vettoriale è per natura approssimata: si
-cercano i vettori più vicini accettando un trade-off tra precisione
+ad alta dimensionalità, progettato per rispondere a query di tipo
+\textit{k-nearest neighbor} (kNN). A differenza dei database relazionali,
+dove le query sono esatte, la ricerca vettoriale è per natura approssimata:
+si cercano i vettori più vicini accettando un trade-off tra richiamo
 (\textit{recall}) e velocità (\textit{throughput}).
 
-L'algoritmo HNSW costruisce un grafo gerarchico multi-livello sullo spazio
-vettoriale, con complessità di ricerca $O(\log n)$ rispetto al numero di punti
-$n$ — contro $O(n)$ della ricerca lineare esatta \cite{malkov2018efficient} —
-garantendo scalabilità anche in presenza di corpora di grandi dimensioni.
+L'algoritmo HNSW costruisce un grafo gerarchico multi-livello nello spazio
+vettoriale, con complessità di ricerca approssimativamente $O(\log n)$ rispetto
+al numero di punti $n$ — contro $O(n)$ della ricerca lineare esatta
+\cite{malkov2018efficient} — garantendo scalabilità anche per corpora ampi.
 
 \subsection{Tecniche di adattamento al dominio}
 \label{subsec:domain_adaptation}
@@ -497,13 +477,13 @@ garantendo scalabilità anche in presenza di corpora di grandi dimensioni.
 L'adattamento di un LLM pre-addestrato a un dominio specifico può avvenire
 tramite approccio parametrico (\textit{fine-tuning}) o non parametrico (RAG,
 \textit{prompt engineering}). Questa sezione analizza le tecniche di fine-tuning
-con parametri ridotti, che costituiscono il riferimento teorico per il confronto
+a parametri ridotti, che costituiscono il riferimento teorico per il confronto
 discusso nel Capitolo~\ref{chap:ottimizzazione}.
 
 \subsubsection{Fine-tuning con adattatori: LoRA}
 
-Il fine-tuning completo di un LLM richiede risorse computazionali proibitive.
-Hu et al.\ \cite{hu2022lora} hanno proposto \textit{Low-Rank Adaptation} (LoRA),
+Il fine-tuning completo di un LLM richiede risorse computazionali elevate.
+Hu et al. \cite{hu2022lora} hanno proposto \textit{Low-Rank Adaptation} (LoRA),
 che vincola gli aggiornamenti dei pesi a matrici di rango basso. Dato un layer
 lineare con matrice $\mathbf{W}_0 \in \mathbb{R}^{m \times n}$, LoRA introduce:
 
@@ -520,12 +500,11 @@ ordini di grandezza rispetto al fine-tuning completo.
 
 \subsubsection{QLoRA: fine-tuning a 4-bit}
 
-\textit{Quantized LoRA} (QLoRA) \cite{dettmers2023qlora} estende LoRA
-combinando la quantizzazione a 4-bit del modello base con gli adattatori LoRA a
-precisione piena. I pesi vengono quantizzati in formato NF4
-(\textit{NormalFloat4}), ottimizzato per distribuzioni gaussiane tipiche dei
-pesi neurali; durante il forward pass vengono de-quantizzati dinamicamente in
-BF16, mentre gli adattatori operano sempre in BF16.
+\textit{Quantized LoRA} (QLoRA) \cite{dettmers2023qlora} combina la
+quantizzazione a 4-bit del modello base con adattatori LoRA a precisione piena.
+I pesi vengono quantizzati in formato NF4 (\textit{NormalFloat4}), ottimizzato
+per le distribuzioni tipiche dei pesi neurali; durante il forward pass i pesi
+vengono de-quantizzati dinamicamente in BF16, mentre gli adattatori operano in BF16.
 
 La Tabella~\ref{tab:lora_vs_qlora} riassume i principali trade-off tra le due
 varianti.
@@ -554,12 +533,11 @@ In alternativa al fine-tuning parametrico, è possibile adattare il comportament
 di un LLM intervenendo sulla formulazione dell'input senza modificare i pesi.
 Tecniche come \textit{few-shot prompting} \cite{brown2020language} e
 \textit{chain-of-thought prompting} \cite{wei2022chain} guidano il modello verso
-risposte più strutturate arricchendo il prompt con esempi o istruzioni di
-ragionamento intermedie. Nel sistema descritto in questa tesi, il prompt
-engineering è impiegato nella definizione del \textit{system prompt} e
-nell'iniezione strutturata del contesto RAG; le strategie adottate e il loro
-impatto sulla qualità delle risposte sono analizzati nel
-Capitolo~\ref{chap:ottimizzazione}.
+risposte più strutturate, arricchendo il prompt con esempi o istruzioni di
+ragionamento. Nel sistema descritto in questa tesi, il prompt engineering è
+impiegato nella definizione del \textit{system prompt} e nell'iniezione
+strutturata del contesto RAG; le strategie adottate e il loro impatto sulla
+qualità delle risposte sono analizzati nel Capitolo~\ref{chap:ottimizzazione}.
 
 % -------------------------------------------------------------
 \section{Framework di orchestrazione: Haystack}
@@ -573,13 +551,13 @@ attraverso interfacce coerenti e componibili. \textbf{Haystack}
 progettato per questo scopo.
 
 Nella versione 2.x adottata in questo progetto, ogni pipeline è un grafo
-diretto aciclico (DAG) di componenti con interfacce tipizzate, collegabili
-in modo dichiarativo. Sono disponibili integrazioni native con Qdrant
+diretto aciclico (DAG) di componenti con interfacce tipizzate, collegabili in
+modo dichiarativo. Sono disponibili integrazioni native con Qdrant
 (\texttt{QdrantDocumentStore}), Ollama (\texttt{OllamaDocumentEmbedder},
 \texttt{OllamaTextEmbedder}, \texttt{OllamaGenerator}) e le principali
-operazioni di pre-processing (\texttt{DocumentCleaner},
-\texttt{DocumentSplitter}). Il dettaglio implementativo della pipeline di
-ingestione e di retrieval è descritto nel Capitolo~\ref{chap:implementazione}.
+operazioni di pre-processing (\texttt{DocumentCleaner}, \texttt{DocumentSplitter}).
+Il dettaglio implementativo della pipeline di ingestione e di retrieval è
+descritto nel Capitolo~\ref{chap:implementazione}.
 
 % -------------------------------------------------------------
 \section{Sintesi e posizionamento del lavoro}
@@ -587,13 +565,12 @@ ingestione e di retrieval è descritto nel Capitolo~\ref{chap:implementazione}.
 % -------------------------------------------------------------
 
 Il presente capitolo ha fornito il quadro teorico su cui si fonda il sistema
-descritto nei capitoli successivi. Le architetture Transformer costituiscono il
-substrato computazionale comune a tutti i componenti di generazione e di
-embedding; i loro limiti in contesti a conoscenza chiusa — conoscenza statica,
-allucinazioni, privacy — motivano l'adozione del paradigma RAG. La scelta di
-operare con modelli e infrastrutture interamente on-premise (Ollama, Qdrant,
-Haystack) risponde ai vincoli di sovranità del dato e sostenibilità
-computazionale identificati nell'analisi dei requisiti. Le tecniche di
-fine-tuning a parametri ridotti (LoRA, QLoRA) costituiscono il termine di
-confronto teorico per la valutazione delle strategie di adattamento al dominio
-nel Capitolo~\ref{chap:ottimizzazione}.
+presentato nei capitoli successivi. Le architetture Transformer costituiscono il
+substrato computazionale comune a componenti di generazione e embedding; i loro
+limiti in contesti a conoscenza chiusa — conoscenza statica, allucinazioni,
+privacy — motivano l'adozione del paradigma RAG. La scelta di operare con modelli
+e infrastrutture interamente on-premise (Ollama, Qdrant, Haystack) risponde ai
+vincoli di sovranità del dato e alla sostenibilità computazionale identificata
+nell'analisi dei requisiti. Le tecniche di fine-tuning a parametri ridotti
+(LoRA, QLoRA) costituiscono il termine di confronto teorico per la valutazione
+delle strategie di adattamento al dominio nel Capitolo~\ref{chap:ottimizzazione}.
