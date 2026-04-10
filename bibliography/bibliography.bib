@@ -1,10 +1,6 @@
 % ============================================================
 % BIBLIOGRAFIA — Capitolo 1
-% Citazioni ridotte a 30 voci (da 46 originali).
-% Ordinate per sezione di primo utilizzo nel testo.
 % ============================================================
-
-% --- §1.1 Architetture Transformer ---
 
 @inproceedings{vaswani2017attention,
   author    = {Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and
@@ -40,8 +36,6 @@
   year    = {2023},
   doi     = {10.1145/3571730}
 }
-
-% --- §1.2 LLM: panorama e analisi comparativa ---
 
 @techreport{openai2023gpt4,
   author      = {{OpenAI}},
@@ -167,8 +161,6 @@
   url    = {https://ollama.com}
 }
 
-% --- §1.3 Retrieval-Augmented Generation ---
-
 @inproceedings{lewis2020retrieval,
   author    = {Lewis, Patrick and Perez, Ethan and Piktus, Aleksandra and
                Petroni, Fabio and Karpukhin, Vladimir and Goyal, Naman and
@@ -281,8 +273,6 @@
   url       = {https://arxiv.org/abs/2201.11903}
 }
 
-% --- §1.4 Framework di orchestrazione ---
-
 @online{haystack2023,
   author = {{deepset GmbH}},
   title  = {Haystack: Open Source {NLP} Framework to Build Production-Ready
@@ -299,4 +289,132 @@
   url      = {https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/},
   note     = {Consultato il: 27-03-2026. Presentato a ICLR 2026.},
   keywords = {KV Cache, Quantization, LLM, PolarQuant, QJL}
+}
+
+
+% ============================================================
+% BIBLIOGRAFIA — Capitolo 2
+% ============================================================
+
+@inproceedings{lewis2020rag,
+  author    = {Patrick Lewis and Ethan Perez and Aleksandra Piktus and
+               Fabio Petroni and Vladimir Karpukhin and Naman Goyal and
+               Heinrich K{\"u}ttler and Mike Lewis and Wen-tau Yih and
+               Tim Rockt{\"a}schel and Sebastian Riedel and Douwe Kiela},
+  title     = {Retrieval-Augmented Generation for Knowledge-Intensive {NLP}
+               Tasks},
+  booktitle = {Advances in Neural Information Processing Systems 33 (NeurIPS)},
+  year      = {2020},
+  pages     = {9459--9474},
+  url       = {https://arxiv.org/abs/2005.11401}
+}
+
+@techreport{gdpr2016,
+  author      = {{European Parliament and Council of the European Union}},
+  title       = {Regulation ({EU}) 2016/679 of the European Parliament and of
+                 the Council on the protection of natural persons with regard to
+                 the processing of personal data (General Data Protection
+                 Regulation)},
+  institution = {Official Journal of the European Union},
+  year        = {2016},
+  number      = {L 119},
+  pages       = {1--88},
+  url         = {https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32016R0679}
+}
+
+@article{zeng2024privacy,
+  author  = {Shenglai Zeng and Jiankun Zhang and Pengfei He and others},
+  title   = {The Good and The Bad: Exploring Privacy Issues in
+             Retrieval-Augmented Generation ({RAG})},
+  journal = {arXiv preprint arXiv:2402.16893},
+  year    = {2024},
+  url     = {https://arxiv.org/abs/2402.16893}
+}
+
+
+@misc{muennighoff2023mteb,
+  author       = {Niklas Muennighoff and Nils Reimers and Lasse Magne and
+                  others},
+  title        = {{MTEB}: Massive Text Embedding Benchmark},
+  year         = {2023},
+  howpublished = {arXiv preprint arXiv:2210.07316},
+  url          = {https://arxiv.org/abs/2210.07316}
+}
+
+
+
+@online{tonic2024rag,
+  author = {Ethan Perez},
+  title  = {{RAG} Evaluation Series: Validating the {RAG} Performance of
+            {LangChain} vs {Haystack}},
+  year   = {2024},
+  url    = {https://www.tonic.ai/blog/rag-evaluation-series-validating-the-rag-performance-of-langchain-vs-haystack},
+  note   = {Tonic.ai Blog}
+}
+
+@online{aimultiple2026benchmark,
+  author = {{AIMultiple Research}},
+  title  = {{RAG} Frameworks: {LangChain} vs {LangGraph} vs {LlamaIndex}},
+  year   = {2026},
+  url    = {https://research.aimultiple.com/rag-frameworks/},
+  note   = {Benchmark comparativo di 5 framework RAG su 100 query standardizzate}
+}
+
+@online{athenic2025framework,
+  author = {{Athenic AI}},
+  title  = {{LangChain} vs {LlamaIndex} vs {Haystack}: {RAG} Framework
+            Comparison},
+  year   = {2025},
+  url    = {https://getathenic.com/blog/langchain-vs-llamaindex-vs-haystack-rag-frameworks}
+}
+
+@online{peliqan2025haystack,
+  author = {{Peliqan}},
+  title  = {Haystack vs {LangChain}: Explained},
+  year   = {2025},
+  url    = {https://peliqan.io/blog/haystack-vs-langchain/}
+}
+
+
+
+@online{nirantk2024pgvector,
+  author = {Nirant Kasliwal},
+  title  = {pgvector vs {Qdrant}: Results from the 1M {OpenAI} Benchmark},
+  year   = {2024},
+  url    = {https://nirantk.com/writing/pgvector-vs-qdrant/}
+}
+
+@online{tigerdata2025benchmark,
+  author = {{Tiger Data}},
+  title  = {Pgvector vs.\ {Qdrant}: Benchmarking Open-Source Vector Databases
+            for {AI} at Scale},
+  year   = {2025},
+  url    = {https://www.tigerdata.com/blog/pgvector-vs-qdrant},
+  note   = {Benchmark su 50M embedding Cohere a 768 dimensioni con fork
+            ANN-Benchmarks}
+}
+
+@online{qdrant2024bench,
+  author = {{Qdrant Team}},
+  title  = {Vector Search Benchmarks},
+  year   = {2024},
+  url    = {https://qdrant.tech/benchmarks/},
+  note   = {Benchmark ufficiale Qdrant su dataset ann-benchmarks; aggiornato
+            gennaio/giugno~2024}
+}
+
+@misc{intre_website,
+  author       = {{Intré S.r.l.}},
+  title        = {Intré --- Software Factory},
+  year         = {2024},
+  howpublished = {\url{https://www.intre.it}},
+  note         = {Ultimo accesso: aprile 2026}
+}
+ 
+@misc{intre_gilde,
+  author       = {{Intré S.r.l.}},
+  title        = {Archivio Gilde},
+  year         = {2024},
+  howpublished = {\url{https://www.intre.it/gilde/}},
+  note         = {Ultimo accesso: aprile 2026}
 }
