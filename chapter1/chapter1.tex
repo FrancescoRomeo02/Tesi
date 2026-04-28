@@ -53,7 +53,7 @@ dove $d_k$ è la dimensione dei vettori di chiave; il fattore $1/\sqrt{d_k}$
 previene la saturazione della funzione softmax in presenza di prodotti scalari
 molto grandi.
 
-Il meccanismo viene replicato su più \textit{teste} in parallelo, ciascuna delle
+Il meccanismo viene replicato su più \textit{teste}~\todo[inline, color=red!40]{Manca una definizione di testa: quando si introduce un contesto è sempre bene definirlo, e citare la fonte} in parallelo, ciascuna delle
 quali apprende una proiezione diversa dello stesso spazio di input
 (\textit{Multi-Head Attention}). La concatenazione degli output di $h$ teste
 permette al modello di catturare simultaneamente relazioni sintattiche,
@@ -76,13 +76,10 @@ di input che forniscono informazioni sull'ordine relativo degli elementi.
 
 L'architettura originale del Transformer è di tipo encoder-decoder: un encoder
 trasforma la sequenza di input in una rappresentazione contestuale densa, mentre
-un decoder la utilizza — attraverso un meccanismo di \textit{cross-attention} —
-per generare la sequenza di output. Questa struttura è particolarmente adatta a
-compiti \textit{sequence-to-sequence}, come la traduzione automatica
-\cite{vaswani2017attention}.
+un decoder la utilizza~—~attraverso un meccanismo di \textit{cross-attention}~—~per generare la sequenza di output. Questa struttura è particolarmente adatta a
+compiti \textit{sequence-to-sequence}, come la traduzione automatica~\cite{vaswani2017attention}.
 
-I modelli linguistici generativi contemporanei adottano prevalentemente un'
-architettura \textit{decoder-only}, nella quale l'attenzione è applicata in modo
+I modelli linguistici generativi contemporanei adottano prevalentemente un'architettura \textit{decoder-only}, nella quale l'attenzione è applicata in modo
 \textit{causale} (o \textit{masked}): ogni token dipende esclusivamente dai
 precedenti. Questo vincolo è necessario per l'addestramento autoregressivo,
 nel quale il modello impara a predire il token successivo dato il contesto.
@@ -186,15 +183,14 @@ tramite servizi dedicati (es. Azure OpenAI Service) che offrono garanzie
 contrattuali di isolamento dei dati.
 
 \paragraph{Claude 4 (Anthropic).}
-I modelli Claude adottano approcci come la \textit{Constitutional AI}
-\cite{bai2022constitutional}, un protocollo di addestramento guidato da principi
+I modelli Claude adottano approcci come la \textit{Constitutional AI}~\cite{bai2022constitutional}, un protocollo di addestramento guidato da principi
 per migliorare l'allineamento. Anche questi modelli sono erogati in modalità
 cloud; Anthropic propone modalità contrattuali (ad esempio \textit{Zero Data Retention})
 per rispondere a esigenze enterprise~\cite{anthropic2025claude4}.
 
 \paragraph{Gemini (Google DeepMind).}
 La famiglia Gemini~\cite{google2025gemini25} è caratterizzata da multimodalità
-nativa e da finestre di contesto molto estese (fino a 1M di token per Gemini 3 Pro).
+nativa e da finestre di contesto molto estese (fino a 1M~\todo[inline, color=red!40]{le abbreviazioni sui numeri vanno usate con criterio, ad es. qui userei "un milione", lasciando la forma "1M" alle tabelle} di token per Gemini 3 Pro).
 Anche in questo caso l'accesso è fornito tramite servizi cloud.
 
 \subsection{Motivazioni per l'adozione di modelli locali}
@@ -268,13 +264,12 @@ Un elemento centrale per l'esecuzione locale di LLM è la quantizzazione: la
 riduzione della precisione numerica dei pesi del modello da FP32 o FP16/BF16 a
 rappresentazioni a bassa precisione (8-bit, 4-bit). La Tabella~\ref{tab:quantization}
 riassume l'impatto delle principali tecniche su memoria e qualità per un modello
-da 7B parametri.
+da 7B~\todo[inline, color=red!40]{Vedi nota precedente su abbreviazione numeri (non farò altre segnalazioni)} parametri.
 
 \begin{table}[ht]
   \centering
   \caption{Impatto della quantizzazione su occupazione di memoria e qualità
-    per un modello da 7B parametri. I valori sono indicativi e tratti da
-   ~\cite{dettmers2023qlora,frantar2022gptq}.}
+    per un modello da 7B parametri. I valori sono indicativi e tratti da~\cite{dettmers2023qlora,frantar2022gptq}.}
   \label{tab:quantization}
   \small
   \begin{tabular}{lcccp{4cm}}
@@ -300,7 +295,7 @@ bottiglia mnemonici della KV Cache\footnote{KV Cache: struttura dati che
 memorizza i tensori Key e Value durante l'inferenza autoregressiva degli LLM.
 Poiché la sua dimensione cresce linearmente con la lunghezza del contesto $(O(n))$,
 essa rappresenta il principale limite fisico per il deployment di modelli a
-lungo contesto su hardware con VRAM limitata.} nei Large Language Models (LLM).
+lungo contesto su hardware con VRAM limitata.}~\todo[inline, color=red!40]{Suggerisco di limitare l'uso delle footnotes: se un'informazione è utile al lettore, inseriscila nel testo principale} nei Large Language Models (LLM).
 La tecnologia mostra la capacità di ridurre il footprint della memoria di un
 fattore rilevante (ordine di grandezza riportato dagli autori) e di migliorare
 l'efficienza computazionale su acceleratori recenti, senza degradazione
@@ -467,8 +462,7 @@ si cercano i vettori più vicini accettando un trade-off tra richiamo
 
 L'algoritmo HNSW costruisce un grafo gerarchico multi-livello nello spazio
 vettoriale, con complessità di ricerca approssimativamente $O(\log n)$ rispetto
-al numero di punti $n$ — contro $O(n)$ della ricerca lineare esatta
-\cite{malkov2018efficient} — garantendo scalabilità anche per corpora ampi.
+al numero di punti $n$ — contro $O(n)$ della ricerca lineare esatta~\cite{malkov2018efficient} — garantendo scalabilità anche per corpora ampi.~\todo[inline, color=red!40]{corpora?}
 
 \subsection{Tecniche di adattamento al dominio}
 \label{subsec:domain_adaptation}
@@ -543,10 +537,7 @@ qualità delle risposte sono analizzati nel Capitolo~\ref{chap:ottimizzazione}.
 \label{sec:haystack}
 % -------------------------------------------------------------
 
-La costruzione di sistemi RAG richiede l'integrazione di componenti eterogenei
-— modelli di embedding, database vettoriali, LLM, pipeline di pre-processing —
-attraverso interfacce coerenti e componibili. \textbf{Haystack}
-\cite{haystack2023}, sviluppato da deepset, è un framework Python open source
+La costruzione di sistemi RAG richiede l'integrazione di componenti eterogenei~—~modelli di embedding, database vettoriali, LLM, pipeline di pre-processing~—~attraverso interfacce coerenti e componibili. \textbf{Haystack}~\cite{haystack2023}, sviluppato da deepset, è un framework Python open source
 progettato per questo scopo.
 
 Nella versione 2.x adottata in questo progetto, ogni pipeline è un grafo
@@ -566,8 +557,8 @@ descritto nel Capitolo~\ref{chap:implementazione}.
 Il presente capitolo ha fornito il quadro teorico su cui si fonda il sistema
 presentato nei capitoli successivi. Le architetture Transformer costituiscono il
 substrato computazionale comune a componenti di generazione e embedding; i loro
-limiti in contesti a conoscenza chiusa — conoscenza statica, allucinazioni,
-privacy — motivano l'adozione del paradigma RAG. La scelta di operare con modelli
+limiti in contesti a conoscenza chiusa~—~conoscenza statica, allucinazioni,
+privacy~—~motivano l'adozione del paradigma RAG. La scelta di operare con modelli
 e infrastrutture interamente on-premise (Ollama, Qdrant, Haystack) risponde ai
 vincoli di sovranità del dato e alla sostenibilità computazionale identificata
 nell'analisi dei requisiti. Le tecniche di fine-tuning a parametri ridotti
