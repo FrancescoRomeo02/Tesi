@@ -18,7 +18,7 @@ tecniche di adattamento al dominio per mitigare i limiti intrinseci degli LLM.
 % -------------------------------------------------------------
 
 \subsection{Dalle reti neurali ricorrenti ai Transformer}
-
+~\todo[inline, color=red!40]{Lo stile delle citazioni non mi torna, non capisco perché non sono numerate, in pratica la bibliografia non viene generata}
 Il modello Transformer, introdotto da Vaswani et al.\ nel 2017~\cite{vaswani2017attention}, ha ridefinito lo stato dell'arte nel trattamento
 del linguaggio naturale (\textit{Natural Language Processing}, NLP). I sistemi
 precedenti si basavano su reti neurali ricorrenti (\textit{Recurrent Neural
@@ -386,15 +386,16 @@ la pipeline di \textbf{ingestione} (offline) e la pipeline di
 \subsubsection{Pipeline di ingestione}
 
 La pipeline di ingestione trasforma i documenti grezzi in vettori persistiti
-nel database vettoriale. Le fasi principali sono le seguenti.
+nel database vettoriale. Le fasi principali sono le seguenti:
 
-\textbf{Pre-processing e chunking.} Il documento viene suddiviso in unità
+\begin{itemize}
+\item \textbf{Pre-processing e chunking.} Il documento viene suddiviso in unità
 testuali (\textit{chunk}) di dimensione controllata. La strategia di chunking
 influisce direttamente sulla qualità del retrieval: chunk troppo piccoli perdono
 contesto, mentre chunk troppo grandi possono diluire il segnale semantico e
 superare la finestra di contesto del modello di embedding~\cite{chen2023benchmarking}.
 
-\textbf{Generazione degli embedding.} Ogni chunk viene trasformato in un
+\item \textbf{Generazione degli embedding.} Ogni chunk viene trasformato in un
 vettore denso da un modello di embedding $f\colon \mathcal{T} \rightarrow
 \mathbb{R}^d$, in modo che documenti semanticamente simili producano vettori
 vicini secondo la similarità coseno:
@@ -405,27 +406,30 @@ vicini secondo la similarità coseno:
   \label{eq:cosine}
 \end{equation}
 
-\textbf{Indicizzazione nel database vettoriale.} I vettori vengono persistiti in
+\item \textbf{Indicizzazione nel database vettoriale.} I vettori vengono persistiti in
 \textbf{Qdrant}~\cite{qdrant2023}, che implementa l'algoritmo HNSW
 (\textit{Hierarchical Navigable Small World})~\cite{malkov2018efficient} per
 la ricerca approssimata (\textit{Approximate Nearest Neighbor}, ANN). La scelta
 di Qdrant rispetto ad alternative quali pgvector, Chroma e Milvus è motivata
 nel Capitolo~\ref{chap:progettazione}.
+\end{itemize}
 
 \subsubsection{Pipeline di inferenza}
-
-\textbf{Embedding della query.} La query dell'utente viene proiettata nello
+\begin{itemize}
+\item \textbf{Embedding della query.} La query dell'utente viene proiettata nello
 stesso spazio vettoriale dei documenti indicizzati con lo stesso modello di
 embedding.
 
-\textbf{Retrieval.} Si esegue una ricerca ANN in Qdrant per recuperare i
+\item \textbf{Retrieval.} Si esegue una ricerca ANN in Qdrant per recuperare i
 $k$ documenti più simili alla query. La ricerca può essere limitata tramite
 \textit{metadata filtering} a sottoinsiemi coerenti (ad esempio, documenti
 appartenenti a una specifica epoca temporale).
 
-\textbf{Augmented generation.} Il contesto recuperato viene concatenato alla
+\item \textbf{Augmented generation.} Il contesto recuperato viene concatenato alla
 query nel prompt inviato all'LLM. Il modello genera la risposta basandosi sulla
 propria conoscenza parametrica e sulle informazioni esterne fornite.
+
+\end{itemize}
 
 \begin{figure}[ht]
   \centering
@@ -435,6 +439,7 @@ propria conoscenza parametrica e sulle informazioni esterne fornite.
     in tempo reale~\cite{lewis2020retrieval}.}
   \label{fig:rag_pipeline}
 \end{figure}
+
 
 \subsection{Modelli di embedding}
 \label{subsec:embedding_models}
