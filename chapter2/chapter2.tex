@@ -4,21 +4,21 @@
 
 Questo capitolo definisce il caso d'uso principale, i requisiti funzionali e
 non funzionali, e la proposta architetturale del sistema progettato. La
-discussione parte dalla presentazione del contesto aziendale Intré e del
-modello organizzativo delle Gilde, prosegue con la specifica dei requisiti e
+discussione parte dalla presentazione del contesto aziendale di Intré e del
+modello formativo delle Gilde, prosegue con la specifica dei requisiti e
 la motivazione delle scelte tecnologiche adottate, e conclude con la
-descrizione dell'integrazione nel flusso di lavoro i3Guild.
+descrizione dell'integrazione nel flusso di lavoro del sistema i3Guild.
 
 % -------------------------------------------------------------
 \section{Il contesto aziendale: Intré S.r.l.}
 \label{sec:intre_context}
 % -------------------------------------------------------------
-
+~\todo[inline, color=red!40]{Questa descrizione non è bellissima... c'è da capire se sia funzionale al resto del discorso. Suggerisco di fare riferimento al concetto di Learning Organization come proposto da Peter Senge in "La quinta disciplina"}
 Intré S.r.l.\footnote{\url{https://www.intre.it}} è una software factory
-italiana con sede a Bergamo, specializzata nello sviluppo di prodotti digitali
-per clienti in settori eterogenei: assicurativo, automotive, trasporti,
+italiana con sede a Monza, specializzata nello sviluppo di prodotti digitali
+per clienti in settori eterogenei: energetico, assicurativo, automotive, trasporti,
 entertainment e food, tra gli altri~\cite{intre_website}. Il modello operativo
-di Intré è fondato sul principio \emph{Learn / Code / Deploy Value}: i team
+di Intré è fondato sul payoff \emph{Learn / Code / Deploy Value}: i team
 cross-funzionali operano in modalità agile e incrementale, rilasciando valore
 al cliente a ogni iterazione, mentre l'apprendimento continuo è strutturato
 come pratica organizzativa esplicita attraverso tre iniziative principali:
@@ -30,14 +30,10 @@ cloud-native, cybersecurity, user experience design e intelligenza artificiale.
 
 \subsection{Il modello delle Gilde}
 \label{subsec:guild_model}
-
+~\todo[inline, color=red!40]{Non usare il termine guild, le chiamiami gilda, in italiano... idem per altri termini affini}
 Le \textbf{Gilde} (\emph{guilds}) rappresentano uno dei pilastri del modello
 di \emph{Learning Organization} di Intré~\cite{intre_gilde}. Una Gilda è un
-\emph{gruppo spontaneo di quattro-otto persone} che si forma con lo scopo di
-apprendere e condividere conoscenze su un argomento scelto liberamente dai
-partecipanti. Le Gilde hanno una durata di circa quattro mesi (un
-\emph{quarter}), al termine del quale i risultati vengono presentati
-internamente in un evento denominato \emph{Gildonferenza}.
+\emph{gruppo spontaneo di almeno quattro e al massimo otto persone} che si forma con lo scopo di apprendere e condividere conoscenze su un argomento proposto e scelto liberamente dai partecipanti. Le Gilde hanno una durata di circa quattro mesi, al termine del quale i risultati vengono presentati internamente in un evento denominato \emph{Gildonferenza}.
 
 Le caratteristiche salienti del modello sono:
 
@@ -48,7 +44,7 @@ Le caratteristiche salienti del modello sono:
   \item \textbf{Ciclo temporale (Epoch)}: le Gilde si ricreano ogni quattro
     mesi; ogni ciclo costituisce un'``epoca'' distinta, con nuovi temi e nuovi
     gruppi.
-  \item \textbf{Output condivisibile}: al termine del quarter la Gilda produce
+  \item \textbf{Output condivisibile}: al termine del periodo la Gilda produce
     un risultato tangibile (prototipo, report, repository, presentazione) che
     viene archiviato e condiviso.
   \item \textbf{Ampiezza tematica}: dall'archivio pubblico del sito aziendale
@@ -347,7 +343,7 @@ self-hostable.
   \end{tabular}
 \end{table}
 
-I principali criteri di esclusione e selezione sono i seguenti.
+I principali criteri di esclusione e selezione sono i seguenti:
 
 \begin{itemize}
   \item \textbf{pgvector} è stato considerato in quanto l'infrastruttura
@@ -461,6 +457,7 @@ normalizzato (con inversione per RAM e CPU perché valori più bassi sono
 preferibili).
 
 \subsubsection{Risultati del benchmark}
+~\todo[inline, color=red!40]{Brutto che la tabella sbordi: o la stringi, o giri la pagina in formato landscape}
 
 La Tabella~\ref{tab:llm_benchmark} riporta i risultati aggregati per modello,
 ordinati per punteggio globale $G$.
@@ -671,6 +668,8 @@ Lo script \texttt{rag/ingest.py} esegue le seguenti fasi:
 \end{enumerate}
 
 Il seguente frammento illustra la struttura della pipeline Haystack:
+
+~\todo[inline, color=red!40]{Brutto se sborda, e suggerirei di riquadrarlo per isolarlo dal resto del testo (idem per altri frammenti analoghi)}
 
 \begin{lstlisting}[language=Python, caption={Struttura della pipeline di
   ingestione Haystack 2.x (pseudocodice).}, label={lst:ingest_pipeline}]
