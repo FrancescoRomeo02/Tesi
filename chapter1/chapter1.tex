@@ -77,7 +77,7 @@ di input che forniscono informazioni sull'ordine relativo degli elementi.
 
 L'architettura originale del Transformer è di tipo encoder-decoder: un encoder
 trasforma la sequenza di input in una rappresentazione contestuale densa, mentre
-un decoder la utilizza — attraverso un meccanismo di \textit{cross-attention} —
+un decoder la utilizza, attraverso un meccanismo di \textit{cross-attention},
 per generare la sequenza di output. Questa struttura è particolarmente adatta a
 compiti \textit{sequence-to-sequence}, come la traduzione automatica
 \cite{vaswani2017attention}.
@@ -136,7 +136,7 @@ l'adattamento al dominio.
 
 L'ecosistema degli LLM si è diversificato rapidamente a partire dal 2022, con
 una distinzione netta tra modelli proprietari, accessibili tramite API cloud,
-e modelli open-weight i cui pesi sono scaricabili e utilizzabili on-premise —
+e modelli open-weight i cui pesi sono scaricabili e utilizzabili on-premise,
 spesso con vincoli di licenza per l'uso commerciale. La Tabella~\ref{tab:llm_comparison}
 fornisce una panoramica dei principali modelli considerati.
 
@@ -468,8 +468,8 @@ si cercano i vettori più vicini accettando un trade-off tra richiamo
 
 L'algoritmo HNSW costruisce un grafo gerarchico multi-livello nello spazio
 vettoriale, con complessità di ricerca approssimativamente $O(\log n)$ rispetto
-al numero di punti $n$ — contro $O(n)$ della ricerca lineare esatta
-\cite{malkov2018efficient} — garantendo scalabilità anche per corpora ampi.
+al numero di punti $n$, contro $O(n)$ della ricerca lineare esatta
+\cite{malkov2018efficient}, garantendo scalabilità anche per corpora ampi.
 
 \subsection{Tecniche di adattamento al dominio}
 \label{subsec:domain_adaptation}
@@ -545,7 +545,7 @@ qualità delle risposte sono analizzati nel Capitolo~\ref{chap:ottimizzazione}.
 % -------------------------------------------------------------
 
 La costruzione di sistemi RAG richiede l'integrazione di componenti eterogenei
-— modelli di embedding, database vettoriali, LLM, pipeline di pre-processing —
+(modelli di embedding, database vettoriali, LLM, pipeline di pre-processing)
 attraverso interfacce coerenti e componibili. \textbf{Haystack}
 \cite{haystack2023}, sviluppato da deepset, è un framework Python open source
 progettato per questo scopo.
@@ -567,8 +567,8 @@ descritto nel Capitolo~\ref{chap:implementazione}.
 Il presente capitolo ha fornito il quadro teorico su cui si fonda il sistema
 presentato nei capitoli successivi. Le architetture Transformer costituiscono il
 substrato computazionale comune a componenti di generazione e embedding; i loro
-limiti in contesti a conoscenza chiusa — conoscenza statica, allucinazioni,
-privacy — motivano l'adozione del paradigma RAG. La scelta di operare con modelli
+limiti in contesti a conoscenza chiusa (conoscenza statica, allucinazioni, privacy)
+motivano l'adozione del paradigma RAG. La scelta di operare con modelli
 e infrastrutture interamente on-premise (Ollama, Qdrant, Haystack) risponde ai
 vincoli di sovranità del dato e alla sostenibilità computazionale identificata
 nell'analisi dei requisiti. Le tecniche di fine-tuning a parametri ridotti

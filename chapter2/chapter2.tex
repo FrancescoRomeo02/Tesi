@@ -113,10 +113,8 @@ I dati di ingresso al sistema RAG comprendono le seguenti categorie:
   \item \textbf{Documenti delle Gilde}: specifiche di progetto, obiettivi,
     rischi, risultati attesi e raggiunti, annotati con metadati strutturati
     (epoche, partecipanti, modalità di partecipazione).
-  \item \textbf{Documenti tecnici}: manuali, whitepaper e specifiche di
-    processo.
-  \item \textbf{Glossari e vocabolari controllati}: terminologia aziendale
-    specifica del dominio.
+  \item \textbf{Blog post}: post pubblicati dai partecipanti alle gilde che ne 
+    sintetizzano i risultati e le esperienze maturate.
   \item \textbf{Documenti non strutturati}: file PDF, HTML e note operative con
     metadati associati.
 \end{itemize}
@@ -180,9 +178,9 @@ del modello.
 % Segnaposto figura caso d'uso
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=0.7\textwidth]{chapter2/images/intre_usecase.jpg}
+  \includegraphics[width=0.7\textwidth]{chapter2/images/intre_usecase.png}
   \caption{Diagramma del caso d'uso ``Intré'': attori, interazioni principali e
-    confini del sistema (segnaposto).}
+    confini del sistema.}
   \label{fig:intre_usecase}
 \end{figure}
 
@@ -247,9 +245,9 @@ I vincoli determinanti per le scelte architetturali sono:
     essere coerente con l'infrastruttura esistente (Docker Compose,
     PostgreSQL/Prisma, Next.js, Keycloak per l'autenticazione).
   \item \textbf{Limitazioni hardware}: l'ambiente Docker dispone di 8~GB di
-    RAM complessivi, condivisi tra tutti i container (PostgreSQL, Qdrant,
-    Ollama, Next.js, RAG service). Questo vincolo è determinante per la
-    selezione del modello LLM (Sezione~\ref{subsec:llm_choice}).
+    RAM complessivi, che dovranno essere condivisi tra
+    il modello di embadding ed il modello di generazione del testo. 
+    Questo vincolo è determinante per la selezione del modello LLM (Sezione~\ref{subsec:llm_choice}).
   \item \textbf{No API esterne per LLM ed embedding}: tutti i modelli devono
     essere eseguiti localmente tramite Ollama, eliminando dipendenze da
     provider come OpenAI o Anthropic.
@@ -538,10 +536,10 @@ dell'architettura.
 
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=0.85\textwidth]{chapter2/images/architecture_diagram.jpg}
+  \includegraphics[width=0.85\textwidth]{chapter2/images/architecture_diagram.png}
   \caption{Schema architetturale del sistema RAG on-premise per i3Guild.
     Il flusso di ingestione (ETL) popola Qdrant a partire da PostgreSQL;
-    il flusso di retrieval serve le query di Next.js tramite FastAPI (segnaposto).}
+    il flusso di retrieval serve le query di Next.js tramite FastAPI.}
   \label{fig:architecture}
 \end{figure}
 
@@ -664,8 +662,7 @@ Lo script \texttt{rag/ingest.py} esegue le seguenti fasi:
     partecipanti.
   \item \textbf{Transform}: applicazione di \texttt{DocumentCleaner} (stripping
     HTML dai campi WYSIWYG come \texttt{journal}), normalizzazione degli spazi,
-    rimozione di segnaposti residui; \texttt{DocumentSplitter} con chunking a
-    150 parole quando necessario (outlier), con overlap del 10--20\%.
+    rimozione di segnaposti residui.
   \item \textbf{Embed}: generazione degli embedding tramite
     \texttt{OllamaDocumentEmbedder} (modello \texttt{nomic-embed-text},
     endpoint interno Docker \texttt{http://ollama:11434}).
@@ -721,7 +718,7 @@ non adotta un valore \texttt{top\_k} fisso; applica invece un approccio a tre
 stadi:
 
 \begin{enumerate}
-  \item \textbf{Soglia di similarità} (default: cosine score $\geq 0.5$):
+  \item \textbf{Soglia di similarità} (default: cosine score $\geq 0.7$):
     esclude documenti semanticamente non pertinenti.
   \item \textbf{Rilevamento del gap}: se il salto di score tra due documenti
     consecutivi supera una soglia configurabile (default: 0.08), la lista viene
@@ -839,9 +836,8 @@ introdotti dal sistema RAG.
     \textbf{Container} & \textbf{Immagine} & \textbf{Porta host} &
       \textbf{Ruolo} \\
     \midrule
-    \texttt{qdrant} & \texttt{qdrant/qdrant:latest} & 6333 (REST),
-      6334 (gRPC) & Database vettoriale; Web UI su \texttt{/dashboard} \\
-    \texttt{ollama} & \texttt{ollama/ollama:latest} & 11434 & Server di
+    \texttt{qdrant} & \texttt{qdrant:latest} & 6333, 6334 & Database vettoriale; Web UI su \texttt{/dashboard} \\
+    \texttt{ollama} & \texttt{ollama:latest} & 11434 & Server di
       inferenza LLM ed embedding \\
     \texttt{i3guild\_rag} & Build locale & 8002 & FastAPI + Haystack
       (retrieval e ingestione) \\
