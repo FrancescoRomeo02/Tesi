@@ -1,2 +1,231 @@
-\chapter{Codice Utilizzato}\label{app:B}
-Text
+\chapter{Codice Utilizzato}
+\label{app:B}
+
+Questa appendice raccoglie i listati richiamati nei capitoli principali. Nel
+testo sono mantenute le scelte progettuali, le decisioni implementative e il
+razionale; i frammenti di codice sono spostati qui per non interrompere la
+lettura.
+
+\section{Listati richiamati nel Capitolo 2}
+
+\begin{lstlisting}[language=Python, frame=single, breaklines=true, caption={Struttura della pipeline di ingestione Haystack 2.x (pseudocodice).}, label={lst:ingest_pipeline}]
+from haystack import Pipeline
+from haystack.components.preprocessors import DocumentCleaner, DocumentSplitter
+from haystack.components.writers import DocumentWriter
+from haystack_integrations.components.embedders.ollama import OllamaDocumentEmbedder
+from haystack_integrations.document_stores.qdrant import QdrantDocumentStore
+
+qdrant_store = QdrantDocumentStore(url="http://qdrant:6333",
+                                   collection_name="i3guild_knowledge",
+                                   embedding_dim=768)
+
+indexing_pipeline = Pipeline()
+indexing_pipeline.add_component("cleaner",  DocumentCleaner())
+indexing_pipeline.add_component("splitter", DocumentSplitter(
+    split_by="word", split_length=500, split_overlap=50))
+indexing_pipeline.add_component("embedder", OllamaDocumentEmbedder(
+    model="nomic-embed-text",
+    url="http://ollama:11434/api/embed",
+    generation_kwargs={"num_ctx": 8192}))
+indexing_pipeline.add_component("writer",   DocumentWriter(
+    document_store=qdrant_store,
+    policy=DuplicatePolicy.OVERWRITE))
+
+indexing_pipeline.connect("cleaner.documents",  "splitter.documents")
+indexing_pipeline.connect("splitter.documents", "embedder.documents")
+indexing_pipeline.connect("embedder.documents", "writer.documents")
+
+indexing_pipeline.run({"cleaner": {"documents": raw_docs}})
+\end{lstlisting}
+
+\begin{lstlisting}[frame=single, breaklines=true, caption={Esempio di request body per l'endpoint \texttt{/rag/retrieve}.}, label={lst:api_request}]
+{
+  "query":           "vorrei fondare una gilda sulla musica",
+  "top_k":           20,
+  "score_threshold": 0.5,
+  "max_documents":   10,
+  "gap_threshold":   0.08,
+  "filters":         null
+}
+\end{lstlisting}
+
+\begin{lstlisting}[frame=single, breaklines=true, caption={Struttura della response dell'endpoint \texttt{/rag/retrieve}.}, label={lst:api_response}]
+{
+  "documents":        [ { "content": "...", "score": 0.85,
+                          "meta": { "guild_name": "...",
+                                    "participants": [...] } } ],
+  "total_candidates": 15,
+  "threshold_used":   0.5,
+  "cutoff_reason":    "gap",
+  "topic_query":      "musica"
+}
+\end{lstlisting}
+
+\section{Listati richiamati nel Capitolo 3: pipeline di ingestione}
+
+\begin{lstlisting}[language=SQL, frame=single, breaklines=true, caption={Campi principali estratti da PostgreSQL per l'ingestione.}, label={lst:postgres_extract_fields}]
+SELECT
+    g.id AS guild_id,
+    g.name AS guild_name,
+    g.summary,
+    g.goals,
+    g.opportunities,
+    g.outcome,
+    g.risks,
+    g."otherResources" AS other_resources,
+    g.budget,
+    g."achievedResultsDescription" AS achieved_results_description,
+    g.journal,
+    g."isIndividualGuild" AS is_individual,
+    g."participationMode" AS participation_mode,
+    e.id AS epoch_id,
+    e."startDate" AS epoch_start,
+    e."endDate" AS epoch_end
+FROM "Guild" g
+LEFT JOIN "Epoch" e ON g."epochId" = e.id
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python, frame=single, breaklines=true, caption={Schema semplificato della costruzione del documento testuale.}, label={lst:create_document_simplified}]
+parts = [f"[GUILD: {guild_name}]"]
+
+if row.get("summary"):
+    parts.append(f"[SOMMARIO] {clean_html(row.get('summary'))}")
+if row.get("goals"):
+    parts.append(f"[OBIETTIVI] {clean_html(row.get('goals'))}")
+if row.get("risks"):
+    parts.append(f"[RISCHI] {clean_html(row.get('risks'))}")
+if participants:
+    parts.append(f"[PARTECIPANTI] {', '.join(participants)}")
+
+full_text = "\n".join(parts)
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python, frame=single, breaklines=true, caption={Pipeline Haystack usata per embedding e scrittura.}, label={lst:embedding_pipeline_impl}]
+document_store = QdrantDocumentStore(
+    url=QDRANT_URL,
+    index=QDRANT_COLLECTION_NAME,
+    embedding_dim=EMBEDDING_DIMENSIONS,
+    similarity="cosine",
+    recreate_index=RECREATE_INDEX,
+)
+
+embedder = OllamaDocumentEmbedder(
+    model=OLLAMA_EMBEDDING_MODEL,
+    url=OLLAMA_BASE_URL,
+    timeout=300,
+    generation_kwargs={"num_ctx": 8192},
+)
+
+writer = DocumentWriter(document_store=document_store, policy=policy)
+indexing_pipeline = Pipeline()
+indexing_pipeline.add_component("embedder", embedder)
+indexing_pipeline.add_component("writer", writer)
+indexing_pipeline.connect("embedder.documents", "writer.documents")
+\end{lstlisting}
+
+\section{Listati richiamati nel Capitolo 3: retrieval e generazione}
+
+\begin{lstlisting}[language=Python, frame=single, breaklines=true, caption={Schema Pydantic della richiesta di retrieval.}, label={lst:retrieve_request}]
+class RetrieveRequest(BaseModel):
+    query: str
+    top_k: int = 20
+    score_threshold: float = 0.7
+    max_documents: int = 10
+    gap_threshold: float = 0.08
+    filters: dict | None = None
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python, frame=single, breaklines=true, caption={Pipeline Haystack per la ricerca semantica.}, label={lst:query_pipeline_impl}]
+document_store = QdrantDocumentStore(
+    url=QDRANT_URL,
+    index=QDRANT_COLLECTION_NAME,
+    embedding_dim=768,
+    similarity="cosine",
+    recreate_index=False,
+)
+text_embedder = OllamaTextEmbedder(
+    model=OLLAMA_EMBEDDING_MODEL,
+    url=OLLAMA_BASE_URL,
+)
+retriever = QdrantEmbeddingRetriever(document_store=document_store)
+
+pipeline = Pipeline()
+pipeline.add_component("text_embedder", text_embedder)
+pipeline.add_component("retriever", retriever)
+pipeline.connect("text_embedder.embedding", "retriever.query_embedding")
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python, frame=single, breaklines=true, caption={Logica semplificata di taglio dinamico dei risultati.}, label={lst:dynamic_filtering}]
+scored_docs.sort(key=lambda x: x[0], reverse=True)
+above_threshold = [
+    d for score_value, d in scored_docs
+    if score_value >= score_threshold
+]
+
+filtered = [above_threshold[0]]
+for i in range(1, len(above_threshold)):
+    prev = float(getattr(above_threshold[i - 1], "score", 0.0) or 0.0)
+    cur = float(getattr(above_threshold[i], "score", 0.0) or 0.0)
+    relative_drop = (prev - cur) / prev if prev > 0 else 1.0
+    if relative_drop > gap_threshold:
+        cutoff_reason = "relative_gap"
+        break
+    filtered.append(above_threshold[i])
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python, frame=single, breaklines=true, caption={Formato del messaggio utente aumentato con contesto RAG.}, label={lst:augmented_prompt}]
+final_message = (
+    f"{message}\n\n"
+    "--- CONTESTO RAG ---\n"
+    "Usa queste informazioni per rispondere.\n"
+    f"{final_context}\n"
+    "--- FINE CONTESTO ---"
+)
+\end{lstlisting}
+
+\begin{lstlisting}[frame=single, breaklines=true, caption={Esempio di eventi NDJSON prodotti dalla chat standard.}, label={lst:ndjson_standard}]
+{"type": "rag", "data": {"documents": [...], "cutoff_reason": "relative_gap"}}
+{"type": "stream_start", "model": "qwen2.5:1.5b"}
+{"type": "token", "content": "La"}
+{"type": "token", "content": " gilda"}
+{"type": "stream_end"}
+\end{lstlisting}
+
+\section{Listati richiamati nel Capitolo 3: workflow agentico e frontend}
+
+\begin{lstlisting}[language=Python, frame=single, breaklines=true, caption={Modello di stato usato dal workflow agentico.}, label={lst:agent_state}]
+class ProposalDraft(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    risks: str | None = None
+    resources: str | None = None
+    outcomes: str | None = None
+
+class AgentState(BaseModel):
+    phase: AgentPhase = "triage"
+    topic: str | None = None
+    current_field: ProposalField | None = None
+    proposal: ProposalDraft = Field(default_factory=ProposalDraft)
+\end{lstlisting}
+
+\begin{lstlisting}[frame=single, breaklines=true, caption={Esempio di eventi NDJSON prodotti dalla modalità agentica.}, label={lst:agentic_ndjson}]
+{"type": "agent_decision", "decision": "benchmark", "rewritten_query": "musica"}
+{"type": "rag", "retrieved": 5, "docs": []}
+{"type": "stream_start", "model": "deterministic-orchestrator"}
+{"type": "token", "content": "Ho "}
+{"type": "stream_end", "agent_state": {...}}
+\end{lstlisting}
+
+\begin{lstlisting}[frame=single, breaklines=true, caption={Chiamata TypeScript al retrieval RAG.}, label={lst:typescript_search_rag}]
+const response = await fetch(`${RAG_API_URL}/rag/retrieve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+        query,
+        filters,
+        top_k: 20,
+        score_threshold: options?.scoreThreshold ?? 0.7,
+        max_documents: options?.maxDocuments ?? 10,
+    }),
+});
+\end{lstlisting}

@@ -5,12 +5,16 @@
 \chapter{Stato dell'Arte e Background Tecnologico}
 \label{chap:background}
 
-Il presente capitolo fornisce le basi teoriche e tecnologiche necessarie alla comprensione del sistema descritto nei capitoli successivi. Si esaminano le architetture
-Transformer, alla base dei modelli linguistici (\textit{Large Language Models}, LLM)
-considerati nel progetto, confrontando modelli open source e proprietari e valutando le soluzioni
-idonee all'esecuzione on‑premise. Si presenta inoltre il paradigma \textit{Retrieval‑Augmented Generation} (RAG),
-ne viene descritta l'architettura e sono illustrate le principali
-tecniche di adattamento al dominio per mitigare i limiti intrinseci degli LLM.
+Il sistema sviluppato in questa tesi nasce dall'esigenza di rendere interrogabile
+una base di conoscenza aziendale senza trasferire dati verso servizi esterni.
+Prima di descriverne i requisiti e l'implementazione, è quindi necessario
+chiarire il quadro tecnologico entro cui si colloca: i modelli linguistici
+generativi, le tecniche che ne rendono possibile l'esecuzione locale e il
+paradigma \textit{Retrieval-Augmented Generation} (RAG), adottato per collegare
+la generazione testuale a fonti documentali verificabili. Il capitolo procede
+seguendo questa linea argomentativa: dalla struttura dei Transformer si passa al
+confronto tra modelli proprietari e open-weight, per poi introdurre RAG,
+database vettoriali, modelli di embedding e tecniche di adattamento al dominio.
 
 % -------------------------------------------------------------
 \section{Architetture Transformer}
@@ -18,20 +22,25 @@ tecniche di adattamento al dominio per mitigare i limiti intrinseci degli LLM.
 % -------------------------------------------------------------
 
 \subsection{Dalle reti neurali ricorrenti ai Transformer}
-Il modello Transformer, introdotto da Vaswani et al.\ nel 2017~\cite{vaswani2017attention}, ha ridefinito lo stato dell'arte nel trattamento
-del linguaggio naturale (\textit{Natural Language Processing}, NLP). I sistemi
-precedenti si basavano su reti neurali ricorrenti (\textit{Recurrent Neural
-Networks}, RNN) e, più specificamente, su architetture LSTM (\textit{Long
-Short-Term Memory})~\cite{hochreiter1997lstm}, che elaboravano i dati in modo
-sequenziale, accumulando uno stato nascosto ad ogni passo temporale.
-Questa formulazione presentava due limitazioni principali: l'impossibilità di
-parallelizzare il calcolo durante l'addestramento e la difficoltà di mantenere
-dipendenze a lungo termine in sequenze molto lunghe (\textit{vanishing gradient}).
+Il modello Transformer, introdotto da Vaswani et al.\ nel
+2017~\cite{vaswani2017attention}, costituisce il punto di svolta da cui derivano
+gli attuali modelli linguistici. Prima della sua introduzione, gran parte dei
+sistemi di trattamento del linguaggio naturale (\textit{Natural Language
+Processing}, NLP) si basava su reti neurali ricorrenti (\textit{Recurrent
+Neural Networks}, RNN) e, in particolare, su architetture LSTM (\textit{Long
+Short-Term Memory})~\cite{hochreiter1997lstm}. Tali modelli elaboravano la
+sequenza un elemento alla volta, aggiornando progressivamente uno stato nascosto.
+Questa impostazione era coerente con la natura ordinata del testo, ma introduceva
+due limiti rilevanti: la scarsa parallelizzabilità dell'addestramento e la
+difficoltà nel preservare dipendenze informative tra elementi molto distanti
+nella sequenza (\textit{vanishing gradient}).
 
-Il Transformer affronta entrambe le limitazioni abbandonando la ricorrenza a
-favore di un meccanismo di \textit{self-attention} globale, che consente a ciascun
-elemento di una sequenza di relazionarsi direttamente con tutti gli altri,
-indipendentemente dalla distanza posizionale.
+Il Transformer affronta tali limiti sostituendo la ricorrenza con un meccanismo
+di \textit{self-attention} globale. In questo modo ogni token può essere messo in
+relazione diretta con tutti gli altri token della sequenza, indipendentemente
+dalla loro distanza posizionale. Questa scelta architetturale spiega sia la
+maggiore efficienza in addestramento sia la capacità dei modelli successivi di
+costruire rappresentazioni contestuali più ricche.
 
 \subsection{Il meccanismo di Self-Attention}
 \label{subsec:attention}
@@ -52,11 +61,12 @@ dove $d_k$ è la dimensione dei vettori di chiave; il fattore $1/\sqrt{d_k}$
 previene la saturazione della funzione softmax in presenza di prodotti scalari
 molto grandi.
 
-Il meccanismo viene replicato su più \textit{teste}~\todo[inline, color=red!40]{Manca una definizione di testa: quando si introduce un contesto è sempre bene definirlo, e citare la fonte} in parallelo, ciascuna delle
-quali apprende una proiezione diversa dello stesso spazio di input
-(\textit{Multi-Head Attention}). La concatenazione degli output di $h$ teste
-permette al modello di catturare simultaneamente relazioni sintattiche,
-semantiche e posizionali:
+Il medesimo calcolo viene poi replicato su più \textit{teste} di attenzione
+(\textit{attention heads}). Ciascuna testa apprende una proiezione diversa dello
+spazio di input e può quindi specializzarsi su relazioni differenti, ad esempio
+sintattiche, semantiche o posizionali~\cite{vaswani2017attention}. La
+concatenazione degli output di $h$ teste definisce il meccanismo di
+\textit{Multi-Head Attention}:
 
 \begin{equation}
   \text{MultiHead}(\mathbf{Q}, \mathbf{K}, \mathbf{V})
@@ -73,10 +83,12 @@ di input che forniscono informazioni sull'ordine relativo degli elementi.
 
 \subsection{Architettura encoder-decoder e varianti decoder-only}
 
-L'architettura originale del Transformer è di tipo encoder-decoder: un encoder
-trasforma la sequenza di input in una rappresentazione contestuale densa, mentre
-un decoder la utilizza~—~attraverso un meccanismo di \textit{cross-attention}~—~per generare la sequenza di output. Questa struttura è particolarmente adatta a
-compiti \textit{sequence-to-sequence}, come la traduzione automatica~\cite{vaswani2017attention}.
+L'architettura originale del Transformer è di tipo encoder-decoder. L'encoder
+trasforma la sequenza di input in una rappresentazione contestuale densa; il
+decoder utilizza tale rappresentazione, tramite \textit{cross-attention}, per
+produrre la sequenza di output. Questa struttura è particolarmente adatta a
+compiti \textit{sequence-to-sequence}, come la traduzione
+automatica~\cite{vaswani2017attention}.
 
 I modelli linguistici generativi contemporanei adottano prevalentemente un'architettura \textit{decoder-only}, nella quale l'attenzione è applicata in modo
 \textit{causale} (o \textit{masked}): ogni token dipende esclusivamente dai
@@ -86,9 +98,14 @@ nel quale il modello impara a predire il token successivo dato il contesto.
 \subsection{Limiti in contesto zero-shot e motivazione del RAG}
 \label{subsec:llm_limits}
 
-Nonostante l'efficacia dei modelli Transformer pre-addestrati, la loro
-applicazione in contesti aziendali specifici presenta limiti pratici, sintetizzati
-nella Tabella~\ref{tab:llm_limits}.
+La capacità dei Transformer di modellare il linguaggio non elimina tuttavia un
+problema centrale per l'uso aziendale: un LLM pre-addestrato non conosce, per
+definizione, i dati interni prodotti dopo l'addestramento e non dispone di un
+meccanismo nativo per verificarli. In un dominio come quello considerato in
+questa tesi, dove le risposte devono riferirsi a documenti aziendali specifici,
+questa caratteristica diventa un limite operativo. La
+Tabella~\ref{tab:llm_limits} riassume le criticità principali e le relative
+strategie di mitigazione.
 
 \begin{table}[ht]
   \centering
@@ -120,20 +137,24 @@ nella Tabella~\ref{tab:llm_limits}.
   \end{tabular}
 \end{table}
 
-Questi fattori motivano l'adozione del paradigma RAG, discusso nella
-Sezione~\ref{sec:rag}, come alternativa pratica al fine-tuning per
-l'adattamento al dominio.
+Da questa analisi deriva la scelta di privilegiare il paradigma RAG, discusso
+nella Sezione~\ref{sec:rag}. Rispetto al fine-tuning, RAG permette di aggiornare
+la conoscenza disponibile intervenendo sul corpus documentale e non sui pesi del
+modello; per questo risulta più adatto a basi di conoscenza aziendali soggette a
+modifiche frequenti.
 
 % -------------------------------------------------------------
 \section{LLM: panorama e analisi comparativa}
 \label{sec:llm}
 % -------------------------------------------------------------
 
-L'ecosistema degli LLM si è diversificato rapidamente a partire dal 2022, con
-una distinzione netta tra modelli proprietari, accessibili tramite API cloud,
-e modelli open-weight i cui pesi sono scaricabili e utilizzabili on-premise,
-spesso con vincoli di licenza per l'uso commerciale. La Tabella~\ref{tab:llm_comparison}
-fornisce una panoramica dei principali modelli considerati.
+Una volta chiariti i limiti dei modelli generativi, occorre distinguere tra le
+famiglie di LLM disponibili. A partire dal 2022 l'ecosistema si è diviso lungo
+una linea rilevante per questa tesi: da un lato i modelli proprietari, accessibili
+prevalentemente tramite API cloud; dall'altro i modelli open-weight, i cui pesi
+possono essere scaricati ed eseguiti su infrastruttura locale, nel rispetto delle
+relative licenze. La Tabella~\ref{tab:llm_comparison} offre una panoramica dei
+modelli considerati come riferimento tecnologico.
 
 \begin{table}[ht]
   \centering
@@ -189,16 +210,18 @@ per rispondere a esigenze enterprise~\cite{anthropic2025claude4}.
 
 \paragraph{Gemini (Google DeepMind).}
 La famiglia Gemini~\cite{google2025gemini25} è caratterizzata da multimodalità
-nativa e da finestre di contesto molto estese (fino a 1M~\todo[inline, color=red!40]{le abbreviazioni sui numeri vanno usate con criterio, ad es. qui userei "un milione", lasciando la forma "1M" alle tabelle} di token per Gemini 3 Pro).
+nativa e da finestre di contesto molto estese (fino a un milione di token per Gemini 3 Pro).
 Anche in questo caso l'accesso è fornito tramite servizi cloud.
 
 \subsection{Motivazioni per l'adozione di modelli locali}
 \label{subsec:onpremise_motivations}
 
-Nonostante le prestazioni dei modelli proprietari, il sistema descritto in
-questa tesi utilizza modelli eseguiti interamente in locale (\textit{self-hosted}).
-La scelta si basa su tre motivazioni principali, sintetizzate nella
-Tabella~\ref{tab:onpremise_motivations}.
+Nel caso in esame, le prestazioni assolute non sono l'unico criterio di scelta.
+Il sistema descritto in questa tesi deve poter operare su dati aziendali interni
+e deve quindi privilegiare controllo, tracciabilità e assenza di dipendenze da
+servizi esterni. Per questo l'architettura utilizza modelli eseguiti interamente
+in locale (\textit{self-hosted}). La scelta si fonda su tre motivazioni,
+sintetizzate nella Tabella~\ref{tab:onpremise_motivations}.
 
 \begin{table}[ht]
   \centering
@@ -228,10 +251,11 @@ Tabella~\ref{tab:onpremise_motivations}.
   \end{tabular}
 \end{table}
 
-Per queste ragioni, la trattazione si concentra successivamente sull'analisi
-di modelli eseguibili localmente, riservando ai sistemi proprietari il ruolo di
-riferimento comparativo per la valutazione delle prestazioni nel
-Capitolo~\ref{chap:valutazione}.
+Per queste ragioni, i modelli proprietari sono mantenuti come riferimento
+comparativo, mentre l'analisi progettuale si concentra sulle soluzioni
+eseguibili localmente. Tale impostazione rende coerente la scelta del modello
+con i vincoli di privacy, costo e governo dell'infrastruttura discussi nei
+capitoli successivi.
 
 \subsection{Modelli open-weight per uso on-premise}
 
@@ -259,16 +283,18 @@ bilancio tra qualità semantica e velocità di inferenza su CPU-only.
 
 \subsection{Quantizzazione e inferenza on-premise}
 
-Un elemento centrale per l'esecuzione locale di LLM è la quantizzazione: la
-riduzione della precisione numerica dei pesi del modello da FP32 o FP16/BF16 a
-rappresentazioni a bassa precisione (8-bit, 4-bit). La Tabella~\ref{tab:quantization}
-riassume l'impatto delle principali tecniche su memoria e qualità per un modello
-da 7B~\todo[inline, color=red!40]{Vedi nota precedente su abbreviazione numeri (non farò altre segnalazioni)} parametri.
+L'esecuzione locale di un LLM richiede un ulteriore passaggio: ridurre il costo
+computazionale dell'inferenza senza compromettere eccessivamente la qualità. La
+tecnica più rilevante in questo senso è la quantizzazione, cioè la riduzione
+della precisione numerica dei pesi del modello da FP32 o FP16/BF16 a
+rappresentazioni a bassa precisione, tipicamente a 8 o 4 bit. La
+Tabella~\ref{tab:quantization} riassume l'impatto delle principali tecniche su
+memoria e qualità per un modello da 7 miliardi di parametri.
 
 \begin{table}[ht]
   \centering
   \caption{Impatto della quantizzazione su occupazione di memoria e qualità
-    per un modello da 7B parametri. I valori sono indicativi e tratti da~\cite{dettmers2023qlora,frantar2022gptq}.}
+    per un modello da 7 miliardi di parametri. I valori sono indicativi e tratti da~\cite{dettmers2023qlora,frantar2022gptq}.}
   \label{tab:quantization}
   \small
   \begin{tabular}{lcccp{4cm}}
@@ -284,45 +310,48 @@ da 7B~\todo[inline, color=red!40]{Vedi nota precedente su abbreviazione numeri (
   \end{tabular}
 \end{table}
 
-L'impatto della quantizzazione sulla qualità della generazione in contesti
-specifici è analizzato nel Capitolo~\ref{chap:ottimizzazione}.
+Nel progetto questa dimensione è particolarmente importante, perché il modello
+deve convivere con database, servizi applicativi e pipeline RAG nello stesso
+ambiente containerizzato. L'impatto della quantizzazione sulla qualità della
+generazione in contesti specifici è analizzato nel
+Capitolo~\ref{chap:ottimizzazione}.
 
-\begin{quote}
-Il 24 marzo 2026 Google Research ha presentato TurboQuant~\cite{google2026turboquant},
-un framework di compressione data‑oblivious progettato per ridurre i colli di
-bottiglia mnemonici della KV Cache\footnote{KV Cache: struttura dati che
-memorizza i tensori Key e Value durante l'inferenza autoregressiva degli LLM.
-Poiché la sua dimensione cresce linearmente con la lunghezza del contesto $(O(n))$,
-essa rappresenta il principale limite fisico per il deployment di modelli a
-lungo contesto su hardware con VRAM limitata.}~\todo[inline, color=red!40]{Suggerisco di limitare l'uso delle footnotes: se un'informazione è utile al lettore, inseriscila nel testo principale} nei Large Language Models (LLM).
-La tecnologia mostra la capacità di ridurre il footprint della memoria di un
-fattore rilevante (ordine di grandezza riportato dagli autori) e di migliorare
-l'efficienza computazionale su acceleratori recenti, senza degradazione
-apprezzabile della precisione nelle valutazioni pubblicate.
+Un ambito collegato è la compressione della \textit{KV Cache}, struttura che
+memorizza i tensori Key e Value durante l'inferenza autoregressiva. Poiché la
+sua dimensione cresce linearmente con la lunghezza del contesto, la KV Cache può
+diventare il principale collo di bottiglia nei modelli a lungo contesto. In
+questa direzione si colloca TurboQuant~\cite{google2026turboquant}, framework
+di compressione \textit{data-oblivious} presentato da Google Research nel 2026.
+Il metodo combina PolarQuant, che normalizza la distribuzione dei dati tramite
+proiezione in coordinate polari, e Quantized Johnson-Lindenstrauss (QJL), che
+limita l'errore introdotto dalla quantizzazione. Sebbene questa tecnica non sia
+parte dell'implementazione descritta nella tesi, è rilevante perché mostra una
+direzione concreta per estendere in futuro la finestra di contesto dei modelli
+locali senza aumentare proporzionalmente il consumo di memoria.
 
-Il metodo si struttura in due stadi principali: PolarQuant, che normalizza la
-distribuzione dei dati mediante una proiezione in coordinate polari, e il
-Quantized Johnson-Lindenstrauss (QJL), un correttore che applica
-dimensionamento proiettivo per limitare l'errore introdotto dalla quantizzazione.
-PolarQuant evita di memorizzare per ogni blocco scale e zero-point grazie a una
-rotazione seguita da una quantizzazione vettoriale; QJL fornisce una correzione
-a bassa complessità per preservare le distanze rilevanti nei prodotti scalari.
-Data la natura training-free e l'efficienza nella gestione dei tensori di
-attenzione, l'integrazione di TurboQuant può facilitare l'estensione delle
-finestre di contesto in locale, rendendolo un elemento rilevante per il
-progetto presentato in questo lavoro.
-\end{quote}
+\subsection{Estensione del contesto: Infini-attention}
+
+Mentre la compressione della KV Cache riduce il \textit{footprint} di memoria a
+parità di contesto, altre architetture intervengono direttamente sul meccanismo
+di attenzione. Nell'aprile 2024, Munkhdalai et al.\ hanno presentato
+\textbf{Infini-attention}~\cite{munkhdalai2024infini}, una tecnica che combina
+attenzione locale mascherata e memoria compressiva a lungo termine. La prima
+mantiene alta risoluzione sulle relazioni immediate; la seconda conserva una
+sintesi del contesto passato con costo di memoria limitato. Questo approccio è
+di interesse per i sistemi RAG perché apre alla gestione di corpora documentali
+più ampi, pur rimanendo compatibile con scenari di inferenza locale.
 
 \subsection{Ollama: server di inferenza locale}
 
-Per il progetto in esame, l'infrastruttura di inferenza è gestita tramite
+Alla luce dei vincoli descritti, il progetto adotta un'infrastruttura di
+inferenza locale gestita tramite
 \textbf{Ollama}~\cite{ollama2023}, un server open source che espone modelli
 locali in formato GGUF tramite un'API REST compatibile con la specifica
 \textit{OpenAI Chat Completions}. Ollama semplifica il ciclo di vita dei modelli
 locali: l'installazione avviene tramite un comando semplice (\texttt{ollama pull <modello>}),
 la gestione del contesto e del formato di prompt è automatizzata, e il server
 può essere distribuito come container Docker. Nel contesto di questo progetto,
-Ollama serve sia il modello di chat (\texttt{qwen3:8b}) sia il modello di
+Ollama serve sia il modello di chat sia il modello di
 embedding (\texttt{nomic-embed-text}), il cui ruolo è descritto nella
 Sezione~\ref{subsec:embedding_models}.
 
@@ -334,25 +363,30 @@ Sezione~\ref{subsec:embedding_models}.
 \subsection{Motivazione e definizione}
 
 Il paradigma \textit{Retrieval-Augmented Generation} (RAG), formalizzato da
-Lewis et al.~\cite{lewis2020retrieval}, nasce per superare il limite dei LLM
-come sistemi a conoscenza chiusa (\textit{closed-book}): la conoscenza del
-modello è codificata nei parametri e non può essere aggiornata senza un nuovo
-ciclo di addestramento o fine-tuning.
+Lewis et al.~\cite{lewis2020retrieval}, risponde al limite degli LLM come
+sistemi a conoscenza chiusa (\textit{closed-book}). In un modello generativo
+tradizionale, infatti, la conoscenza disponibile è codificata nei parametri e
+non può essere aggiornata senza un nuovo ciclo di addestramento o fine-tuning.
 
-In un sistema RAG, la generazione è affiancata da una fase di \textit{retrieval}
-dinamico: prima di invocare l'LLM si esegue una ricerca in una base di conoscenza
-esterna per recuperare documenti pertinenti alla query. I documenti recuperati
-vengono inseriti nel contesto del prompt (\textit{prompt augmentation}), in modo
-che la risposta del modello si basi anche su informazioni aggiornate e
-verificabili, riducendo il rischio di allucinazioni~\cite{shuster2021retrieval}.
+In un sistema RAG, la generazione viene preceduta da una fase di
+\textit{retrieval} dinamico. Prima di invocare l'LLM, il sistema interroga una
+base di conoscenza esterna e recupera i documenti più pertinenti rispetto alla
+query. Tali documenti vengono poi inseriti nel prompt
+(\textit{prompt augmentation}), così che la risposta sia fondata non solo sulla
+conoscenza parametrica del modello, ma anche su fonti aggiornate e
+verificabili~\cite{shuster2021retrieval}. Questa separazione tra modello e
+conoscenza esterna è il motivo per cui RAG si adatta bene a domini aziendali in
+evoluzione.
 
 \subsection{Architettura del sistema RAG}
 \label{subsec:rag_arch}
 
-Un sistema RAG si compone di due pipeline distinte, messe a confronto nella
-Tabella~\ref{tab:rag_pipelines} e illustrate nella Figura~\ref{fig:rag_pipeline}:
-la pipeline di \textbf{ingestione} (offline) e la pipeline di
-\textbf{inferenza} (real-time).
+Dal punto di vista architetturale, un sistema RAG separa il momento in cui la
+conoscenza viene preparata dal momento in cui viene interrogata. Ne derivano due
+pipeline distinte, messe a confronto nella Tabella~\ref{tab:rag_pipelines} e
+illustrate nella Figura~\ref{fig:rag_pipeline}: la pipeline di
+\textbf{ingestione}, eseguita offline, e la pipeline di \textbf{inferenza},
+attivata in tempo reale a ogni richiesta utente.
 
 \begin{table}[ht]
   \centering
@@ -384,8 +418,10 @@ la pipeline di \textbf{ingestione} (offline) e la pipeline di
 
 \subsubsection{Pipeline di ingestione}
 
-La pipeline di ingestione trasforma i documenti grezzi in vettori persistiti
-nel database vettoriale. Le fasi principali sono le seguenti:
+La pipeline di ingestione trasforma i documenti grezzi in una rappresentazione
+adatta alla ricerca semantica. Il risultato non è più soltanto un archivio di
+testi, ma un indice vettoriale interrogabile per similarità. Le fasi principali
+sono le seguenti:
 
 \begin{itemize}
 \item \textbf{Pre-processing e chunking.} Il documento viene suddiviso in unità
@@ -414,6 +450,12 @@ nel Capitolo~\ref{chap:progettazione}.
 \end{itemize}
 
 \subsubsection{Pipeline di inferenza}
+
+La pipeline di inferenza utilizza l'indice costruito offline per rispondere a
+una query utente. A differenza dell'ingestione, questa fase è vincolata dalla
+latenza percepita e deve quindi bilanciare qualità del recupero, numero di
+documenti restituiti e costo della generazione.
+
 \begin{itemize}
 \item \textbf{Embedding della query.} La query dell'utente viene proiettata nello
 stesso spazio vettoriale dei documenti indicizzati con lo stesso modello di
@@ -443,13 +485,16 @@ propria conoscenza parametrica e sulle informazioni esterne fornite.
 \subsection{Modelli di embedding}
 \label{subsec:embedding_models}
 
-La scelta del modello di embedding influisce sulla qualità del retrieval. Il
-vincolo di esecuzione on-premise restringe la scelta a modelli distribuibili
-localmente tramite Ollama. La valutazione comparativa è stata condotta su quattro
-candidati --- \texttt{nomic-embed-text}, \texttt{mxbai-embed-large},
-\texttt{all-minilm} e \texttt{multilingual-e5-large} --- secondo criteri di
-qualità per la lingua italiana, occupazione di memoria, compatibilità con
-Ollama e punteggi sul benchmark MTEB (\textit{Massive Text Embedding Benchmark})
+La qualità del retrieval dipende in larga misura dal modello di embedding: se
+la rappresentazione vettoriale non preserva correttamente il significato dei
+documenti, anche il modello generativo riceverà un contesto poco pertinente. Il
+vincolo di esecuzione on-premise restringe quindi la scelta a modelli
+distribuibili localmente tramite Ollama. La valutazione comparativa è stata
+condotta su quattro candidati --- \texttt{nomic-embed-text},
+\texttt{mxbai-embed-large}, \texttt{all-minilm} e
+\texttt{multilingual-e5-large} --- secondo criteri di qualità per la lingua
+italiana, occupazione di memoria, compatibilità con Ollama e punteggi sul
+benchmark MTEB (\textit{Massive Text Embedding Benchmark})
 \cite{muennighoff2022mteb}. L'analisi completa e la motivazione della scelta
 finale di \texttt{nomic-embed-text}~\cite{nussbaum2024nomic} sono presentate
 nel Capitolo~\ref{chap:progettazione}.
@@ -466,16 +511,49 @@ si cercano i vettori più vicini accettando un trade-off tra richiamo
 
 L'algoritmo HNSW costruisce un grafo gerarchico multi-livello nello spazio
 vettoriale, con complessità di ricerca approssimativamente $O(\log n)$ rispetto
-al numero di punti $n$ — contro $O(n)$ della ricerca lineare esatta~\cite{malkov2018efficient} — garantendo scalabilità anche per corpora ampi.~\todo[inline, color=red!40]{corpora?}
+al numero di punti $n$ — contro $O(n)$ della ricerca lineare esatta~\cite{malkov2018efficient} — garantendo scalabilità anche per ampi \textit{corpora}.
+
+
+\subsection{Agentic RAG}
+\label{subsec:agentic_rag}
+
+Il RAG lineare descritto finora segue un flusso deterministico: recupero dei
+documenti, costruzione del prompt e generazione della risposta. Nei casi in cui
+la query richiede più passaggi logici, confronto tra fonti o riformulazioni
+successive, tale schema può risultare insufficiente. L'\textit{Agentic RAG}
+estende questo approccio utilizzando l'LLM come unità di ragionamento capace di
+invocare strumenti, pianificare ricerche successive e valutare la pertinenza dei
+documenti recuperati. Architetture come ReAct~\cite{yao2023react} formalizzano
+questo ciclo combinando ragionamento verbale e azioni.
+
+In contesti RAG avanzati, tecniche come Self-RAG~\cite{asai2023selfrag} e
+Corrective RAG (CRAG)~\cite{yan2024corrective} introducono meccanismi di
+controllo sulla qualità del retrieval e della risposta generata. Il sistema può
+così rilevare lacune informative, richiedere nuovi documenti o modificare il
+prompt prima di produrre la risposta finale. Le rassegne più recenti
+evidenziano che questa evoluzione è particolarmente utile quando le query
+richiedono sintesi da fonti eterogenee o passaggi intermedi di
+ragionamento~\cite{gao2024retrieval}.
+
+Un'altra direzione di sviluppo è rappresentata da \textbf{GraphRAG},
+formalizzato da Microsoft Research nel 2024~\cite{edge2024graphrag}. A
+differenza del RAG vettoriale classico, che è efficace nel recupero di passaggi
+localmente simili alla query ma meno adatto a interrogazioni globali sull'intero
+dataset, GraphRAG estrae entità e relazioni dai testi sorgente e costruisce un
+grafo di conoscenza gerarchico. In fase di retrieval, il sistema può quindi
+aggregare riassunti semantici di intere \textit{community} di concetti,
+ottenendo un livello di astrazione più adeguato all'analisi di corpora
+documentali estesi.
 
 \subsection{Tecniche di adattamento al dominio}
 \label{subsec:domain_adaptation}
 
-L'adattamento di un LLM pre-addestrato a un dominio specifico può avvenire
-tramite approccio parametrico (\textit{fine-tuning}) o non parametrico (RAG,
-\textit{prompt engineering}). Questa sezione analizza le tecniche di fine-tuning
-a parametri ridotti, che costituiscono il riferimento teorico per il confronto
-discusso nel Capitolo~\ref{chap:ottimizzazione}.
+Il collegamento tra LLM e conoscenza aziendale può essere realizzato in modi
+diversi. RAG mantiene separati i pesi del modello e il corpus documentale;
+il fine-tuning, invece, modifica il modello affinché si adatti a un dominio o a
+uno stile di risposta specifico. Questa sezione introduce le principali tecniche
+di adattamento a parametri ridotti, che costituiscono il riferimento teorico per
+il confronto discusso nel Capitolo~\ref{chap:ottimizzazione}.
 
 \subsubsection{Fine-tuning con adattatori: LoRA}
 
@@ -524,6 +602,18 @@ varianti.
   \end{tabular}
 \end{table}
 
+\subsubsection{DoRA: Weight-Decomposed Low-Rank Adaptation}
+
+Nel 2024 Liu et al.\ hanno introdotto \textbf{DoRA}
+(\textit{Weight-Decomposed Low-Rank Adaptation})~\cite{liu2024dora}. Il metodo
+parte dall'osservazione che LoRA approssima bene l'aggiornamento direzionale dei
+pesi, ma cattura con minore efficacia le variazioni di magnitudine osservate nel
+fine-tuning completo. DoRA separa quindi il tensore dei pesi in una componente
+di magnitudine e una componente direzionale: la prima viene aggiornata
+direttamente, mentre la seconda sfrutta l'approssimazione a rango basso di LoRA.
+In questo modo si riduce il divario prestazionale rispetto al fine-tuning
+completo, mantenendo un numero contenuto di parametri addestrabili.
+
 \subsubsection{Prompt engineering e inference-time intervention}
 
 In alternativa al fine-tuning parametrico, è possibile adattare il comportamento
@@ -541,8 +631,12 @@ qualità delle risposte sono analizzati nel Capitolo~\ref{chap:ottimizzazione}.
 \label{sec:haystack}
 % -------------------------------------------------------------
 
-La costruzione di sistemi RAG richiede l'integrazione di componenti eterogenei~—~modelli di embedding, database vettoriali, LLM, pipeline di pre-processing~—~attraverso interfacce coerenti e componibili. \textbf{Haystack}~\cite{haystack2023}, sviluppato da deepset, è un framework Python open source
-progettato per questo scopo.
+La costruzione di un sistema RAG non consiste soltanto nella scelta del modello
+generativo. È necessario coordinare modelli di embedding, database vettoriali,
+LLM e fasi di pre-processing attraverso interfacce coerenti e componibili.
+\textbf{Haystack}~\cite{haystack2023}, sviluppato da deepset, è un framework
+Python open source progettato per organizzare questi componenti in pipeline
+esplicite.
 
 Nella versione 2.x adottata in questo progetto, ogni pipeline è un grafo
 diretto aciclico (DAG) di componenti con interfacce tipizzate, collegabili in

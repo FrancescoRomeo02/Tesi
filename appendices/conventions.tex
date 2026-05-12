@@ -1,2 +1,97 @@
-\chapter{Annotazioni e Convenzioni}\label{app:A}
-Text
+\chapter{Annotazioni e Convenzioni}
+\label{app:A}
+
+Questa appendice raccoglie le convenzioni usate nella descrizione del sistema
+RAG. L'obiettivo è evitare ripetizioni nei capitoli principali e rendere
+esplicito il significato di nomi, formati e parametri ricorrenti.
+
+\section{Repository e componenti}
+
+\begin{table}[ht]
+  \centering
+  \caption{Convenzioni di denominazione dei repository.}
+  \label{tab:repo_conventions}
+  \small
+  \begin{tabular}{p{4cm}p{9cm}}
+    \toprule
+    \textbf{Nome} & \textbf{Significato} \\
+    \midrule
+    \texttt{i3guild}
+      & Applicazione web principale, basata su Next.js, PostgreSQL e Keycloak. \\
+    \texttt{i3guild-embedding-pipeline}
+      & Job Python che estrae, normalizza e indicizza il corpus delle Gilde. \\
+    \texttt{i3guild-rag}
+      & Microservizio FastAPI che espone retrieval, chat RAG e workflow
+        agentico. \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Formato dei documenti indicizzati}
+
+I documenti salvati in Qdrant derivano dai record applicativi di i3Guild. Ogni
+documento contiene un testo normalizzato e un insieme di metadati usati per
+filtri, diagnostica e deduplicazione.
+
+\begin{table}[ht]
+  \centering
+  \caption{Metadati principali associati ai documenti indicizzati.}
+  \label{tab:document_metadata_conventions}
+  \small
+  \begin{tabular}{p{4cm}p{9cm}}
+    \toprule
+    \textbf{Campo} & \textbf{Uso} \\
+    \midrule
+    \texttt{guild\_id}
+      & Identificativo della Gilda sorgente. \\
+    \texttt{guild\_name}
+      & Nome della Gilda, usato anche nei risultati mostrati all'utente. \\
+    \texttt{epoch\_id}
+      & Identificativo dell'epoca a cui appartiene la Gilda. \\
+    \texttt{participants}
+      & Lista dei partecipanti, utile come metadato filtrabile. \\
+    \texttt{participation\_mode}
+      & Modalità di partecipazione, ad esempio in presenza, remota o ibrida. \\
+    \texttt{is\_individual}
+      & Indica se la proposta riguarda una Gilda individuale. \\
+    \texttt{chunk\_index}
+      & Posizione del chunk quando una Gilda viene suddivisa. \\
+    \texttt{chunk\_count}
+      & Numero totale di chunk generati per la stessa Gilda. \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Eventi NDJSON}
+
+Gli endpoint streaming restituiscono una sequenza di righe JSON indipendenti.
+La scelta del formato NDJSON permette al frontend di elaborare subito i metadati
+RAG e poi aggiornare l'interfaccia man mano che arrivano i token.
+
+\begin{table}[ht]
+  \centering
+  \caption{Tipi di evento usati dagli endpoint streaming.}
+  \label{tab:ndjson_event_conventions}
+  \small
+  \begin{tabular}{p{3.5cm}p{9.5cm}}
+    \toprule
+    \textbf{Evento} & \textbf{Significato} \\
+    \midrule
+    \texttt{rag}
+      & Contiene documenti recuperati, filtri, query riscritta e motivo del
+        taglio dei risultati. \\
+    \texttt{agent\_decision}
+      & Indica la decisione presa dall'orchestratore agentico. \\
+    \texttt{stream\_start}
+      & Segnala l'inizio della risposta generata. \\
+    \texttt{token}
+      & Contiene un frammento incrementale della risposta. \\
+    \texttt{stream\_end}
+      & Chiude lo stream e, nella modalità agentica, può includere lo stato
+        aggiornato. \\
+    \texttt{error}
+      & Comunica un errore gestibile senza interrompere il contratto dello
+        stream. \\
+    \bottomrule
+  \end{tabular}
+\end{table}

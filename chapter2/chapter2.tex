@@ -2,40 +2,62 @@
 \chapter{Analisi dei Requisiti e Progettazione del Sistema}
 \label{chap:requirements_design}
 
-Questo capitolo definisce il caso d'uso principale, i requisiti funzionali e
-non funzionali, e la proposta architetturale del sistema progettato. La
-discussione parte dalla presentazione del contesto aziendale di Intré e del
-modello formativo delle Gilde, prosegue con la specifica dei requisiti e
-la motivazione delle scelte tecnologiche adottate, e conclude con la
-descrizione dell'integrazione nel flusso di lavoro del sistema i3Guild.
+Il capitolo traduce il quadro teorico introdotto in precedenza in un problema
+progettuale concreto. L'obiettivo non è costruire un sistema RAG generico, ma
+integrare un assistente nel contesto operativo di Intré, rispettando i vincoli
+organizzativi, infrastrutturali e di riservatezza già presenti. Per questo la
+trattazione parte dal modello aziendale delle Gilde, identifica il caso d'uso e
+il corpus informativo disponibile, formalizza i requisiti e motiva infine le
+scelte tecnologiche che portano alla proposta architetturale.
 
 % -------------------------------------------------------------
 \section{Il contesto aziendale: Intré S.r.l.}
 \label{sec:intre_context}
 % -------------------------------------------------------------
-~\todo[inline, color=red!40]{Questa descrizione non è bellissima... c'è da capire se sia funzionale al resto del discorso. Suggerisco di fare riferimento al concetto di Learning Organization come proposto da Peter Senge in "La quinta disciplina"}
 Intré S.r.l.\footnote{\url{https://www.intre.it}} è una software factory
-italiana con sede a Monza, specializzata nello sviluppo di prodotti digitali
-per clienti in settori eterogenei: energetico, assicurativo, automotive, trasporti,
-entertainment e food, tra gli altri~\cite{intre_website}. Il modello operativo
-di Intré è fondato sul payoff \emph{Learn / Code / Deploy Value}: i team
-cross-funzionali operano in modalità agile e incrementale, rilasciando valore
-al cliente a ogni iterazione, mentre l'apprendimento continuo è strutturato
-come pratica organizzativa esplicita attraverso tre iniziative principali:
-\emph{Camp} (eventi di formazione periodici), \emph{Gilde} (gruppi di
-apprendimento interni) e \emph{Community} (comunità di pratica aperte).
-L'azienda ha conseguito la certificazione ISO~27001 per la sicurezza delle
-informazioni e si avvale di un ecosistema di realtà correlate nelle aree
-cloud-native, cybersecurity, user experience design e intelligenza artificiale.
+italiana con sede a Monza. L'azienda sviluppa prodotti digitali per settori
+eterogenei, tra cui energia, assicurazioni, automotive ed entertainment, e
+organizza il lavoro in team Scrum cross-funzionali. La dimensione aziendale,
+pari a circa settanta persone, consente di mantenere processi interni
+formalizzati senza rinunciare a una circolazione diretta della conoscenza tra i
+team~\cite{intre_learning_organization}.
+
+Il payoff \emph{Learn / Code / Deploy Value} esplicita l'ordine con cui Intré
+interpreta il proprio modo di produrre valore: prima l'apprendimento, poi la
+realizzazione del software, infine il rilascio di valore al cliente. Questa
+impostazione è coerente con il concetto di \textit{Learning Organization}
+proposto da Peter Senge in \emph{The Fifth Discipline}~\cite{senge1990fifth}.
+Nel modello di Senge l'apprendimento organizzativo non coincide con la sola
+formazione individuale, ma richiede padronanza personale, modelli mentali
+esplicitati, visione condivisa, apprendimento di gruppo e pensiero sistemico.
+La quinta disciplina, cioè il pensiero sistemico, collega le altre quattro e
+permette di leggere l'organizzazione come un insieme di relazioni, feedback e
+dipendenze, non come una somma di attività isolate.
+
+Nel caso di Intré questa prospettiva non rimane un principio astratto. Il
+modello aziendale prevede un insieme di pratiche dedicate all'apprendimento
+continuo: Gilde, Camp, Community, Skill Matrix, certificazioni, Academy,
+Community of Practice per speaker, obiettivi di apprendimento, formazione in
+aula e corsi di lingua~\cite{intre_learning_organization}. Tali pratiche
+rendono l'apprendimento una responsabilità distribuita, sostenuta da tempo,
+budget e momenti di restituzione pubblica. La certificazione ISO~27001 e le
+competenze maturate in ambiti come cloud-native, cybersecurity e intelligenza
+artificiale rendono inoltre particolarmente rilevante il tema della gestione
+sicura della conoscenza interna.
 
 \subsection{Il modello delle Gilde}
 \label{subsec:guild_model}
-~\todo[inline, color=red!40]{Non usare il termine guild, le chiamiami gilda, in italiano... idem per altri termini affini}
-Le \textbf{Gilde} (\emph{guilds}) rappresentano uno dei pilastri del modello
-di \emph{Learning Organization} di Intré~\cite{intre_gilde}. Una Gilda è un
-\emph{gruppo spontaneo di almeno quattro e al massimo otto persone} che si forma con lo scopo di apprendere e condividere conoscenze su un argomento proposto e scelto liberamente dai partecipanti. Le Gilde hanno una durata di circa quattro mesi, al termine del quale i risultati vengono presentati internamente in un evento denominato \emph{Gildonferenza}.
-
-Le caratteristiche salienti del modello sono:
+Le \textbf{Gilde} (\emph{gilde}) sono uno degli strumenti principali con cui
+Intré rende operativa la propria idea di apprendimento organizzativo. Sono cicli
+rapidi di apprendimento di gruppo, della durata di quattro mesi, costruiti a
+partire da temi proposti direttamente dalle persone
+dell'azienda~\cite{intre_learning_organization,intre_gilde}. Una Gilda nasce quando una
+proposta raccoglie un numero minimo di partecipanti; il gruppo lavora in
+autogestione e dedica al tema scelto una quota stabile del proprio tempo
+lavorativo. L'esito non è un esame o una valutazione formale, ma un risultato
+di apprendimento da presentare al Camp successivo. Il modello combina quindi
+autonomia nella scelta dei temi, durata definita, lavoro di gruppo e produzione
+di un risultato condivisibile. Le sue caratteristiche principali sono:
 
 \begin{itemize}
   \item \textbf{Formazione spontanea}: ogni persona può proporre o aderire a
@@ -43,47 +65,58 @@ Le caratteristiche salienti del modello sono:
     di programmazione, ceramica, game development, intelligenza artificiale).
   \item \textbf{Ciclo temporale (Epoch)}: le Gilde si ricreano ogni quattro
     mesi; ogni ciclo costituisce un'``epoca'' distinta, con nuovi temi e nuovi
-    gruppi.
+    gruppi. Questa scansione periodica evita che l'apprendimento rimanga legato
+    a iniziative isolate e lo inserisce in una routine aziendale riconoscibile.
   \item \textbf{Output condivisibile}: al termine del periodo la Gilda produce
     un risultato tangibile (prototipo, report, repository, presentazione) che
-    viene archiviato e condiviso.
+    viene archiviato e condiviso. La restituzione pubblica durante il Camp
+    trasforma l'esperienza del gruppo in conoscenza disponibile anche per il
+    resto dell'organizzazione.
   \item \textbf{Ampiezza tematica}: dall'archivio pubblico del sito aziendale
     emergono Gilde su temi come \emph{Angular}, \emph{F\#}, \emph{IA agentiva},
     \emph{game development} con Phaser, ceramica, selezione fotografica con AI,
     e molti altri~\cite{intre_gilde}.
 \end{itemize}
 
-Intré gestisce il ciclo di vita delle Gilde tramite la piattaforma web
-\textbf{i3Guild}, applicazione interna sviluppata con Next.js, PostgreSQL e
-Keycloak, che costituisce il contesto tecnologico nel quale il sistema RAG
-progettato in questa tesi viene integrato.
+Il ciclo di vita delle Gilde è gestito tramite \textbf{i3Guild}, una
+piattaforma web interna sviluppata con Next.js, PostgreSQL e Keycloak. Questa
+applicazione conserva nel tempo proposte, descrizioni, partecipanti e risultati
+delle Gilde. Di conseguenza, i3Guild non è soltanto uno strumento
+amministrativo: è una memoria organizzativa parziale, nella quale si depositano
+interessi, competenze, esperimenti e risultati prodotti nel tempo. Proprio per
+questo rappresenta sia il contesto applicativo di integrazione sia la
+principale sorgente dati del sistema RAG progettato in questa tesi.
 
 % -------------------------------------------------------------
 \section{Caso d'uso: Proposta di nuove Gilde Intré}
 \label{sec:use_case_intre}
 % -------------------------------------------------------------
 
-L'obiettivo è supportare utenti tecnici e non tecnici nel
-reperimento di informazioni aggiornate e verificabili, consentendo la
-generazione di risposte contestualizzate ancorate a fonti interne utili 
-alla creazione di nuove Gilde. Il sistema adotta il paradigma 
-\emph{Retrieval-Augmented Generation} (RAG), introdotto da
-Lewis et al.~\cite{lewis2020rag} come metodo per estendere la memoria
-non-parametrica dei Large Language Model (LLM) tramite recupero dinamico di
-documenti da un corpus esterno.
+Il caso d'uso individuato riguarda il supporto alla proposta di nuove Gilde.
+Quando una persona vuole avviare una nuova iniziativa, può essere utile
+conoscere esperienze precedenti, temi già affrontati, risultati ottenuti e
+partecipanti coinvolti. Oggi queste informazioni esistono, ma sono distribuite
+tra database e contenuti editoriali. Il sistema proposto mira a renderle
+consultabili tramite query in linguaggio naturale, generando risposte
+contestualizzate e ancorate a fonti interne. A tale scopo viene adottato il
+paradigma \emph{Retrieval-Augmented Generation} (RAG), introdotto da Lewis et
+al.~\cite{lewis2020rag} per estendere la memoria non parametrica dei Large
+Language Model (LLM) tramite recupero dinamico di documenti da un corpus
+esterno.
 
 \subsection{Motivazione del caso d'uso}
 
-Il corpus di Gilde archiviate in i3Guild e i relativi blog post
-costituiscono una base di conoscenza aziendale di significativo valore: contiene
-descrizioni di progetti, obiettivi, rischi, risultati raggiunti e annotazioni
-dei partecipanti, accumulata nel corso di oltre trenta epoch a partire dal
-2016~\cite{intre_gilde}. Questa conoscenza è tuttavia distribuita in un database
-relazionale non direttamente interrogabile in linguaggio naturale oppure
-in diversi blog post che non sono facilmente consultabili. Un assistente
-RAG permette di rendere tale patrimonio accessibile tramite query conversazionali,
-riducendo il tempo di ricerca e aumentando la trasferibilità della conoscenza
-tra i team.
+Il corpus delle Gilde archiviate in i3Guild, insieme ai relativi blog post,
+costituisce una base di conoscenza aziendale di valore: raccoglie descrizioni di
+progetti, obiettivi, rischi, risultati raggiunti e annotazioni dei partecipanti,
+accumulate in oltre trenta epoch a partire dal 2016~\cite{intre_gilde}. Tuttavia
+questa conoscenza è frammentata. Una parte risiede in un database relazionale,
+ottimo come sorgente applicativa ma poco accessibile tramite domande in
+linguaggio naturale; un'altra parte è distribuita in post e contenuti non
+sempre facili da reperire. Un assistente RAG consente di trasformare tale
+patrimonio in uno strumento operativo: riduce il tempo di ricerca, facilita il
+riuso delle esperienze pregresse e rende più trasferibile la conoscenza tra i
+team.
 
 \subsection{Obiettivi del caso d'uso}
 
@@ -103,7 +136,9 @@ tra i team.
 \subsection{Descrizione dei dati e analisi del corpus}
 \label{subsec:data_analysis}
 
-I dati di ingresso al sistema RAG comprendono le seguenti categorie:
+Per progettare correttamente la pipeline di ingestione è necessario chiarire
+quali informazioni debbano alimentare l'indice. I dati di ingresso al sistema
+RAG comprendono tre categorie:
 
 \begin{itemize}
   \item \textbf{Documenti delle Gilde}: specifiche di progetto, obiettivi,
@@ -115,10 +150,11 @@ I dati di ingresso al sistema RAG comprendono le seguenti categorie:
     metadati associati.
 \end{itemize}
 
-Dall'analisi del corpus i3Guild (estrazione al 15/02/2026) emergono le
+Dall'analisi del corpus i3Guild, estratto il 15/02/2026, emergono le
 statistiche riportate nelle Tabelle~\ref{tab:entity_stats}
-e~\ref{tab:field_stats}, rilevanti per la progettazione della pipeline di
-ingestione.
+e~\ref{tab:field_stats}. Questi valori non hanno solo funzione descrittiva:
+determinano la granularità dell'indicizzazione, la strategia di chunking e la
+scelta del modello di embedding.
 
 \begin{table}[ht]
   \centering
@@ -130,9 +166,9 @@ ingestione.
     \toprule
     \textbf{Entità} & \textbf{Conteggio} & \textbf{Note} \\
     \midrule
-    Guild & 270 & Gestibile per re-indicizzazioni complete \\
-    Epoch & 30 & $\approx$ 9 guild per epoca in media \\
-    Relazioni Utente-Guild & 1.166 & $\approx$ 4,3 partecipanti medi per guild \\
+    Gilda & 270 & Gestibile per re-indicizzazioni complete \\
+    Epoch & 30 & $\approx$ 9 gilde per epoca in media \\
+    Relazioni Utente-Gilda & 1.166 & $\approx$ 4,3 partecipanti medi per gilda \\
     Utenti esterni & 3 & Trascurabile ai fini del RAG \\
     \bottomrule
   \end{tabular}
@@ -140,7 +176,7 @@ ingestione.
 
 \begin{table}[ht]
   \centering
-  \caption{Statistiche dei campi testuali delle entità Guild (valori in
+  \caption{Statistiche dei campi testuali delle entità Gilda (valori in
     caratteri).}
   \label{tab:field_stats}
   \small
@@ -168,8 +204,10 @@ ingestione.
 corrispondenti a circa 400~token. Anche nel caso peggiore la somma non supera
 i 7.000--8.000~token, rimanendo compatibile con la finestra di contesto del
 modello di embedding selezionato (Sezione~\ref{subsec:embedding_choice}).
-Queste statistiche guidano direttamente la strategia di chunking e la selezione
-del modello.
+Da ciò deriva una conseguenza progettuale importante: nella maggior parte dei
+casi una Gilda può essere trattata come documento consolidato, senza frammentare
+aggressivamente i campi testuali e senza perdere il contesto semantico che lega
+obiettivi, rischi e risultati.
 
 % Segnaposto figura caso d'uso
 \begin{figure}[ht]
@@ -185,10 +223,11 @@ del modello.
 \label{sec:system_requirements}
 % -------------------------------------------------------------
 
-I requisiti sono stati elicitati attraverso l'analisi del corpus, dei vincoli
-infrastrutturali di Intré e delle policy aziendali in materia di protezione dei
-dati. La Tabella~\ref{tab:req_summary} sintetizza i requisiti ad alto livello,
-suddivisi per categoria.
+Il caso d'uso appena descritto permette di passare dalla motivazione generale ai
+requisiti del sistema. Essi sono stati ricavati dall'analisi del corpus, dai
+vincoli infrastrutturali di Intré e dalle policy aziendali in materia di
+protezione dei dati. La Tabella~\ref{tab:req_summary} sintetizza i requisiti ad
+alto livello, suddivisi per categoria.
 
 \begin{table}[ht]
   \centering
@@ -202,7 +241,7 @@ suddivisi per categoria.
     Funzionali & Ricerca semantica full-text su documenti interni; generazione
       di risposte contestualizzate con riferimenti alle fonti; capacità di
       filtraggio per metadati (epoca, modalità di partecipazione, proprietario
-      della guild). \\
+      della gilda). \\
     \addlinespace
     Privacy e conformità & Esecuzione on-premise; nessun invio di dati a
       servizi cloud esterni; logging e auditing degli accessi; protezione dei
@@ -229,7 +268,8 @@ suddivisi per categoria.
 \subsection{Vincoli architetturali}
 \label{subsec:constraints}
 
-I vincoli determinanti per le scelte architetturali sono:
+I requisiti precedenti si traducono in alcuni vincoli architetturali non
+negoziabili, che orientano direttamente la scelta dei componenti:
 
 \begin{itemize}
   \item \textbf{On-premise obbligatorio}: i dati delle Gilde, incluse
@@ -242,7 +282,7 @@ I vincoli determinanti per le scelte architetturali sono:
     PostgreSQL/Prisma, Next.js, Keycloak per l'autenticazione).
   \item \textbf{Limitazioni hardware}: l'ambiente Docker dispone di 8~GB di
     RAM complessivi, che dovranno essere condivisi tra
-    il modello di embadding ed il modello di generazione del testo. 
+    il modello di embedding e il modello di generazione del testo.
     Questo vincolo è determinante per la selezione del modello LLM (Sezione~\ref{subsec:llm_choice}).
   \item \textbf{No API esterne per LLM ed embedding}: tutti i modelli devono
     essere eseguiti localmente tramite Ollama, eliminando dipendenze da
@@ -254,27 +294,36 @@ I vincoli determinanti per le scelte architetturali sono:
 \label{sec:tech_choices}
 % -------------------------------------------------------------
 
-In questa sezione si motivano le scelte dei componenti principali dello stack
-tecnologico, presentando per ciascuno un'analisi comparativa delle alternative
-valutate.
+Le scelte tecnologiche sono state effettuate a partire dai vincoli appena
+definiti. Per ciascun componente principale dello stack sono state valutate
+alternative compatibili con l'esecuzione on-premise, privilegiando soluzioni
+semplici da integrare nello stack i3Guild, osservabili e sostenibili rispetto
+alle risorse disponibili.
 
 \subsection{Framework di orchestrazione RAG}
 \label{subsec:framework_choice}
 
-Tre framework open-source sono stati considerati per l'orchestrazione delle
-pipeline RAG: \textbf{LangChain}, \textbf{LlamaIndex} e \textbf{Haystack~2.x}.
+Il framework di orchestrazione deve collegare ingestione, embedding, retrieval
+e generazione senza introdurre eccessiva complessità operativa. Sono stati
+considerati tre framework open-source: \textbf{LangChain},
+\textbf{LlamaIndex} e \textbf{Haystack~2.x}.
 
-\paragraph{LangChain} è il framework con il più ampio ecosistema di
-integrazioni (oltre 50.000 connettori). La sua filosofia è imperativa con
-componenti dichiarativi (operatore \texttt{|}), adatta per workflow agentici
-e multi-step reasoning. Il principale svantaggio è la curva di apprendimento
-elevata e la tendenza a breaking changes frequenti nelle versioni
-minori~\cite{tonic2024rag}.
+\paragraph{LangChain} offre l'ecosistema più ampio di integrazioni e una forte
+vocazione verso workflow agentici e \textit{multi-step reasoning}. Nel 2024
+l'introduzione di \textbf{LangGraph}~\cite{langchain2024langgraph} ha ampliato
+questa impostazione, permettendo di modellare applicazioni multi-agente come
+grafi di stato. Tale flessibilità è utile in scenari complessi, ma nel progetto
+in esame introduce un costo non trascurabile in termini di curva di
+apprendimento, stabilità delle API e manutenzione, anche alla luce dei
+\textit{breaking changes} frequenti riportati in letteratura~\cite{tonic2024rag}.
 
-\paragraph{LlamaIndex} è ottimizzato per la fase di ingestione e retrieval
-avanzato, offrendo oltre 150 data connector e strutture di indicizzazione
-specializzate. È la scelta preferibile per pipeline di question-answering
-puro~\cite{athenic2025framework}.
+\paragraph{LlamaIndex} è orientato alla gestione dei dati e al retrieval
+avanzato. Offre numerosi data connector e strutture di indicizzazione
+specializzate, risultando particolarmente adatto a pipeline di
+question-answering documentale~\cite{athenic2025framework}. Rispetto al caso
+considerato, tuttavia, l'obiettivo principale non è solo indicizzare sorgenti
+eterogenee, ma integrare una pipeline osservabile e facilmente testabile nello
+stack applicativo esistente.
 
 \paragraph{Haystack 2.x} (deepset) adotta un modello a componenti tipizzati
 con input/output espliciti, organizzati in pipeline dichiarative serializzabili
@@ -318,8 +367,10 @@ sistema RAG production-oriented in ambiente on-premise~\cite{tonic2024rag}.
 \label{subsec:vectordb_choice}
 
 La ricerca di similarità approssimata (\emph{Approximate Nearest Neighbor},
-ANN) su vettori ad alta dimensionalità è il componente infrastrutturale
-critico di ogni sistema RAG. Sono stati valutati quattro database vettoriali
+ANN) su vettori ad alta dimensionalità è il componente infrastrutturale che
+abilita il retrieval. La scelta del database vettoriale incide su latenza,
+filtraggio per metadati, semplicità di deployment e capacità di manutenzione
+dell'indice. Sono stati quindi valutati quattro database vettoriali
 self-hostable.
 
 \begin{table}[ht]
@@ -343,7 +394,10 @@ self-hostable.
   \end{tabular}
 \end{table}
 
-I principali criteri di esclusione e selezione sono i seguenti:
+Il confronto non si limita alle prestazioni pure: nel contesto i3Guild hanno
+peso anche la semplicità operativa e la possibilità di applicare filtri sui
+metadati delle Gilde. I principali criteri di esclusione e selezione sono i
+seguenti:
 
 \begin{itemize}
   \item \textbf{pgvector} è stato considerato in quanto l'infrastruttura
@@ -367,7 +421,7 @@ I principali criteri di esclusione e selezione sono i seguenti:
   \item \textbf{Qdrant} è scritto in Rust, garantisce prestazioni elevate e
     latenze stabili. La funzionalità di pre-filtering, che applica i filtri sui
     payload \emph{prima} della ricerca vettoriale, è cruciale per query
-    contestuali come ``guild dell'epoca X'': il filtering riduce lo spazio di
+    contestuali come ``gilda dell'epoca X'': il filtering riduce lo spazio di
     ricerca prima del calcolo ANN, mantenendo il top-$K$ accurato. Offre Web
     UI integrata su porta 6333, client TypeScript ufficiale compatibile con
     Next.js, e deploy in singolo container Docker~\cite{qdrant2024bench}.
@@ -405,7 +459,7 @@ candidati devono essere serviti localmente tramite Ollama.
 
 \noindent La selezione del modello è guidata da cinque criteri pesati:
 (1)~qualità per la lingua italiana (peso 30\%), in quanto i documenti delle
-Guild sono interamente in italiano; (2)~footprint di risorse (25\%), essenziale
+Gilde sono interamente in italiano; (2)~footprint di risorse (25\%), essenziale
 in un ambiente Docker con risorse condivise; (3)~compatibilità nativa con
 Ollama (20\%); (4)~dimensione dello spazio vettoriale (15\%); (5)~benchmark
 MTEB~\cite{muennighoff2023mteb} (10\%).
@@ -417,7 +471,7 @@ token) che supera \texttt{text-embedding-ada-002} di OpenAI sia sul benchmark
 MTEB che sul benchmark LoCo per contesto lungo. Con soli 137M parametri e un
 peso di 275\,MB, offre il miglior rapporto qualità/footprint tra i candidati.
 La finestra di 8.192~token è determinante: permette di ingerire la quasi
-totalità dei documenti consolidati delle Guild come singolo vettore senza
+totalità dei documenti consolidati delle Gilde come singolo vettore senza
 chunking aggressivo, preservando il contesto semantico integrale. È rilasciato
 sotto licenza Apache~2.0, compatibile con l'utilizzo aziendale.
 
@@ -425,10 +479,11 @@ sotto licenza Apache~2.0, compatibile con l'utilizzo aziendale.
 \label{subsec:llm_choice}
 
 Il componente di generazione del testo è gestito da \textbf{Ollama}, server di
-inferenza locale che supporta il formato GGUF (quantizzazione a 4-bit e 8-bit).
-Per la selezione del modello di chat sono stati condotti test sperimentali
-su dodici modelli disponibili nel registry Ollama, con l'obiettivo di
-identificare il miglior compromesso tra qualità delle risposte e consumo di
+inferenza locale che supporta modelli in formato GGUF e consente l'uso di
+varianti quantizzate a 4 e 8 bit. La scelta del modello di chat è stata trattata
+come un problema sperimentale, non come una semplice preferenza tecnologica:
+sono stati testati dodici modelli disponibili nel registry Ollama per individuare
+il compromesso più adeguato tra qualità delle risposte, latenza e consumo di
 risorse nell'ambiente Docker vincolato a 8~GB di RAM totali.
 
 \subsubsection{Metodologia di valutazione}
@@ -457,18 +512,7 @@ normalizzato (con inversione per RAM e CPU perché valori più bassi sono
 preferibili).
 
 \subsubsection{Risultati del benchmark}
-~\todo[inline, color=red!40]{Brutto che la tabella sbordi: o la stringi, o giri la pagina in formato landscape}
-
-La Tabella~\ref{tab:llm_benchmark} riporta i risultati aggregati per modello,
-ordinati per punteggio globale $G$.
-
-\begin{table}[ht]
-  \centering
-  \caption{Risultati del benchmark LLM su 12 modelli Ollama (valori medi su
-    tutte le query). La colonna \emph{G} riporta il punteggio globale calcolato
-    secondo l'Equazione~\eqref{eq:global_score}.}
-  \label{tab:llm_benchmark}
-  \small
+\resizebox{\textwidth}{!}{
   \begin{tabular}{p{4.5cm}rrrrrr}
     \toprule
     \textbf{Modello} & \textbf{Latenza (s)} & \textbf{Throughput (w/s)} &
@@ -489,13 +533,17 @@ ordinati per punteggio globale $G$.
     phi4-mini-reasoning:latest & 95.53 & 19.55 & 129.14 & 1.87 & 5.00 & 46.8 \\
     \bottomrule
   \end{tabular}
-\end{table}
+}
 
 \subsubsection{Motivazione della scelta: \texttt{gemma3:1b}}
 
-Alla luce dei risultati del benchmark e del vincolo di 8~GB di RAM
-disponibili per l'intero stack Docker, il modello selezionato è
-\textbf{\texttt{gemma3:1b}}. Le motivazioni principali sono:
+Alla luce dei risultati del benchmark e del vincolo di 8~GB di RAM disponibili
+per l'intero stack Docker, il modello selezionato è
+\textbf{\texttt{gemma3:1b}}. La scelta non coincide con il punteggio globale più
+alto in assoluto, ma con il miglior equilibrio rispetto allo scenario
+applicativo: risposte sufficientemente accurate, tempi compatibili con l'uso
+interattivo e ridotto impatto sugli altri container. Le motivazioni principali
+sono:
 
 \begin{itemize}
   \item \textbf{RAM compatibile con i vincoli}: il consumo medio di circa
@@ -525,11 +573,12 @@ valutati come alternativa.
 \label{sec:architecture}
 % -------------------------------------------------------------
 
-La soluzione proposta si articola in componenti modulari containerizzati:
-ingestione e normalizzazione dei dati, generazione di embedding, database
-vettoriale, orchestrazione RAG e servizio di inferenza LLM. La
-Figura~\ref{fig:architecture} riporta lo schema di alto livello
-dell'architettura.
+Le scelte tecnologiche descritte convergono in una soluzione modulare e
+containerizzata. L'architettura separa responsabilità diverse -- ingestione e
+normalizzazione dei dati, generazione degli embedding, persistenza vettoriale,
+retrieval e inferenza LLM -- in modo da mantenere il sistema osservabile,
+sostituibile e coerente con lo stack i3Guild. La Figura~\ref{fig:architecture}
+riporta lo schema di alto livello dell'architettura.
 
 \begin{figure}[ht]
   \centering
@@ -543,6 +592,12 @@ dell'architettura.
 \subsection{Componenti principali}
 \label{subsec:components}
 
+I componenti non sono indipendenti solo dal punto di vista del deployment: ciascuno
+risponde a un requisito emerso nelle sezioni precedenti. PostgreSQL rimane la
+sorgente autoritativa, Qdrant rende interrogabile il corpus per similarità,
+Ollama evita dipendenze cloud e FastAPI espone un confine applicativo semplice
+verso Next.js.
+
 \begin{description}
   \item[Ingestione e pre-processing (\texttt{rag/ingest.py})] Pipeline batch
     Python che esegue le fasi ETL descritte nella
@@ -552,7 +607,7 @@ dell'architettura.
 
   \item[Strategia di chunking] Sulla base dell'analisi dei dati
     (Sezione~\ref{subsec:data_analysis}), viene adottato l'approccio a
-    \emph{documento consolidato} (1 Guild $\leftrightarrow$ 1 documento
+    \emph{documento consolidato} (1 Gilda $\leftrightarrow$ 1 documento
     vettoriale): tutti i campi testuali rilevanti sono concatenati in un unico
     documento con separatori strutturati. Per i rari outlier che eccedono
     8.000~token viene applicata una \emph{soft truncation}. Questo approccio
@@ -587,8 +642,10 @@ dell'architettura.
 \subsection{Progettazione della collection Qdrant}
 \label{subsec:qdrant_collection}
 
-La collection \texttt{i3guild\_knowledge} è configurata con i parametri
-riportati nella Tabella~\ref{tab:qdrant_config}.
+La collection \texttt{i3guild\_knowledge} è il punto in cui la conoscenza
+estratta da i3Guild viene trasformata in indice semantico. La configurazione,
+riportata nella Tabella~\ref{tab:qdrant_config}, riflette il modello di
+embedding selezionato e privilegia una metrica adatta alla similarità testuale.
 
 \begin{table}[ht]
   \centering
@@ -626,13 +683,13 @@ top-$K$ sia effettuato solo sul sottoinsieme filtrato.
     \textbf{Campo} & \textbf{Tipo} & \textbf{Descrizione} &
       \textbf{Indicizzato} \\
     \midrule
-    \texttt{guild\_id} & integer & ID della guild sorgente & Sì \\
-    \texttt{guild\_name} & keyword & Nome della guild & Sì \\
+    \texttt{guild\_id} & integer & ID della gilda sorgente & Sì \\
+    \texttt{guild\_name} & keyword & Nome della gilda & Sì \\
     \texttt{epoch\_id} & integer & ID dell'epoca di appartenenza & Sì \\
     \texttt{epoch\_start} & datetime & Data inizio epoca & Sì \\
     \texttt{epoch\_end} & datetime & Data fine epoca (nullable) & Sì \\
     \texttt{participation\_mode} & keyword & FullRemote / Hybrid / OnSite & Sì \\
-    \texttt{is\_individual} & bool & Guild individuale & Sì \\
+    \texttt{is\_individual} & bool & Gilda individuale & Sì \\
     \texttt{owner\_id} & keyword & ID del proprietario & Sì \\
     \texttt{participants} & keyword[] & Nomi dei partecipanti & Sì \\
     \texttt{participant\_count} & integer & Numero di partecipanti & No \\
@@ -650,12 +707,14 @@ prevenendo la creazione di duplicati in caso di re-indicizzazione.
 \subsection{Pipeline di ingestione ETL}
 \label{subsec:ingestion_pipeline}
 
-Lo script \texttt{rag/ingest.py} esegue le seguenti fasi:
+La pipeline ETL ha il compito di mantenere allineata la rappresentazione
+vettoriale con i dati applicativi. Lo script \texttt{rag/ingest.py} esegue le
+seguenti fasi:
 
 \begin{enumerate}
   \item \textbf{Extract}: connessione a PostgreSQL e query SQL con JOIN su
     \texttt{Epoch}, \texttt{GuildUserRelation} ed \texttt{ExternalUser} per
-    estrarre tutti i campi semantici delle Guild insieme ai nomi dei
+    estrarre tutti i campi semantici delle Gilde insieme ai nomi dei
     partecipanti.
   \item \textbf{Transform}: applicazione di \texttt{DocumentCleaner} (stripping
     HTML dai campi WYSIWYG come \texttt{journal}), normalizzazione degli spazi,
@@ -667,54 +726,23 @@ Lo script \texttt{rag/ingest.py} esegue le seguenti fasi:
     policy \texttt{DuplicatePolicy.OVERWRITE}.
 \end{enumerate}
 
-Il seguente frammento illustra la struttura della pipeline Haystack:
+La struttura della pipeline Haystack è riportata in Appendice~\ref{app:B},
+Listato~\ref{lst:ingest_pipeline}. Nel capitolo principale è sufficiente
+evidenziare la sequenza logica Extract--Transform--Embed--Load, perché il
+dettaglio del codice non modifica la scelta progettuale.
 
-~\todo[inline, color=red!40]{Brutto se sborda, e suggerirei di riquadrarlo per isolarlo dal resto del testo (idem per altri frammenti analoghi)}
-
-\begin{lstlisting}[language=Python, caption={Struttura della pipeline di
-  ingestione Haystack 2.x (pseudocodice).}, label={lst:ingest_pipeline}]
-from haystack import Pipeline
-from haystack.components.preprocessors import DocumentCleaner, DocumentSplitter
-from haystack.components.writers import DocumentWriter
-from haystack_integrations.components.embedders.ollama import OllamaDocumentEmbedder
-from haystack_integrations.document_stores.qdrant import QdrantDocumentStore
-
-qdrant_store = QdrantDocumentStore(url="http://qdrant:6333",
-                                   collection_name="i3guild_knowledge",
-                                   embedding_dim=768)
-
-indexing_pipeline = Pipeline()
-indexing_pipeline.add_component("cleaner",  DocumentCleaner())
-indexing_pipeline.add_component("splitter", DocumentSplitter(
-    split_by="word", split_length=500, split_overlap=50))
-indexing_pipeline.add_component("embedder", OllamaDocumentEmbedder(
-    model="nomic-embed-text",
-    url="http://ollama:11434/api/embed",
-    generation_kwargs={"num_ctx": 8192}))
-indexing_pipeline.add_component("writer",   DocumentWriter(
-    document_store=qdrant_store,
-    policy=DuplicatePolicy.OVERWRITE))
-
-indexing_pipeline.connect("cleaner.documents",  "splitter.documents")
-indexing_pipeline.connect("splitter.documents", "embedder.documents")
-indexing_pipeline.connect("embedder.documents", "writer.documents")
-
-indexing_pipeline.run({"cleaner": {"documents": raw_docs}})
-\end{lstlisting}
-
-\noindent Il comando per avviare l'ingestione da host (stack Docker attivo) è:
-
-\begin{verbatim}
-docker-compose exec i3guild_rag python rag/ingest.py
-\end{verbatim}
+Con lo stack Docker attivo, l'ingestione può essere avviata da host tramite il
+comando \texttt{docker-compose exec i3guild\_rag python rag/ingest.py}.
 
 \subsection{Pipeline di retrieval e logica di ranking}
 \label{subsec:retrieval_pipeline}
 
-La pipeline di retrieval (\texttt{rag/api.py}) implementa una ricerca ANN con
-logica adattiva per la selezione del numero di documenti restituiti. Il sistema
-non adotta un valore \texttt{top\_k} fisso; applica invece un approccio a tre
-stadi:
+La pipeline di retrieval (\texttt{rag/api.py}) usa l'indice Qdrant per
+recuperare i documenti più pertinenti alla query e restituisce al livello
+applicativo un contesto già filtrato. Il sistema non adotta un valore
+\texttt{top\_k} fisso: una soglia rigida rischierebbe infatti di includere
+documenti marginali nelle query semplici o di tagliare informazioni utili nelle
+query più ampie. Per questo viene applicato un approccio adattivo in tre stadi:
 
 \begin{enumerate}
   \item \textbf{Soglia di similarità} (default: cosine score $\geq 0.7$):
@@ -730,12 +758,14 @@ stadi:
 \subsubsection{Query rewriting e Topic-First Search}
 \label{subsubsec:query_rewriting}
 
-In corpora domain-specific come i3Guild, alcuni termini frequenti in quasi
-tutti i documenti (es. ``gilda'', ``fondare'', ``consigli'') dominano lo spazio
-degli embedding, producendo risultati generici in luogo di quelli pertinenti.
-Il meccanismo di \emph{query rewriting} implementato nella funzione
-\texttt{extract\_topic\_query()} risolve questo problema attraverso le
-seguenti fasi:
+Nel contesto i3Guild, molte query contengono parole ricorrenti come ``gilda'',
+``fondare'' o ``consigli''. Questi termini descrivono l'interazione con il
+sistema, ma non il tema informativo cercato; se mantenuti nella query, possono
+dominare lo spazio degli embedding e produrre risultati generici. Il
+\emph{query rewriting}, discusso anche in framework come
+RQ-RAG~\cite{chan2024rqrag}, viene quindi utilizzato per isolare il topic
+rilevante prima del retrieval. L'approccio implementato tramite la funzione
+\texttt{extract\_topic\_query()} opera in tre passaggi:
 
 \begin{enumerate}
   \item Normalizzazione e rimozione della punteggiatura.
@@ -761,11 +791,11 @@ query campione.
     \midrule
     ``vorrei fondare una gilda sulla musica, cosa mi consigli?'' &
       \texttt{musica} &
-      Guild a tema musicale \\
+      Gilda a tema musicale \\
     ``intelligenza artificiale'' & \texttt{intelligenza artificiale} &
       (nessun rewriting) \\
     ``chi ha partecipato al progetto di design?'' & \texttt{design} &
-      Guild con partecipanti nel settore design \\
+      Gilda con partecipanti nel settore design \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -773,36 +803,15 @@ query campione.
 \subsection{Endpoint API di riferimento}
 \label{subsec:api_endpoint}
 
-L'endpoint principale esposto dal microservizio FastAPI è il seguente:
+Il risultato della pipeline viene esposto tramite un endpoint FastAPI, che
+costituisce il contratto tra il servizio RAG e l'applicazione Next.js.
+L'endpoint principale è il seguente:
 
 \noindent \textbf{POST} \texttt{/rag/retrieve}
 
-\noindent \textit{Request body} (esempio):
-\begin{lstlisting}[caption={Esempio di request body per
-  l'endpoint \texttt{/rag/retrieve}.}, label={lst:api_request}]
-{
-  "query":           "vorrei fondare una gilda sulla musica",
-  "top_k":           20,
-  "score_threshold": 0.5,
-  "max_documents":   10,
-  "gap_threshold":   0.08,
-  "filters":         null
-}
-\end{lstlisting}
-
-\noindent \textit{Response body} (struttura):
-\begin{lstlisting}[caption={Struttura della response
-  dell'endpoint \texttt{/rag/retrieve}.}, label={lst:api_response}]
-{
-  "documents":        [ { "content": "...", "score": 0.85,
-                          "meta": { "guild_name": "...",
-                                    "participants": [...] } } ],
-  "total_candidates": 15,
-  "threshold_used":   0.5,
-  "cutoff_reason":    "gap",
-  "topic_query":      "musica"
-}
-\end{lstlisting}
+Un esempio di request body e la struttura della response sono riportati in
+Appendice~\ref{app:B}, Listati~\ref{lst:api_request}
+e~\ref{lst:api_response}.
 
 I campi \texttt{total\_candidates}, \texttt{threshold\_used},
 \texttt{cutoff\_reason} e \texttt{topic\_query} (presente solo quando il
@@ -814,10 +823,12 @@ sistema (Capitolo~\ref{chap:evaluation}).
 \label{sec:i3guild_integration}
 % -------------------------------------------------------------
 
-L'integrazione del sistema RAG nell'infrastruttura i3Guild esistente avviene
-senza modifiche strutturali ai componenti già operativi (PostgreSQL, Next.js,
-Keycloak, Kong). Il sistema RAG si aggiunge come sottoinsieme di servizi nel
-file \texttt{dev\_containers/docker-compose.yml} esistente.
+L'integrazione del sistema RAG nell'infrastruttura i3Guild esistente è pensata
+per ridurre l'impatto sul sistema già operativo. PostgreSQL, Next.js, Keycloak e
+Kong mantengono il proprio ruolo; il sistema RAG si aggiunge come insieme di
+servizi nel file \texttt{dev\_containers/docker-compose.yml}. Questa scelta
+permette di introdurre il retrieval semantico senza modificare il modello dati
+principale né il flusso di autenticazione.
 
 \subsection{Servizi Docker aggiuntivi}
 \label{subsec:docker_services}
@@ -878,12 +889,13 @@ introdotti dal sistema RAG.
 \subsection{Integrazione lato Next.js}
 \label{subsec:nextjs_integration}
 
-Lato applicazione Next.js, il sistema RAG è integrato tramite il servizio
-TypeScript \texttt{src/lib/services/rag.service.ts}, che espone la funzione
-\texttt{searchRAG(query, filters?, options?)}. Questa funzione chiama
-l'endpoint Python \texttt{/rag/retrieve} con i parametri di retrieval dinamico
-e restituisce un array vuoto in caso di irraggiungibilità del servizio Python,
-garantendo la \emph{graceful degradation} del chatbot.
+Lato applicazione Next.js, l'integrazione è concentrata nel servizio TypeScript
+\texttt{src/lib/services/rag.service.ts}, che espone la funzione
+\texttt{searchRAG(query, filters?, options?)}. La funzione invoca l'endpoint
+Python \texttt{/rag/retrieve} con i parametri di retrieval dinamico e restituisce
+un array vuoto in caso di irraggiungibilità del servizio Python. In questo modo
+il chatbot può degradare in modo controllato, senza interrompere il resto
+dell'esperienza applicativa.
 
 Le chiamate a Ollama per la generazione del testo utilizzano un agent
 \texttt{undici} personalizzato con \texttt{headersTimeout: 300s} per evitare
@@ -893,14 +905,15 @@ carica il modello in memoria (latenza tipica di 60--120~s su CPU-only).
 \subsection{Sincronizzazione dei dati}
 \label{subsec:data_sync}
 
-PostgreSQL è la \emph{source of truth}; Qdrant è una vista derivata che deve
-essere mantenuta sincronizzata. Sono state identificate tre strategie di
-sincronizzazione, descritte in ordine crescente di complessità implementativa.
-La strategia raccomandata è il \textbf{full re-index periodico}: lo script
+PostgreSQL rimane la \emph{source of truth}; Qdrant è una vista derivata e deve
+essere mantenuto sincronizzato con i dati applicativi. Sono state considerate
+tre strategie, in ordine crescente di complessità: re-indicizzazione completa,
+sincronizzazione incrementale e aggiornamento event-driven. Per il prototipo la
+strategia raccomandata è il \textbf{full re-index periodico}: lo script
 \texttt{rag/ingest.py} riscrive l'intera collection su base giornaliera o
-settimanale. È semplice da implementare, privo di rischi di inconsistenza e
-accettabile grazie alla natura locale dell'embedding (nessun costo per token).
-L'evoluzione verso un \emph{sync incrementale} (solo guild modificate,
-identificate tramite \texttt{@updatedAt} di Prisma) o uno \emph{sync
-event-driven} (trigger su ogni operazione CRUD) è pianificata come sviluppo
-futuro.      
+settimanale. La scelta è semplice da implementare, riduce il rischio di
+inconsistenze e rimane sostenibile perché l'embedding è eseguito localmente,
+senza costi a consumo per token. L'evoluzione verso un \emph{sync incrementale}
+basato sul campo \texttt{@updatedAt} di Prisma, o verso un meccanismo
+\emph{event-driven} attivato dalle operazioni CRUD, è lasciata come sviluppo
+futuro.
