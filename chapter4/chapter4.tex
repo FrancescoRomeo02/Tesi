@@ -1,7 +1,50 @@
 \pagestyle{mystyle}
-\chapter{Metodologia di Ricerca e Ottimizzazione}
+\chapter{Ottimizzazione e Adattamento al Dominio}
+\label{chap:ottimizzazione}
 
-* Ottimizzazione dell'Attention: Strategie per il trattamento del glossario tecnico aziendale.
-* Inference-Time Intervention: Sperimentazione sulla manipolazione dei vettori di attivazione (come discusso con la Professoressa).
-* Strategie di Quantizzazione: Impatto della quantizzazione (4-bit vs 8-bit) sulla qualità della generazione in contesti specialistici.
-* Fine-tuning (Opzionale): Analisi di fattibilità con risorse limitate (PEFT/
+Il capitolo analizza le strategie adottate per adattare il sistema RAG al
+dominio i3Guild senza trasformare il prototipo in un progetto di addestramento
+del modello. Questa scelta deriva da un vincolo concreto: non è disponibile un
+glossario tecnico aziendale validato e non esiste, allo stato attuale, un
+dataset supervisionato sufficiente per un fine-tuning robusto. Il corpus
+utilizzabile è costituito principalmente dai dati delle Gilde, dai relativi
+metadati, dalle descrizioni testuali e dai contenuti pubblicati nel tempo.
+
+L'adattamento al dominio viene quindi affrontato in modo non parametrico. Il
+sistema non modifica i pesi del modello, ma interviene sulla qualità del
+retrieval, sulla normalizzazione delle query, sull'uso dei metadati, sulla
+costruzione del prompt e sulla configurazione dei modelli locali. In questo
+modo il sistema rimane aggiornabile, eseguibile on-premise e coerente con i
+vincoli architetturali definiti nei capitoli precedenti.
+
+La prima parte del capitolo descrive i vincoli sperimentali: assenza di un
+glossario formale, disponibilità parziale dei dati aziendali, risorse hardware
+limitate e necessità di mantenere separati il sistema applicativo e la
+componente RAG. La seconda parte approfondisce le ottimizzazioni implementate:
+query rewriting, stopword di dominio, filtri strutturati, deduplicazione,
+chunking, soglie dinamiche di retrieval e gestione del contesto generativo. La
+terza parte riguarda l'estensione agentica, trattata come evoluzione del flusso
+RAG tradizionale e non come sostituzione dell'architettura di base.
+
+Il capitolo include inoltre una sezione di sperimentazione preliminare su
+strategie alternative di adattamento. Tecniche come LoRA, QLoRA,
+fine-tuning e interventi a tempo di inferenza vengono considerate in termini di
+fattibilità, requisiti e limiti, senza renderle parte del sistema aziendale
+integrato. Questa analisi serve a delimitare il perimetro del prototipo e a
+motivare perché, nel lavoro svolto, l'adattamento non parametrico rappresenti la
+scelta più solida.
+
+La chiusura del capitolo definisce la configurazione finale da portare alla
+valutazione del Capitolo~\ref{chap:evaluation}: parametri di retrieval,
+criteri di selezione dei documenti, impostazioni del modello locale e modalità
+agentica. In questo modo il Capitolo 5 può concentrarsi sulla valutazione del
+sistema risultante, evitando di riaprire decisioni architetturali già motivate.
+
+% Struttura prevista del capitolo:
+% 1. Vincoli e perimetro dell'ottimizzazione
+% 2. Adattamento non parametrico al dominio i3Guild
+% 3. Ottimizzazione del retrieval
+% 4. Ottimizzazione del prompt e della generazione locale
+% 5. Estensione agentica come adattamento del flusso utente
+% 6. Sperimentazione preliminare su tecniche alternative
+% 7. Configurazione finale per la valutazione

@@ -1,9 +1,48 @@
 \pagestyle{mystyle}
 \chapter{Analisi Sperimentale e Valutazione dei Risultati}
+\label{chap:evaluation}
 
-* Dataset di Validazione: Definizione di una "Ground Truth" per le domande sulle Gilde.
-* Metriche Quantitative:
-    * Retrieval: Hit Rate, MRR (Mean Reciprocal Rank).
-    * Generation: Faithfulness, Answer Relevance (tramite framework come RAGAS).
-* Analisi Qualitativa: Studio dei casi di fallimento (allucinazioni, errori di retrieval) e feedback degli stakeholder di Intré.
-* Benchmarking: Confronto tra LLM diversi (es. OpenAI vs Llama locale).
+Il capitolo valuta il sistema ottenuto dopo le scelte progettuali,
+implementative e di ottimizzazione descritte nei capitoli precedenti. La
+valutazione non ha l'obiettivo di dimostrare la superiorità assoluta di un
+modello, ma di verificare se il prototipo risponde in modo adeguato al caso
+d'uso aziendale: supportare la consultazione delle Gilde e la proposta di nuove
+iniziative tramite un sistema RAG eseguibile on-premise.
+
+La prima parte del capitolo definisce il dataset di validazione. In assenza di
+una ground truth aziendale preesistente, il set di test può essere costruito a
+partire dai dati disponibili sulle Gilde: domande fattuali, domande tematiche,
+richieste di confronto tra iniziative e richieste di supporto alla proposta di
+una nuova Gilda. Ogni domanda deve essere associata a documenti attesi o a
+criteri espliciti di correttezza, così da rendere la valutazione ripetibile.
+
+La seconda parte riguarda le metriche. Per il retrieval possono essere usati
+indicatori come hit rate, precision@k e MRR, limitatamente ai casi in cui sia
+possibile definire documenti rilevanti attesi. Per la generazione è più
+opportuno combinare metriche automatiche e valutazione manuale: fedeltà alle
+fonti recuperate, pertinenza rispetto alla domanda, completezza della risposta e
+presenza di allucinazioni. Nel caso della modalità agentica, la valutazione deve
+considerare anche la capacità del sistema di guidare l'utente nella costruzione
+di una proposta coerente.
+
+La terza parte confronta configurazioni diverse del sistema. Il confronto
+principale riguarda pipeline RAG tradizionale e flusso agentico introdotto nel
+prototipo. Eventuali confronti tra modelli locali, soglie di retrieval o
+configurazioni di prompt vengono trattati come analisi di supporto, non come
+nuovi obiettivi sperimentali indipendenti. Questa distinzione mantiene il
+capitolo allineato al perimetro definito nel Capitolo~\ref{chap:ottimizzazione}.
+
+La parte finale discute i casi di fallimento: documenti non recuperati, query
+ambigue, risposte corrette ma incomplete, risposte non sufficientemente ancorate
+alle fonti e limiti dei modelli locali piccoli. Tale analisi è necessaria per
+distinguere i problemi dovuti al corpus, quelli dovuti al retrieval e quelli
+dovuti alla generazione.
+
+% Struttura prevista del capitolo:
+% 1. Dataset di validazione basato sulle Gilde
+% 2. Metriche per retrieval, generazione e flusso agentico
+% 3. Protocollo sperimentale
+% 4. Risultati del retrieval
+% 5. Risultati della generazione
+% 6. Confronto tra RAG tradizionale e workflow agentico
+% 7. Analisi qualitativa dei casi di fallimento

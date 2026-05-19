@@ -1,4 +1,30 @@
 \chapter*{Conclusioni e Sviluppi Futuri}
-* Sintesi del lavoro: Efficacia del sistema RAG nell'ecosistema aziendale.
-* Contributi originali: Risultati dell'analisi metodologica sull'attenzione e l'inferenza.
-* Limiti e lavori futuri: Agenti multi-modali, miglioramento continuo della base di conoscenza.
+
+Le conclusioni sintetizzano il percorso svolto: dallo studio delle tecniche RAG
+e dei modelli locali, alla progettazione del sistema per i3Guild, fino
+all'implementazione del prototipo e alla valutazione delle sue configurazioni
+principali. Il contributo centrale della tesi non consiste nell'addestramento
+di un nuovo modello, ma nell'integrazione di un sistema RAG enterprise
+on-premise in un contesto aziendale reale, con vincoli di privacy, risorse e
+manutenibilità.
+
+La sezione conclusiva dovrà evidenziare tre risultati. Primo, la possibilità di
+usare il corpus delle Gilde come base di conoscenza interrogabile in linguaggio
+naturale. Secondo, il ruolo delle ottimizzazioni non parametriche, come query
+rewriting, filtri strutturati, deduplicazione e soglie dinamiche, nel rendere il
+retrieval più adatto al dominio. Terzo, il valore e i limiti dell'estensione
+agentica, utile per guidare l'utente nella proposta di nuove Gilde ma ancora
+dipendente dalla qualità del corpus e dal comportamento dei modelli locali.
+
+I limiti principali riguardano l'assenza di un glossario aziendale validato, la
+mancanza di una ground truth estesa, la dimensione ridotta dei modelli eseguibili
+localmente e la natura preliminare delle sperimentazioni su tecniche di
+adattamento più invasive. Questi limiti non invalidano il prototipo, ma
+definiscono con precisione il perimetro entro cui interpretarne i risultati.
+
+Gli sviluppi futuri possono essere organizzati su tre direzioni: arricchimento
+incrementale della base di conoscenza, costruzione di un dataset di valutazione
+più ampio e validato con stakeholder aziendali, e sperimentazione più
+approfondita di strategie come fine-tuning leggero, LoRA/QLoRA o orchestrazione
+agentica più flessibile. Tali estensioni potranno essere considerate solo dopo
+aver consolidato il sistema RAG di base e il processo di valutazione.
