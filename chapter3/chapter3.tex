@@ -628,23 +628,28 @@ ma non modifica il flusso RAG standard adottato come riferimento finale.
 Accanto alla chat RAG, i3Guild include un flusso per generare una bozza di
 Gilda a partire dalla conversazione. La funzionalità è documentata come
 \emph{Guild Draft Generation} e si attiva dal pulsante "Proponi bozza" nella
-chat. Il flusso è separato dal retrieval: usa la conversazione come input,
-costruisce un prompt istruttivo, invoca Ollama e prova a estrarre un oggetto JSON
-compatibile con il form di creazione.
+chat. Il flusso non crea direttamente una nuova Gilda e non invia l'utente alla
+pagina di creazione: produce invece un oggetto strutturato che rappresenta un
+draft, modificabile e verificabile prima di qualunque salvataggio applicativo.
 
 Il formato atteso è \texttt{GuildDraft}. Include nome, sommario, obiettivi,
 risultati attesi, rischi, opportunità, budget, risorse, journal, modalità di
 partecipazione, numero minimo e massimo di partecipanti, indicazione di Gilda
-individuale e avatar. Una volta generata, la bozza viene codificata in Base64 e
-passata alla pagina \texttt{/guild/create} tramite query string. La pagina di
-creazione decodifica il parametro, lo combina con lo stato applicativo e mostra
-il form precompilato.
+individuale e avatar. Il servizio costruisce un prompt istruttivo a partire
+dalla conversazione, invoca Ollama e prova a estrarre dalla risposta un JSON
+compatibile con questo schema. La validazione è quindi parte del contratto
+applicativo: una risposta testuale plausibile, ma non riconducibile allo schema
+atteso, non viene trattata come bozza valida.
 
-Il punto rilevante dell'implementazione è il fallback. Se non esiste una
-conversazione, se il modello restituisce JSON non valido o se mancano campi
-obbligatori, il codice genera una bozza template valida. Il flusso utente quindi
-non dipende completamente dalla qualità della generazione: l'LLM migliora la
-bozza quando riesce, ma non è l'unico meccanismo per arrivare al form.
+La gestione degli errori è intenzionalmente esplicita. Se la conversazione non è
+sufficiente, se il modello restituisce JSON non valido o se mancano campi
+obbligatori, il sistema informa l'utente del problema e viene invitato a riprovare, 
+eventualmente aggiungendo dettagli più chiari nella conversazione. Questo 
+comportamento rende misurabile il tasso di fallimento della generazione. Nella
+valutazione sperimentale, tale tasso può essere espresso come rapporto tra
+bozze non valide e numero totale di richieste di generazione, duratne i test 
+effettuati il tasso di errori è stato di: $n_{fallimenti} / N_{test}$. \textbf{TEST DA FARE}
+
 
 % -------------------------------------------------------------
 \section{Aspetti operativi}
@@ -658,28 +663,38 @@ ma ne migliorano l'affidabilità durante l'uso locale.
 \label{subsec:implementation_timeouts}
 
 Ollama può impiegare diversi secondi, o più di un minuto su CPU, per caricare un
-modello non ancora residente in memoria. Per questo il servizio Python usa
-timeout più lunghi nelle chiamate streaming, mentre la documentazione lato
-Next.js prevede un \texttt{undici Agent} con \texttt{headersTimeout} e
-\texttt{bodyTimeout} estesi. Senza questa configurazione, il primo messaggio
-dopo l'avvio del container rischia di fallire anche se il modello è installato
-correttamente.
+modello non ancora residente in memoria. Il problema si presenta soprattutto
+alla prima richiesta dopo l'avvio del container: il modello è installato, ma il
+processo deve ancora caricarlo e inizializzare l'inferenza. Per questo il
+servizio Python usa timeout più lunghi nelle chiamate streaming verso Ollama.
+
+La stessa attenzione serve lato Next.js. Le chiamate server-side effettuate con
+\texttt{fetch} nel runtime Node.js usano Undici come client HTTP sottostante.
+Configurare un \texttt{Agent} di Undici significa impostare il dispatcher usato
+da quelle richieste, estendendo parametri come \texttt{headersTimeout} e
+\texttt{bodyTimeout}. In questo modo il frontend non interrompe prematuramente
+la richiesta mentre il microservizio RAG sta ancora attendendo la prima risposta
+dal modello locale.
 
 \subsection{System prompt e modello derivato}
 \label{subsec:implementation_prompt_cache}
 
-La documentazione del progetto descrive anche una strategia opzionale per
-stabilizzare il system prompt in Ollama. Invece di inviare il messaggio
-\texttt{system} a ogni chiamata, il sistema può creare un modello derivato con
-prompt incorporato tramite \texttt{/api/create}. Il nome del modello contiene un
-hash del prompt; se il prompt cambia, cambia anche il nome del modello derivato.
+Una seconda ottimizzazione operativa riguarda la gestione del system prompt.
+Nella configurazione standard il prompt di sistema viene inviato a ogni
+richiesta insieme alla conversazione e al contesto recuperato. Per ridurre la
+duplicazione del payload, il progetto considera anche la creazione di un modello
+Ollama derivato tramite l'endpoint \texttt{/api/create}, incorporando il system
+prompt nella definizione del modello. Il nome del modello derivato include un
+hash del prompt, così una modifica del prompt produce una nuova configurazione
+senza sovrascrivere quella precedente.
 
-Questa tecnica non è un vero riuso della KV Cache del modello. Il vantaggio
-misurato riguarda soprattutto la dimensione del payload e la stabilità
-configurativa: nei benchmark registrati, il payload JSON si riduce in modo
-marcato, mentre il numero di token valutati da Ollama rimane invariato. Per la
-tesi questo punto è utile perché distingue un'ottimizzazione architetturale
-effettiva da un'ottimizzazione solo apparente.
+Questa soluzione migliora soprattutto la stabilità configurativa e riduce la
+quantità di testo serializzata nelle richieste. Non va però interpretata come un
+riuso effettivo della KV Cache del modello: nei benchmark registrati il payload
+JSON si riduce in modo marcato, ma il numero di token valutati da Ollama rimane
+sostanzialmente invariato. L'ottimizzazione è quindi utile per rendere più
+pulita e riproducibile la configurazione, non per eliminare il costo computazionale
+del prompt durante l'inferenza. \textbf{TEST DA FARE}
 
 \subsection{Tracciabilità}
 \label{subsec:implementation_tracing}
