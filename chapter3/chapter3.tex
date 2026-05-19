@@ -8,7 +8,11 @@ Capitolo~\ref{chap:requirements_design}, ma mostrare come tali scelte siano
 state tradotte in componenti eseguibili: una pipeline di ingestione per
 popolare Qdrant, un microservizio FastAPI per il retrieval e la generazione,
 un'integrazione applicativa lato Next.js e un workflow agentico per accompagnare
-l'utente nella proposta di nuove Gilde.
+l'utente nella proposta di nuove Gilde. Quest'ultimo viene documentato come
+soluzione sperimentale: è stato implementato ed esplorato, ma non è stato
+mantenuto come scelta finale a causa del costo computazionale più elevato e del
+vantaggio limitato rispetto a un flusso RAG più classico a parità di risorse
+hardware.
 
 La realizzazione è distribuita su tre repository applicativi. Il primo è
 \texttt{i3guild}, che contiene l'applicazione web Next.js e il database
@@ -86,8 +90,9 @@ tramite un client HTTP dedicato~\cite{nextjs2024}.
     \addlinespace
     \texttt{-rag/app/agent}
       & \texttt{orchestrator.py}, \texttt{state.py}, \texttt{models.py}
-      & Workflow agentico deterministico per ricerca, ideazione e compilazione
-        progressiva della proposta di Gilda. \\
+      & Workflow agentico deterministico esplorato per ricerca, ideazione e
+        compilazione progressiva della proposta di Gilda; non adottato nella
+        soluzione finale. \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -473,13 +478,22 @@ Appendice~\ref{app:B}, Listato~\ref{lst:ndjson_standard}.
 \label{sec:implementation_agentic}
 % -------------------------------------------------------------
 
-Il sistema include anche una modalità agentica, esposta dagli endpoint
+Il sistema ha esplorato anche una modalità agentica, esposta dagli endpoint
 \texttt{/chat/agentic} e \texttt{/chat/agentic/stream}. La documentazione
 progettuale iniziale prevedeva un agente a due step basato su decisione LLM e
 sintesi. L'implementazione corrente adotta invece un orchestratore
 deterministico in \texttt{app/agent/orchestrator.py}. La scelta è più adatta a
 un prototipo con modelli locali piccoli: riduce la variabilità, rende testabile
 il comportamento e limita il numero di chiamate al modello.
+
+Questa parte dell'implementazione deve quindi essere interpretata come una
+soluzione esplorata e testata, non come il nucleo della soluzione finale. Le
+prove condotte hanno mostrato che il modello agentico richiede più risorse
+computazionali, soprattutto in termini di latenza e disponibilità di memoria,
+mentre l'approccio RAG standard risulta più robusto e conveniente a parità di
+hardware. Per questo motivo la componente agentica è stata mantenuta come
+evidenza sperimentale e come possibile direzione futura, ma non come scelta
+architetturale vincente per l'implementazione finale.
 
 \subsection{Stato conversazionale}
 \label{subsec:implementation_agent_state}
@@ -547,9 +561,11 @@ il campo corrente e passa al successivo solo se il contenuto è sufficiente.
 Questa logica è meno flessibile di un agente completamente governato da LLM, ma
 ha due vantaggi concreti. Primo, il comportamento è riproducibile. Secondo, il
 sistema può guidare l'utente in un flusso formale senza affidare a un modello
-piccolo la gestione implicita dello stato. Per un'applicazione interna, dove il
-risultato deve essere una bozza compilabile e non una conversazione generica, il
-compromesso è difendibile.
+piccolo la gestione implicita dello stato. Tuttavia, anche in questa forma più
+controllata, il flusso agentico introduce complessità e overhead superiori
+rispetto al percorso RAG standard. Il compromesso è quindi utile come
+sperimentazione, ma non sufficiente a giustificare l'adozione nel prototipo
+finale.
 
 \subsection{Eventi di streaming agentico}
 \label{subsec:implementation_agentic_stream}
@@ -588,7 +604,7 @@ La funzione \texttt{searchRAG()} è un wrapper più semplice che restituisce sol
 i documenti. Viene mantenuta per i punti dell'applicazione che non hanno bisogno
 della diagnostica.
 
-\subsection{Client chat e modalità agentica}
+\subsection{Client chat e modalità agentica sperimentale}
 \label{subsec:implementation_nextjs_chat}
 
 Per la generazione sono disponibili \texttt{generateRAGChatReply()},
@@ -597,11 +613,12 @@ prima usa l'endpoint non streaming \texttt{/chat/reply}; le altre restituiscono
 direttamente la \texttt{Response}, lasciando al chiamante la lettura incrementale
 dello stream NDJSON.
 
-La modalità agentica passa anche \texttt{agent\_state}. Questo consente al
-frontend di mantenere lo stato tra turni di conversazione senza imporre al
-microservizio una sessione server-side. Il servizio RAG rimane quindi
+La variante agentica sperimentale passa anche \texttt{agent\_state}. Questo
+consente al frontend di mantenere lo stato tra turni di conversazione senza
+imporre al microservizio una sessione server-side. Il servizio RAG rimane quindi
 stateless: ogni richiesta contiene la cronologia e lo stato necessari per
-calcolare il turno successivo.
+calcolare il turno successivo. La scelta è utile per isolare la sperimentazione,
+ma non modifica il flusso RAG standard adottato come riferimento finale.
 
 % -------------------------------------------------------------
 \section{Generazione della bozza di Gilda}
@@ -686,8 +703,10 @@ opzionali; il microservizio RAG espone retrieval e generazione; Qdrant gestisce
 la ricerca vettoriale; Ollama mantiene l'inferenza in locale; Next.js integra le
 funzioni nel flusso utente. Le parti più specifiche del lavoro sono la
 normalizzazione del corpus i3Guild, il retrieval dinamico con query rewriting e
-deduplicazione, e il workflow agentico deterministico per guidare la proposta di
-nuove Gilde. Queste scelte rendono il prototipo coerente con i vincoli di
-privacy e di risorse discussi nei capitoli precedenti, lasciando aperti margini
-di evoluzione su sincronizzazione incrementale, agenti più flessibili e
-valutazione sistematica della qualità delle risposte.
+deduplicazione. Il workflow agentico deterministico è stato invece trattato come
+una linea sperimentale: ha permesso di valutare un flusso più guidato per la
+proposta di nuove Gilde, ma non è risultato preferibile all'approccio classico
+nelle condizioni hardware disponibili. Queste scelte rendono il prototipo
+coerente con i vincoli di privacy e di risorse discussi nei capitoli precedenti,
+lasciando aperti margini di evoluzione su sincronizzazione incrementale, agenti
+più flessibili e valutazione sistematica della qualità delle risposte.

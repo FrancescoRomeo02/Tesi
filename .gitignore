@@ -22,6 +22,7 @@
 *.nav
 *.snm
 *.vrb
+*.pdf
 
 ############################
 # Latexmk
@@ -81,3 +82,5 @@ Thumbs.db
 /build/
 /out/
 /dist/
+
+AGENTS.md
