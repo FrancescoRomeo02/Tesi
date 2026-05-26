@@ -28,25 +28,7 @@ LLM~\cite{qdrant2023,ollama2023}.
 
 \begin{figure}[ht]
   \centering
-  \begin{tikzpicture}[
-    node distance=1.15cm,
-    box/.style={draw, rounded corners=2pt, align=center, minimum width=3.1cm,
-      minimum height=0.9cm, font=\small},
-    arrow/.style={->, thick}
-  ]
-    \node[box] (postgres) {PostgreSQL\\\texttt{i3guild}};
-    \node[box, right=of postgres] (pipeline) {Embedding pipeline\\normalizzazione e chunking};
-    \node[box, right=of pipeline] (qdrant) {Qdrant\\indice ibrido};
-    \node[box, below=of qdrant] (rag) {FastAPI RAG\\retrieval e chat};
-    \node[box, left=of rag] (ollama) {Ollama\\generazione LLM};
-    \node[box, left=of ollama] (nextjs) {Next.js\\interfaccia i3Guild};
-
-    \draw[arrow] (postgres) -- (pipeline);
-    \draw[arrow] (pipeline) -- (qdrant);
-    \draw[arrow] (nextjs) -- (rag);
-    \draw[arrow] (rag) -- (qdrant);
-    \draw[arrow] (rag) -- (ollama);
-  \end{tikzpicture}
+  \includegraphics[width=\textwidth]{chapter3/images/implementation_end_to_end.png}
   \caption{Flusso implementativo end-to-end tra sorgente dati, indicizzazione
   ibrida, retrieval e generazione.}
   \label{fig:implementation_end_to_end}
@@ -70,28 +52,28 @@ dedicato~\cite{nextjs2024}.
   \caption{Componenti implementativi principali.}
   \label{tab:implementation_components}
   \small
-  \begin{tabular}{p{3.6cm}p{4.7cm}p{5.2cm}}
+  \begin{tabular}{L{3.4cm}L{4.5cm}L{5.3cm}}
     \toprule
     \textbf{Repository / modulo} & \textbf{File principali} & \textbf{Responsabilità} \\
     \midrule
-    \texttt{i3guild}
-      & \texttt{services/rag.service.ts}
+    \breakcode{i3guild}
+      & \breakcode{services/rag.service.ts}
       & Client TypeScript verso il microservizio RAG; gestione dello streaming e
         degradazione controllata in caso di errore. \\
     \addlinespace
-    \texttt{i3guild-embedding-pipeline}
-      & \texttt{pipeline/main.py}
+    \makecell[l]{\texttt{i3guild-}\\\texttt{embedding-pipeline}}
+      & \breakcode{pipeline/main.py}
       & Estrazione da PostgreSQL, normalizzazione, chunking, embedding denso e
         sparso con FastEmbed e scrittura su Qdrant. \\
     \addlinespace
-    \texttt{i3guild-rag}
-      & \texttt{app/main.py}, \texttt{app/rag.py}, \texttt{app/pipeline.py},
-        \texttt{app/ollama\_service.py}
+    \breakcode{i3guild-rag}
+      & \breakcode{app/main.py}, \breakcode{app/rag.py},
+        \breakcode{app/pipeline.py}, \breakcode{app/ollama_service.py}
       & API FastAPI, pipeline Haystack di query ibrida, retrieval dinamico,
         chiamate a Ollama e streaming NDJSON. \\
     \addlinespace
-    \texttt{i3guild-rag/app/agent}
-      & \texttt{orchestrator.py}, \texttt{state.py}, \texttt{models.py}
+    \breakcode{i3guild-rag/app/agent}
+      & \breakcode{orchestrator.py}, \breakcode{state.py}, \breakcode{models.py}
       & Workflow agentico deterministico esplorato per ricerca, ideazione e
         compilazione progressiva della proposta di Gilda; non adottato nella
         soluzione finale. \\
@@ -124,54 +106,50 @@ dell'indicizzazione~\cite{docker2024}.
 \subsection{Configurazione e controlli preliminari}
 \label{subsec:implementation_ingestion_config}
 
-La configurazione avviene tramite variabili d'ambiente. Le più rilevanti sono
-\texttt{DB\_URL}, \texttt{QDRANT\_URL}, \texttt{QDRANT\_COLLECTION\_NAME},
-\texttt{FASTEMBED\_DENSE\_MODEL}, \texttt{FASTEMBED\_SPARSE\_MODEL} ed
-\texttt{EMBEDDING\_DIMENSIONS}. Il modulo legge anche parametri operativi come
-\texttt{RECREATE\_INDEX}, \texttt{INGEST\_PIPELINE\_BATCH\_SIZE},
-\texttt{INGEST\_MAX\_DOCUMENT\_CHARS} e
-\texttt{INGEST\_CHUNK\_OVERLAP\_CHARS}. La pipeline non richiede più
-\texttt{OLLAMA\_BASE\_URL} o \texttt{OLLAMA\_EMBEDDING\_MODEL} per
-l'indicizzazione.
+La configurazione avviene tramite variabili d'ambiente. Le più rilevanti
+definiscono connessione a PostgreSQL, endpoint e collection Qdrant, modelli
+FastEmbed e dimensione del vettore denso. Il modulo legge anche parametri
+operativi per ricreazione dell'indice, dimensione dei batch, soglia di chunking
+e overlap. La pipeline non richiede più variabili Ollama per l'indicizzazione.
 
 \begin{table}[ht]
   \centering
   \caption{Parametri principali della pipeline di ingestione.}
   \label{tab:ingestion_configuration}
   \small
-  \begin{tabular}{p{4.1cm}p{4.3cm}p{5cm}}
+  \begin{tabular}{L{4cm}L{4cm}L{5.2cm}}
     \toprule
     \textbf{Variabile} & \textbf{Ambito} & \textbf{Uso nell'implementazione} \\
     \midrule
-    \texttt{DB\_URL}
+    \breakcode{DB_URL}
       & PostgreSQL
       & Connessione alla sorgente autoritativa delle Gilde. \\
-    \texttt{QDRANT\_URL}
+    \breakcode{QDRANT_URL}
       & Qdrant
       & Endpoint del vector database usato in scrittura. \\
-    \texttt{QDRANT\_COLLECTION\_NAME}
+    \breakcode{QDRANT_COLLECTION_NAME}
       & Qdrant
       & Nome della collection da creare o aggiornare. \\
-    \texttt{FASTEMBED\_DENSE\_MODEL}
+    \breakcode{FASTEMBED_DENSE_MODEL}
       & FastEmbed
       & Modello usato per gli embedding densi. \\
-    \texttt{FASTEMBED\_SPARSE\_MODEL}
+    \breakcode{FASTEMBED_SPARSE_MODEL}
       & FastEmbed
       & Modello usato per gli embedding sparsi. \\
-    \texttt{FASTEMBED\_CACHE\_DIR}
+    \breakcode{FASTEMBED_CACHE_DIR}
       & FastEmbed
       & Directory locale per la cache dei modelli. \\
-    \texttt{EMBEDDING\_DIMENSIONS}
+    \breakcode{EMBEDDING_DIMENSIONS}
       & Indice vettoriale
       & Dimensione dei vettori densi salvati in Qdrant. \\
-    \texttt{RECREATE\_INDEX}
+    \breakcode{RECREATE_INDEX}
       & Operatività
       & Ricrea la collection; nella versione aggiornata il default è
-        \texttt{true}. \\
-    \texttt{INGEST\_PIPELINE\_BATCH\_SIZE}
+        \breakcode{true}. \\
+    \breakcode{INGEST_PIPELINE_BATCH_SIZE}
       & Operatività
       & Numero di documenti elaborati per run Haystack. \\
-    \texttt{INGEST\_MAX\_DOCUMENT\_CHARS}
+    \breakcode{INGEST_MAX_DOCUMENT_CHARS}
       & Chunking
       & Limite oltre il quale un documento viene suddiviso. \\
     \bottomrule
@@ -204,14 +182,13 @@ testuale per le domande dell'utente.
 \subsection{Normalizzazione e costruzione dei documenti}
 \label{subsec:implementation_document_building}
 
-Ogni riga estratta viene trasformata in uno o più oggetti
-\texttt{haystack.Document}. La funzione \texttt{create\_documents\_from\_row()}
-compone un documento testuale con sezioni marcate, ad esempio
-\texttt{[SOMMARIO]}, \texttt{[OBIETTIVI]}, \texttt{[RISCHI]},
-\texttt{[RISULTATI RAGGIUNTI]} e \texttt{[PARTECIPANTI]}. I campi HTML vengono
-normalizzati con \texttt{BeautifulSoup}~\cite{beautifulsoup2024}: il codice rimuove i tag, conserva il
-testo e compatta gli spazi. Per il retrieval serve un testo pulito e stabile, non una resa
-editoriale. Uno schema semplificato della costruzione del documento è riportato
+Ogni riga estratta viene trasformata in uno o più documenti Haystack. La
+funzione di costruzione compone un testo con sezioni marcate per sommario,
+obiettivi, rischi, risultati raggiunti e partecipanti. I campi HTML vengono
+normalizzati con BeautifulSoup~\cite{beautifulsoup2024}: il codice rimuove i
+tag, conserva il testo e compatta gli spazi. Per il retrieval serve un testo
+pulito e stabile, non una resa editoriale. Uno schema semplificato della
+costruzione del documento è riportato
 in Appendice~\ref{app:B}, Listato~\ref{lst:create_document_simplified}.
 
 La strategia descritta nel Capitolo~\ref{chap:requirements_design} prevedeva un
@@ -235,19 +212,18 @@ I metadati associati includono \texttt{guild\_id}, \texttt{guild\_name},
 \subsection{Embedding e scrittura in Qdrant}
 \label{subsec:implementation_embedding_write}
 
-La fase finale costruisce una pipeline Haystack composta da
-\texttt{FastembedDocumentEmbedder}, \texttt{FastembedSparseDocumentEmbedder} e
-\texttt{DocumentWriter}. Il primo componente aggiunge ai documenti la
+La fase finale costruisce una pipeline Haystack con un embedder denso, un
+embedder sparso e un writer. Il primo componente aggiunge ai documenti la
 rappresentazione densa; il secondo aggiunge la rappresentazione sparsa; il writer
-persiste entrambi i segnali nel \texttt{QdrantDocumentStore}. La configurazione
+persiste entrambi i segnali nel document store Qdrant. La configurazione
 essenziale della pipeline è riportata in Appendice~\ref{app:B},
 Listato~\ref{lst:embedding_pipeline_impl}.
 
-La pipeline viene eseguita in batch applicativi, configurati tramite
-\texttt{INGEST\_PIPELINE\_BATCH\_SIZE}. Questa scelta riduce il picco di memoria
-dello sparse embedder e mantiene il comportamento batch del container: il job
-parte, scrive su Qdrant e termina. La normalizzazione dei campi avviene prima
-della costruzione dei documenti, rendendo esplicito quali testi entrano nella
+La pipeline viene eseguita in batch applicativi, con una dimensione configurabile
+tramite variabile d'ambiente. Questa scelta riduce il picco di memoria dello
+sparse embedder e mantiene il comportamento batch del container: il job parte,
+scrive su Qdrant e termina. La normalizzazione dei campi avviene prima della
+costruzione dei documenti, rendendo esplicito quali testi entrano nella
 knowledge base.
 
 % -------------------------------------------------------------
@@ -257,8 +233,8 @@ knowledge base.
 
 Il microservizio RAG è implementato con FastAPI nel repository
 \texttt{i3guild-rag}. Espone endpoint per retrieval, chat sincrona e chat in
-streaming. La configurazione è centralizzata in
-\texttt{app/settings.py} tramite \texttt{pydantic-settings}; i valori di default
+streaming. La configurazione è centralizzata nel modulo delle impostazioni e usa
+\texttt{pydantic-settings}; i valori di default
 permettono lo sviluppo locale, mentre gli ambienti Docker possono sovrascriverli
 con variabili d'ambiente~\cite{fastapi2024,pydantic2024}.
 
@@ -326,8 +302,8 @@ semplice testare il retrieval senza dover passare da FastAPI.
 
 La pipeline di query è costruita in \texttt{app/pipeline.py}. Il
 \texttt{QdrantDocumentStore} punta alla collection configurata, usa embedding
-densi di dimensione 768 con similarità coseno e abilita
-\texttt{use\_sparse\_embeddings}. La query utente viene elaborata da due
+densi di dimensione 768 con similarità coseno e abilita la componente sparsa.
+La query utente viene elaborata da due
 componenti: \texttt{FastembedTextEmbedder}, che produce l'embedding denso, e
 \texttt{FastembedSparseTextEmbedder}, che produce la rappresentazione sparsa. I
 due output alimentano \texttt{QdrantHybridRetriever}, responsabile della ricerca
@@ -384,7 +360,7 @@ una cache condivisa o disabilitata per evitare differenze tra istanze.
 
 Dopo il recupero da Qdrant, il servizio rimuove duplicati su tre livelli. Prima
 controlla l'ID del documento, poi usa una fingerprint testuale normalizzata e
-infine confronta i testi con \texttt{difflib.SequenceMatcher}. La soglia fuzzy è
+infine confronta i testi tramite similarità fuzzy. La soglia fuzzy è
 configurabile con \texttt{rag\_dedup\_fuzzy\_threshold}. Questa parte è stata
 aggiunta perché il corpus può contenere documenti equivalenti provenienti da
 sorgenti diverse o chunk molto simili generati dalla sovrapposizione.
@@ -428,10 +404,9 @@ la configurazione è ambigua o il modello non è installato, il servizio restitu
 un errore esplicito. Questa verifica evita fallimenti meno leggibili durante la
 generazione.
 
-La lista dei modelli disponibili viene mantenuta in cache per pochi secondi
-(\texttt{ollama\_model\_cache\_ttl\_seconds}), così il servizio non interroga
-Ollama a ogni richiesta. La cache è locale al processo e ha solo funzione di
-riduzione dell'overhead.
+La lista dei modelli disponibili viene mantenuta in cache per pochi secondi,
+così il servizio non interroga Ollama a ogni richiesta. La cache è locale al
+processo e ha solo funzione di riduzione dell'overhead.
 
 \subsection{Costruzione del prompt aumentato}
 \label{subsec:implementation_augmented_prompt}

@@ -199,9 +199,9 @@ scelta del modello di embedding.
   \end{tabular}
 \end{table}
 
-\noindent La somma media dei campi testuali rilevanti
-(\texttt{summary} + \texttt{goals} + \texttt{outcome} + \texttt{risks} +
-\texttt{achievedResultsDescription}) ammonta a circa 1.900~caratteri,
+\noindent La somma media dei campi testuali rilevanti della Gilda, inclusi
+sommario, obiettivi, rischi, outcome e risultati raggiunti, ammonta a circa
+1.900~caratteri,
 corrispondenti a circa 400~token. Anche nel caso peggiore la somma non supera
 i 7.000--8.000~token, rimanendo compatibile con la finestra di contesto del
 modello di embedding selezionato (Sezione~\ref{subsec:embedding_choice}).
@@ -451,19 +451,17 @@ Gilde~\cite{haystackFastembedDocument2026,haystackFastembedSparse2026}.
   \caption{Configurazione embedding della versione aggiornata del sistema RAG.}
   \label{tab:embedding_models}
   \small
-  \begin{tabular}{p{3cm}p{4cm}p{2.5cm}p{4cm}}
+  \begin{tabular}{L{2.7cm}L{4.1cm}L{3cm}L{3.6cm}}
     \toprule
     \textbf{Ruolo} & \textbf{Componente Haystack} & \textbf{Default} &
       \textbf{Funzione} \\
     \midrule
-    Embedding denso & \texttt{FastembedDocumentEmbedder} /
-      \texttt{FastembedTextEmbedder} & \texttt{BAAI/bge-base-en-v1.5} &
+    Embedding denso & Document/text embedder denso & \breakcode{BAAI/bge-base-en-v1.5} &
       Similarità semantica tra query e documenti. \\
-    Embedding sparso & \texttt{FastembedSparseDocumentEmbedder} /
-      \texttt{FastembedSparseTextEmbedder} & \texttt{prithivida/Splade\_PP\_en\_v1} &
+    Embedding sparso & Document/text embedder sparso & \makecell[l]{\texttt{prithivida/}\\\texttt{Splade\_PP\_en\_v1}} &
       Matching lessicale pesato, utile per termini specifici. \\
-    Store ibrido & \texttt{QdrantDocumentStore} con
-      \texttt{use\_sparse\_embeddings=true} & \texttt{i3guild\_knowledge} &
+    Store ibrido & \breakcode{QdrantDocumentStore} con
+      \breakcode{use_sparse_embeddings=true} & \breakcode{i3guild_knowledge} &
       Persistenza con vettori densi e rappresentazioni sparse. \\
     \bottomrule
   \end{tabular}
@@ -589,11 +587,9 @@ verso Next.js.
     indicizzati per il filtering (Sezione~\ref{subsec:qdrant_collection}).
 
   \item[Orchestrazione RAG (Haystack 2.x)] Haystack è usato sia nel job di
-    indicizzazione sia nel servizio di query. La pipeline batch collega
-    \texttt{FastembedDocumentEmbedder}, \texttt{FastembedSparseDocumentEmbedder}
-    e \texttt{DocumentWriter}; la pipeline di query collega
-    \texttt{FastembedTextEmbedder}, \texttt{FastembedSparseTextEmbedder} e
-    \texttt{QdrantHybridRetriever}.
+    indicizzazione sia nel servizio di query. La pipeline batch collega gli
+    embedder densi e sparsi con il writer; la pipeline di query usa i
+    componenti corrispondenti e il retriever ibrido Qdrant.
 
   \item[Inference LLM (Ollama)] Server di inferenza locale; modello di chat
     adottato: \texttt{gemma3:1b}, selezionato sulla base di prove preliminari
@@ -623,19 +619,19 @@ similarità vettoriale densa e componente sparsa nello stesso store.
   \caption{Parametri di configurazione della collection Qdrant.}
   \label{tab:qdrant_config}
   \small
-  \begin{tabular}{lll}
+  \begin{tabular}{L{4.2cm}L{3.5cm}L{5.5cm}}
     \toprule
     \textbf{Parametro} & \textbf{Valore} & \textbf{Motivazione} \\
     \midrule
-    \texttt{embedding\_dim} & 768 & Dimensione della componente densa FastEmbed \\
-    \texttt{vectors.distance} & \texttt{Cosine} & Standard per similarità
+    \breakcode{embedding_dim} & 768 & Dimensione della componente densa FastEmbed \\
+    \breakcode{vectors.distance} & \breakcode{Cosine} & Standard per similarità
       semantica testuale \\
-    \texttt{use\_sparse\_embeddings} & \texttt{true} & Abilita la componente
+    \breakcode{use_sparse_embeddings} & \breakcode{true} & Abilita la componente
       sparsa per retrieval ibrido \\
-    \texttt{recreate\_index} & \texttt{true} (job batch) & Ricrea collection
+    \breakcode{recreate_index} & \breakcode{true} (job batch) & Ricrea collection
       dense-only mantenendo lo stesso nome \\
-    \texttt{hnsw\_config.m} & 16 (default) & Compromesso velocità/precisione \\
-    \texttt{hnsw\_config.ef\_construct} & 100 (default) & Qualità dell'indice
+    \breakcode{hnsw_config.m} & 16 (default) & Compromesso velocità/precisione \\
+    \breakcode{hnsw_config.ef_construct} & 100 (default) & Qualità dell'indice
       in fase di build \\
     \bottomrule
   \end{tabular}
@@ -653,23 +649,23 @@ top-$K$ sia effettuato solo sul sottoinsieme filtrato.
     \texttt{i3guild\_knowledge}.}
   \label{tab:qdrant_payload}
   \small
-  \begin{tabular}{p{4cm}p{2cm}p{6cm}l}
+  \begin{tabular}{L{3.7cm}L{2cm}L{5.8cm}L{1.4cm}}
     \toprule
     \textbf{Campo} & \textbf{Tipo} & \textbf{Descrizione} &
-      \textbf{Indicizzato} \\
+      \makecell[l]{\textbf{Ind.}} \\
     \midrule
-    \texttt{guild\_id} & integer & ID della gilda sorgente & Sì \\
-    \texttt{guild\_name} & keyword & Nome della gilda & Sì \\
-    \texttt{epoch\_id} & integer & ID dell'epoca di appartenenza & Sì \\
-    \texttt{epoch\_start} & datetime & Data inizio epoca & Sì \\
-    \texttt{epoch\_end} & datetime & Data fine epoca (nullable) & Sì \\
-    \texttt{participation\_mode} & keyword & FullRemote / Hybrid / OnSite & Sì \\
-    \texttt{is\_individual} & bool & Gilda individuale & Sì \\
-    \texttt{owner\_id} & keyword & ID del proprietario & Sì \\
-    \texttt{participants} & keyword[] & Nomi dei partecipanti & Sì \\
-    \texttt{participant\_count} & integer & Numero di partecipanti & No \\
-    \texttt{source\_text} & text & Testo originale del chunk & No \\
-    \texttt{last\_synced} & datetime & Timestamp ultima sincronizzazione & No \\
+    \breakcode{guild_id} & integer & ID della gilda sorgente & Sì \\
+    \breakcode{guild_name} & keyword & Nome della gilda & Sì \\
+    \breakcode{epoch_id} & integer & ID dell'epoca di appartenenza & Sì \\
+    \breakcode{epoch_start} & datetime & Data inizio epoca & Sì \\
+    \breakcode{epoch_end} & datetime & Data fine epoca (nullable) & Sì \\
+    \breakcode{participation_mode} & keyword & FullRemote / Hybrid / OnSite & Sì \\
+    \breakcode{is_individual} & bool & Gilda individuale & Sì \\
+    \breakcode{owner_id} & keyword & ID del proprietario & Sì \\
+    \breakcode{participants} & keyword[] & Nomi dei partecipanti & Sì \\
+    \breakcode{participant_count} & integer & Numero di partecipanti & No \\
+    \breakcode{source_text} & text & Testo originale del chunk & No \\
+    \breakcode{last_synced} & datetime & Timestamp ultima sincronizzazione & No \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -694,7 +690,7 @@ vettoriale con i dati applicativi. Il job
     partecipanti.
   \item \textbf{Transform}: normalizzazione HTML tramite \texttt{BeautifulSoup},
     composizione di documenti Haystack con sezioni marcate e chunking con
-    overlap quando il testo supera \texttt{INGEST\_MAX\_DOCUMENT\_CHARS}.
+    overlap quando il testo supera il limite configurato.
   \item \textbf{Embed}: generazione di embedding densi tramite
     \texttt{FastembedDocumentEmbedder} e di embedding sparsi tramite
     \texttt{FastembedSparseDocumentEmbedder}.
@@ -826,19 +822,19 @@ introdotti dal sistema RAG.
   \caption{Servizi Docker introdotti dall'integrazione RAG in i3Guild.}
   \label{tab:docker_services}
   \small
-  \begin{tabular}{p{2.5cm}p{2.5cm}p{1.5cm}p{5cm}}
+  \begin{tabular}{L{3.1cm}L{2.4cm}L{1.5cm}L{5.1cm}}
     \toprule
     \textbf{Container} & \textbf{Immagine} & \textbf{Porta host} &
       \textbf{Ruolo} \\
     \midrule
-    \texttt{qdrant} & \texttt{qdrant:latest} & 6333, 6334 & Database vettoriale; Web UI su \texttt{/dashboard} \\
-    \texttt{ollama} & \texttt{ollama:latest} & 11434 & Server di
+    \breakcode{qdrant} & \breakcode{qdrant:latest} & 6333, 6334 & Database vettoriale; Web UI su \breakcode{/dashboard} \\
+    \breakcode{ollama} & \breakcode{ollama:latest} & 11434 & Server di
       inferenza LLM \\
-    \texttt{i3guild\_rag} & Build locale & 8002 & FastAPI + Haystack
+    \breakcode{i3guild_rag} & Build locale & 8002 & FastAPI + Haystack
       (retrieval ibrido e generazione) \\
-    \texttt{i3guild\_embedding\_pipeline} & Build locale & -- & Job batch
+    \breakcode{i3guild_embedding_pipeline} & Build locale & -- & Job batch
       PostgreSQL $\rightarrow$ FastEmbed/Haystack $\rightarrow$ Qdrant \\
-    \texttt{postgres} & già presente & già presente & Sorgente autoritativa
+    \breakcode{postgres} & già presente & già presente & Sorgente autoritativa
       relazionale (nessuna modifica) \\
     \bottomrule
   \end{tabular}
@@ -852,27 +848,27 @@ introdotti dal sistema RAG.
   \caption{Variabili d'ambiente introdotte dalla componente RAG.}
   \label{tab:env_vars}
   \small
-  \begin{tabular}{l l p{5cm}}
+  \begin{tabular}{L{4.1cm}L{3.6cm}L{5.1cm}}
     \toprule
     \textbf{Variabile} & \textbf{Valore di default} & \textbf{Descrizione} \\
     \midrule
-    \texttt{QDRANT\_URL} & \texttt{http://localhost:6333} & Endpoint REST
+    \breakcode{QDRANT_URL} & \breakcode{http://localhost:6333} & Endpoint REST
       Qdrant \\
-    \texttt{QDRANT\_COLLECTION\_NAME} & \texttt{i3guild\_knowledge} &
+    \breakcode{QDRANT_COLLECTION_NAME} & \breakcode{i3guild_knowledge} &
       Collection principale \\
-    \texttt{OLLAMA\_BASE\_URL} & \texttt{http://localhost:11434} & Endpoint
+    \breakcode{OLLAMA_BASE_URL} & \breakcode{http://localhost:11434} & Endpoint
       Ollama per generazione LLM \\
-    \texttt{OLLAMA\_LLM\_MODEL} / \texttt{OLLAMA\_CHAT\_MODEL} &
-      \texttt{gemma3:1b} / configurabile & Modello LLM usato dal servizio o
+    \breakcode{OLLAMA_LLM_MODEL} / \breakcode{OLLAMA_CHAT_MODEL} &
+      \breakcode{gemma3:1b} / configurabile & Modello LLM usato dal servizio o
       inoltrato dal frontend \\
-    \texttt{EMBEDDING\_DIMENSIONS} & \texttt{768} & Dimensione vettore denso \\
-    \texttt{FASTEMBED\_DENSE\_MODEL} & \texttt{BAAI/bge-base-en-v1.5} &
+    \breakcode{EMBEDDING_DIMENSIONS} & \breakcode{768} & Dimensione vettore denso \\
+    \breakcode{FASTEMBED_DENSE_MODEL} & \breakcode{BAAI/bge-base-en-v1.5} &
       Modello FastEmbed denso \\
-    \texttt{FASTEMBED\_SPARSE\_MODEL} & \texttt{prithivida/Splade\_PP\_en\_v1} &
+    \breakcode{FASTEMBED_SPARSE_MODEL} & \breakcode{prithivida/Splade_PP_en_v1} &
       Modello FastEmbed sparso \\
-    \texttt{RAG\_CACHE\_TTL\_SECONDS} & \texttt{60} & TTL cache retrieval
+    \breakcode{RAG_CACHE_TTL_SECONDS} & \breakcode{60} & TTL cache retrieval
       in-process \\
-    \texttt{RAG\_API\_URL} & \texttt{http://i3guild\_rag:8000} &
+    \breakcode{RAG_API_URL} & \breakcode{http://i3guild_rag:8000} &
       Endpoint interno del servizio RAG \\
     \bottomrule
   \end{tabular}
@@ -881,8 +877,8 @@ introdotti dal sistema RAG.
 \subsection{Integrazione lato Next.js}
 \label{subsec:nextjs_integration}
 
-Lato applicazione Next.js, l'integrazione è concentrata nel servizio TypeScript
-\texttt{src/lib/services/rag.service.ts}. Il client espone funzioni per
+Lato applicazione Next.js, l'integrazione è concentrata in un servizio
+TypeScript dedicato, \breakcode{src/lib/services/rag.service.ts}. Il client espone funzioni per
 retrieval, risposta sincrona e streaming, inoltra al microservizio il modello
 LLM configurato e supporta opzioni applicative come \texttt{use\_rag},
 \texttt{json\_mode}, timeout client e parametri di generazione. In caso di
