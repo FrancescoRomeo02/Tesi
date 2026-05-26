@@ -21,8 +21,8 @@ esplicito il significato di nomi, formati e parametri ricorrenti.
     \texttt{i3guild-embedding-pipeline}
       & Job Python che estrae, normalizza e indicizza il corpus delle Gilde. \\
     \texttt{i3guild-rag}
-      & Microservizio FastAPI che espone retrieval, chat RAG e workflow
-        agentico. \\
+      & Microservizio FastAPI che espone retrieval ibrido, chat RAG e
+        generazione controllata. \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -80,15 +80,14 @@ RAG e poi aggiornare l'interfaccia man mano che arrivano i token.
     \texttt{rag}
       & Contiene documenti recuperati, filtri, query riscritta e motivo del
         taglio dei risultati. \\
-    \texttt{agent\_decision}
-      & Indica la decisione presa dall'orchestratore agentico. \\
+    \texttt{status}
+      & Indica l'avanzamento di una generazione asincrona lato applicazione. \\
     \texttt{stream\_start}
       & Segnala l'inizio della risposta generata. \\
     \texttt{token}
       & Contiene un frammento incrementale della risposta. \\
     \texttt{stream\_end}
-      & Chiude lo stream e, nella modalità agentica, può includere lo stato
-        aggiornato. \\
+      & Chiude lo stream dopo l'ultimo token generato. \\
     \texttt{error}
       & Comunica un errore gestibile senza interrompere il contratto dello
         stream. \\

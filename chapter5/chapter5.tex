@@ -1,48 +1,180 @@
 \pagestyle{mystyle}
-\chapter{Analisi Sperimentale e Valutazione dei Risultati}
+\chapter{Valutazione Sperimentale e Analisi dei Risultati}
 \label{chap:evaluation}
 
-Il capitolo valuta il sistema ottenuto dopo le scelte progettuali,
-implementative e di ottimizzazione descritte nei capitoli precedenti. La
-valutazione non ha l'obiettivo di dimostrare la superiorità assoluta di un
-modello, ma di verificare se il prototipo risponde in modo adeguato al caso
-d'uso aziendale: supportare la consultazione delle Gilde e la proposta di nuove
-iniziative tramite un sistema RAG eseguibile on-premise.
+Il capitolo definisce la valutazione sperimentale del sistema dopo le scelte
+metodologiche descritte nel Capitolo~\ref{chap:ottimizzazione}. Poiché i
+benchmark completi non sono ancora stati eseguiti, il testo distingue tra
+protocollo di valutazione, metriche da raccogliere e struttura attesa
+dell'analisi. Questa distinzione è necessaria per evitare di presentare come
+risultati misurati dati che appartengono ancora alla fase di pianificazione
+sperimentale.
 
-La prima parte del capitolo definisce il dataset di validazione. In assenza di
-una ground truth aziendale preesistente, il set di test può essere costruito a
-partire dai dati disponibili sulle Gilde: domande fattuali, domande tematiche,
-richieste di confronto tra iniziative e richieste di supporto alla proposta di
-una nuova Gilda. Ogni domanda deve essere associata a documenti attesi o a
-criteri espliciti di correttezza, così da rendere la valutazione ripetibile.
+La domanda di ricerca è la seguente: in che misura la quantizzazione di Gemma 3
+4B Instruct tramite MLX modifica il compromesso tra memoria, latenza, throughput
+e qualità generativa su Apple Silicon consumer, e quali configurazioni risultano
+sostenibili per una pipeline RAG enterprise on-premise? La risposta richiede due
+livelli di analisi. Il primo riguarda il modello isolato, misurato in termini di
+prestazioni e qualità generale. Il secondo riguarda il sistema RAG completo,
+dove la qualità non dipende solo dal modello generativo, ma anche dal retrieval,
+dalla costruzione del prompt e dalla capacità di restare aderente alle fonti.
 
-La seconda parte riguarda le metriche. Per il retrieval possono essere usati
-indicatori come hit rate, precision@k e MRR, limitatamente ai casi in cui sia
-possibile definire documenti rilevanti attesi. Per la generazione è più
-opportuno combinare metriche automatiche e valutazione manuale: fedeltà alle
-fonti recuperate, pertinenza rispetto alla domanda, completezza della risposta e
-presenza di allucinazioni. Nel caso della modalità agentica, la valutazione deve
-considerare anche la capacità del sistema di guidare l'utente nella costruzione
-di una proposta coerente.
+Il confronto principale è quindi interno a MLX: la variabile sperimentale è il
+livello di quantizzazione del modello, mentre runtime, hardware, prompt e
+parametri di generazione restano controllati. GGUF, llama.cpp e Ollama non
+vengono rimossi dalla valutazione, ma assumono un ruolo diverso: costituiscono
+un riferimento applicativo secondario, utile per collegare l'esperimento al
+prototipo e alla riproducibilità pratica, non la base del confronto scientifico
+su Apple Silicon.
 
-La terza parte confronta configurazioni diverse del sistema. Il confronto
-principale riguarda pipeline RAG tradizionale e flusso agentico introdotto nel
-prototipo. Eventuali confronti tra modelli locali, soglie di retrieval o
-configurazioni di prompt vengono trattati come analisi di supporto, non come
-nuovi obiettivi sperimentali indipendenti. Questa distinzione mantiene il
-capitolo allineato al perimetro definito nel Capitolo~\ref{chap:ottimizzazione}.
+\section{Ambiente sperimentale}
+\label{sec:evaluation_environment}
 
-La parte finale discute i casi di fallimento: documenti non recuperati, query
-ambigue, risposte corrette ma incomplete, risposte non sufficientemente ancorate
-alle fonti e limiti dei modelli locali piccoli. Tale analisi è necessaria per
-distinguere i problemi dovuti al corpus, quelli dovuti al retrieval e quelli
-dovuti alla generazione.
+L'ambiente di riferimento è un MacBook Pro con chip M1 Pro, 16 GB di unified
+memory, macOS e backend Metal. Il vincolo hardware è parte dell'esperimento:
+non si valuta una workstation specializzata, ma una macchina consumer che può
+rappresentare un limite realistico per prototipi aziendali on-premise. Questa
+scelta rende il confronto più vicino al caso d'uso della tesi, anche se limita
+la trasferibilità dei risultati verso sistemi con più memoria o GPU dedicate.
 
-% Struttura prevista del capitolo:
-% 1. Dataset di validazione basato sulle Gilde
-% 2. Metriche per retrieval, generazione e flusso agentico
-% 3. Protocollo sperimentale
-% 4. Risultati del retrieval
-% 5. Risultati della generazione
-% 6. Confronto tra RAG tradizionale e workflow agentico
-% 7. Analisi qualitativa dei casi di fallimento
+Le configurazioni principali sono la baseline MLX in precisione non quantizzata
+e più varianti quantizzate generate con \texttt{mlx-lm}. La granularità esatta
+dei livelli dipende dal supporto disponibile nel runtime al momento
+dell'esecuzione, ma il protocollo prevede almeno un confronto tra baseline,
+quantizzazione moderata e quantizzazione aggressiva. Se tecnicamente
+disponibili, verranno incluse configurazioni a 8, 6 e 4 bit. La configurazione
+GGUF/Ollama, eventualmente eseguita su una o due varianti equivalenti, viene
+riportata separatamente e non viene mescolata con il confronto principale MLX.
+
+I parametri di generazione restano costanti tra le configurazioni: contesto pari
+a 4096 token, massimo 256 token generati, temperatura 0, \texttt{top\_p} pari a
+1 e seed fisso quando supportato dal runtime. Anche corpus, embedding,
+retrieval, valore di \texttt{top\_k} e template di prompt restano invariati nei
+test RAG. In questo modo il cambiamento osservato può essere ricondotto alla
+quantizzazione e non a modifiche concorrenti della pipeline.
+
+\begin{table}[ht]
+  \centering
+  \caption{Ruolo delle configurazioni nella valutazione sperimentale.}
+  \label{tab:evaluation_configurations}
+  \small
+  \begin{tabular}{p{3cm}p{3cm}p{6.5cm}}
+    \toprule
+    \textbf{Configurazione} & \textbf{Ruolo} & \textbf{Uso nell'analisi} \\
+    \midrule
+    MLX FP16/BF16 & Baseline principale
+      & Riferimento per qualità, memoria, latenza e throughput. \\
+    MLX quantizzata moderata & Confronto principale
+      & Misura del compromesso tra compressione e qualità. \\
+    MLX quantizzata aggressiva & Confronto principale
+      & Valutazione del limite inferiore di memoria e del degrado qualitativo. \\
+    GGUF/Ollama & Baseline applicativa secondaria
+      & Collegamento con il prototipo e con strumenti diffusi di deployment locale. \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Metriche prestazionali}
+\label{sec:evaluation_performance_metrics}
+
+Il benchmark prestazionale raccoglie metriche che descrivono sia il costo di
+deployment sia il comportamento interattivo. Per ogni variante vengono
+registrati dimensione su disco, rapporto di compressione rispetto alla baseline,
+riduzione percentuale della dimensione, tempo di caricamento, memoria residente,
+time to first token, tempo totale di generazione e token al secondo. Questi
+valori non devono essere letti separatamente: un modello più piccolo può ridurre
+la memoria occupata ma non necessariamente migliorare la latenza, perché su
+Apple Silicon il costo di dequantizzazione, l'accesso alla unified memory e
+l'efficienza dei kernel Metal possono pesare in modo rilevante
+~\cite{benazir2025profiling,rajesh2025productionlocal}.
+
+Per rendere il confronto più utile in ottica enterprise vengono calcolate anche
+metriche normalizzate, come token al secondo per GiB e latenza per dimensione
+del modello. Questo tipo di misura aiuta a individuare configurazioni efficienti
+rispetto alla memoria disponibile, non solo rispetto alla velocità assoluta. In
+un sistema on-premise con risorse limitate, infatti, la configurazione migliore
+non coincide necessariamente con quella più veloce o più compressa, ma con
+quella che offre stabilità, qualità e consumo di memoria compatibili con l'uso
+applicativo.
+
+\section{Metriche di qualità}
+\label{sec:evaluation_quality_metrics}
+
+La qualità viene misurata su tre livelli. Il primo è la perplexity su un testo
+di riferimento, utile per osservare il degrado statistico introdotto dalla
+quantizzazione. Il secondo usa subset ridotti di MMLU e GSM8K, per ottenere un
+segnale, anche limitato, su conoscenza generale e ragionamento matematico. Il
+terzo livello è specifico per la tesi: un benchmark RAG costruito su un corpus
+enterprise simulato, con domande che richiedono risposte fondate sui documenti
+recuperati.
+
+Nel benchmark RAG la valutazione considera groundedness, completezza,
+allucinazioni e latenza end-to-end. La groundedness misura quanto la risposta
+sia supportata dal contesto recuperato; la completezza misura se copre le
+informazioni richieste; il conteggio delle allucinazioni segnala affermazioni
+non giustificate dalle fonti. Per collegare qualità e costo di deployment,
+queste metriche possono essere normalizzate rispetto alla dimensione del
+modello, ad esempio groundedness per GiB o completezza per GiB.
+
+\begin{table}[ht]
+  \centering
+  \caption{Metriche previste per la valutazione RAG.}
+  \label{tab:rag_evaluation_metrics}
+  \small
+  \begin{tabular}{p{3.5cm}p{2.2cm}p{7cm}}
+    \toprule
+    \textbf{Metrica} & \textbf{Scala} & \textbf{Significato} \\
+    \midrule
+    Groundedness & 1--5 & Aderenza della risposta al contesto recuperato. \\
+    Completezza & 1--5 & Copertura delle informazioni richieste dalla domanda. \\
+    Allucinazioni & 0--3 & Presenza di affermazioni non supportate dalle fonti. \\
+    Latenza & secondi & Tempo end-to-end della risposta RAG. \\
+    Qualità per GiB & derivata & Qualità normalizzata rispetto alla dimensione del modello. \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Valutazione della generazione di bozze}
+\label{sec:evaluation_draft_generation}
+
+La generazione di bozze di Gilda richiede una valutazione separata, perché il
+risultato non è una risposta libera ma un oggetto strutturato. Ogni output deve
+essere verificato rispetto allo schema \texttt{GuildDraft}: presenza dei campi
+obbligatori, coerenza dei tipi, leggibilità dei contenuti e compatibilità con il
+flusso applicativo. Un output discorsivo o un JSON incompleto non viene contato
+come successo, anche se il testo contiene informazioni plausibili.
+
+Il tasso di errore deve essere riportato come numero di bozze non valide sul
+totale dei test eseguiti. Questa metrica è importante perché il sistema non usa
+un fallback artificiale: se la risposta non è valida, l'utente viene informato
+dell'errore e invitato a riprovare. La valutazione deve quindi misurare non solo
+la qualità media delle bozze riuscite, ma anche la probabilità che il modello
+produca un output utilizzabile al primo tentativo.
+
+\section{Struttura dell'analisi dei risultati}
+\label{sec:evaluation_result_structure}
+
+Quando i benchmark saranno eseguiti, l'analisi dovrà confrontare ogni variante
+MLX contro la baseline non quantizzata nello stesso runtime. Per ciascuna
+configurazione verranno riportati delta di memoria, delta di velocità, delta di
+qualità e metriche normalizzate. Una lettura corretta deve evitare conclusioni
+monotone: la quantizzazione più aggressiva potrebbe essere la variante più
+piccola, ma non per questo la più utile; una quantizzazione leggera potrebbe
+mantenere qualità vicina alla baseline, ma senza offrire il miglior rapporto tra
+qualità e memoria; una quantizzazione intermedia potrebbe risultare il
+compromesso migliore, ma solo i dati locali possono confermarlo.
+
+Il confronto GGUF/Ollama, se eseguito, dovrà essere discusso in una sottosezione
+separata. Il suo scopo non è stabilire in modo generale quale runtime sia
+migliore, ma verificare se le conclusioni ottenute nel setup MLX rimangono
+coerenti con l'integrazione applicativa usata dal prototipo. Questa separazione
+evita di attribuire alla sola quantizzazione differenze prodotte dal runtime,
+dal formato del modello o dai rispettivi backend di inferenza.
+
+La parte finale dovrà discutere i casi di fallimento: documenti non recuperati,
+query ambigue, risposte corrette ma incomplete, risposte non sufficientemente
+ancorate alle fonti, JSON non validi nella generazione delle bozze e limiti dei
+modelli locali piccoli. Questo passaggio collega la valutazione tecnica al caso
+d'uso enterprise: un modello sostenibile non è solo un modello che entra in
+memoria, ma un modello che mantiene un comportamento affidabile nel flusso RAG
+effettivamente usato dall'applicazione.

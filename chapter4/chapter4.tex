@@ -1,50 +1,545 @@
 \pagestyle{mystyle}
-\chapter{Ottimizzazione e Adattamento al Dominio}
+\chapter{Disegno Sperimentale per la Quantizzazione di LLM Locali su Apple Silicon}
 \label{chap:ottimizzazione}
 
-Il capitolo analizza le strategie adottate per adattare il sistema RAG al
-dominio i3Guild senza trasformare il prototipo in un progetto di addestramento
-del modello. Questa scelta deriva da un vincolo concreto: non è disponibile un
-glossario tecnico aziendale validato e non esiste, allo stato attuale, un
-dataset supervisionato sufficiente per un fine-tuning robusto. Il corpus
-utilizzabile è costituito principalmente dai dati delle Gilde, dai relativi
-metadati, dalle descrizioni testuali e dai contenuti pubblicati nel tempo.
+Il capitolo definisce il disegno sperimentale usato per studiare l'inferenza
+locale di Large Language Models quantizzati su Apple Silicon. Nei capitoli
+precedenti sono state descritte la progettazione e l'implementazione della
+pipeline RAG per i3Guild; qui l'attenzione si sposta sul vincolo
+infrastrutturale che emerge quando quella pipeline deve usare modelli
+generativi locali, senza servizi cloud e senza GPU server dedicate.
 
-L'adattamento al dominio viene quindi affrontato in modo non parametrico. Il
-sistema non modifica i pesi del modello, ma interviene sulla qualità del
-retrieval, sulla normalizzazione delle query, sull'uso dei metadati, sulla
-costruzione del prompt e sulla configurazione dei modelli locali. In questo
-modo il sistema rimane aggiornabile, eseguibile on-premise e coerente con i
-vincoli architetturali definiti nei capitoli precedenti.
+La scelta di eseguire un LLM in locale nasce da esigenze applicative precise:
+ridurre la dipendenza da provider esterni, mantenere i dati aziendali entro il
+perimetro controllato e verificare se un prototipo RAG possa funzionare anche
+su hardware consumer. Queste esigenze non rendono automaticamente praticabile
+il deployment. Un modello locale deve entrare nella memoria disponibile,
+rispondere con una latenza accettabile, produrre testo qualitativamente utile e
+mantenere un comportamento stabile quando viene inserito in un flusso
+applicativo reale.
 
-La prima parte del capitolo descrive i vincoli sperimentali: assenza di un
-glossario formale, disponibilità parziale dei dati aziendali, risorse hardware
-limitate e necessità di mantenere separati il sistema applicativo e la
-componente RAG. La seconda parte approfondisce le ottimizzazioni implementate:
-query rewriting, stopword di dominio, filtri strutturati, deduplicazione,
-chunking, soglie dinamiche di retrieval e gestione del contesto generativo. La
-terza parte riguarda l'estensione agentica, trattata come evoluzione del flusso
-RAG tradizionale e non come sostituzione dell'architettura di base.
+La domanda di ricerca è quindi la seguente: quale compromesso tra qualità delle
+risposte, occupazione di memoria, latenza e throughput consente di utilizzare
+Gemma 3 4B Instruct in una pipeline RAG locale su Apple Silicon consumer? La
+risposta non può essere dedotta soltanto dalla dimensione del modello o dal
+numero di bit usati per rappresentarne i pesi. Gli studi recenti su Apple
+Silicon mostrano che la relazione tra quantizzazione e prestazioni è
+dipendente dal runtime, dal formato del modello, dal backend Metal, dal carico
+di dequantizzazione e dal regime di contesto. Per questo motivo il capitolo
+parte dalla letteratura disponibile e la usa per costruire un protocollo
+sperimentale controllato.
 
-Il capitolo include inoltre una sezione di sperimentazione preliminare su
-strategie alternative di adattamento. Tecniche come LoRA, QLoRA,
-fine-tuning e interventi a tempo di inferenza vengono considerate in termini di
-fattibilità, requisiti e limiti, senza renderle parte del sistema aziendale
-integrato. Questa analisi serve a delimitare il perimetro del prototipo e a
-motivare perché, nel lavoro svolto, l'adattamento non parametrico rappresenti la
-scelta più solida.
+\section{Motivazione enterprise e perimetro applicativo}
+\label{sec:optimization_enterprise_motivation}
 
-La chiusura del capitolo definisce la configurazione finale da portare alla
-valutazione del Capitolo~\ref{chap:evaluation}: parametri di retrieval,
-criteri di selezione dei documenti, impostazioni del modello locale e modalità
-agentica. In questo modo il Capitolo 5 può concentrarsi sulla valutazione del
-sistema risultante, evitando di riaprire decisioni architetturali già motivate.
+L'adozione di LLM in ambienti aziendali è spesso condizionata da vincoli che
+non riguardano solo la qualità del modello. In scenari in cui i dati contengono
+informazioni interne, documentazione operativa o conoscenza aziendale non
+pubblica, l'inferenza on-premise riduce l'esposizione verso servizi esterni e
+semplifica il controllo del perimetro dati. Nel caso i3Guild, questo aspetto è
+particolarmente rilevante perché la pipeline RAG lavora su contenuti prodotti
+nel tempo dall'organizzazione: descrizioni di Gilde, obiettivi, rischi,
+partecipanti, risultati e materiali collegati.
 
-% Struttura prevista del capitolo:
-% 1. Vincoli e perimetro dell'ottimizzazione
-% 2. Adattamento non parametrico al dominio i3Guild
-% 3. Ottimizzazione del retrieval
-% 4. Ottimizzazione del prompt e della generazione locale
-% 5. Estensione agentica come adattamento del flusso utente
-% 6. Sperimentazione preliminare su tecniche alternative
-% 7. Configurazione finale per la valutazione
+Il requisito on-premise non va però confuso con una semplice preferenza
+architetturale. Spostare la generazione dal cloud a una macchina locale
+significa assumersi il costo della memoria, della latenza e della manutenzione
+del runtime. In una pipeline RAG questi fattori sono visibili all'utente: una
+risposta può essere corretta ma troppo lenta; oppure può essere rapida ma poco
+aderente ai documenti recuperati. La sostenibilità del sistema non coincide
+quindi con l'esecuzione del modello, ma con l'esecuzione del modello dentro un
+flusso applicativo utile.
+
+La quantizzazione viene studiata in questa prospettiva. Non è considerata un
+semplice meccanismo di compressione, ma una possibile leva per rendere
+praticabile un sistema RAG locale su risorse limitate. La domanda sperimentale
+non è quale modello sia astrattamente migliore, ma quale configurazione sia
+abbastanza leggera da funzionare sul target hardware e abbastanza accurata da
+non compromettere il caso d'uso enterprise.
+
+Il perimetro resta volutamente stretto. La tesi non affronta fine-tuning,
+adattamento locale del modello, addestramento di embedding o ottimizzazione
+del retriever. Queste attività introdurrebbero variabili ulteriori e renderebbero
+più difficile attribuire i risultati alla quantizzazione. L'esperimento si
+concentra invece sul modello generativo locale: cambia la sua configurazione di
+inferenza, mentre il resto della pipeline rimane invariato.
+
+\section{Uso dei risultati di altri studi}
+\label{sec:optimization_prior_results}
+
+In un capitolo di disegno sperimentale è opportuno riportare risultati di altri
+studi quando servono a motivare le scelte metodologiche. Tali risultati non
+devono essere presentati come risultati della tesi, né usati per anticipare
+conclusioni non ancora misurate localmente. Il loro ruolo è diverso: delimitano
+lo stato dell'arte, mostrano quali metriche sono rilevanti e indicano quali
+assunzioni sarebbero fragili.
+
+Questa distinzione è importante nel presente lavoro perché le fonti disponibili
+non hanno tutte lo stesso status. Il riferimento più solido è l'articolo
+\emph{Benchmarking and Characterization of Large Language Model Inference on
+Apple Silicon}, pubblicato in sede ACM e quindi usabile come fonte scientifica
+principale~\cite{benazir2025applebenchmark}. Gli altri documenti sono preprint
+o technical report. Sono utili perché contengono misure aggiornate su runtime,
+quantizzazione e long-context inference, ma vanno citati come evidenza tecnica
+non ancora consolidata dalla revisione accademica.
+
+I numeri riportati nelle sezioni successive vanno letti con cautela. I lavori
+citati usano hardware diversi, modelli diversi e runtime diversi: Mac Studio
+M2 Ultra con 192 GB di unified memory, M1 Max con 64 GB, M3 Ultra, RTX 5090 o
+GPU A6000 non sono direttamente confrontabili con il MacBook Pro M1 Pro da
+16 GB usato in questa tesi. Proprio per questo, la letteratura non sostituisce
+il benchmark locale. Serve a costruire il benchmark locale.
+
+\section{Stato dell'arte su Apple Silicon}
+\label{sec:optimization_scientific_framing}
+
+L'inferenza di LLM su Apple Silicon è un tema recente e meno consolidato dei
+benchmark su GPU NVIDIA. Le architetture CUDA dispongono di un ecosistema più
+maturo per serving, batching e kernel specializzati; Apple Silicon offre invece
+un modello di memoria unificata che può essere vantaggioso quando il problema
+principale non è la massima densità di calcolo, ma la possibilità di ospitare
+modelli e cache entro un unico spazio di memoria.
+
+L'articolo \emph{Benchmarking and Characterization of Large Language Model
+Inference on Apple Silicon} caratterizza inferenza, memoria, costo ed energia su
+hardware Apple e NVIDIA. Il risultato più rilevante per questa tesi non è una
+vittoria generale di Apple Silicon, ma una tesi più precisa: la memoria
+unificata permette configurazioni che sarebbero difficili su GPU consumer con
+VRAM limitata, mentre la latenza resta influenzata da decode, dequantizzazione e
+bandwidth effettiva~\cite{benazir2025applebenchmark}. Lo stesso filone è
+approfondito nel preprint \emph{Profiling Large Language Model Inference on
+Apple Silicon: A Quantization Perspective}, che mostra come una precisione più
+bassa non produca automaticamente inferenza più veloce~\cite{benazir2025profiling}.
+
+Il report \emph{Production-Grade Local LLM Inference on Apple Silicon}
+confronta MLX, MLC-LLM, llama.cpp, Ollama e PyTorch MPS su Mac Studio M2 Ultra.
+Nel setup considerato, MLX raggiunge il throughput sostenuto più alto, circa
+230 token/s, mentre MLC-LLM si colloca intorno a 190 token/s ma mostra un
+time-to-first-token competitivo su prompt moderati~\cite{rajesh2025productionlocal}.
+Lo stesso report descrive llama.cpp come efficiente in scenari single-stream
+leggeri, Ollama come molto comodo per prototipazione ma meno competitivo sulle
+metriche prestazionali, e PyTorch MPS come meno adatto a modelli grandi o
+contesti lunghi.
+
+Open-TQ-Metal affronta un problema diverso: il collo di bottiglia della KV cache
+nei contesti molto lunghi. Nel caso Llama 3.1 70B a 128K token, il report
+riporta una riduzione della KV cache da 40 GB in FP16 a 12,5 GB in int4 e un
+forte aumento della velocità del kernel di attention quando il calcolo avviene
+direttamente nel dominio compresso~\cite{vegasena2026opentqmetal}. Questo
+risultato non rientra nel perimetro sperimentale della tesi, che non valuta
+contesti estremi né KV-cache quantization, ma chiarisce perché la sola
+quantizzazione dei pesi non esaurisce il tema dell'inferenza locale.
+
+Infine, \emph{Silicon Showdown} confronta hardware consumer Apple e NVIDIA,
+evidenziando una tensione ricorrente: le GPU discrete mantengono spesso un
+vantaggio di throughput grezzo su modelli che entrano interamente in VRAM,
+mentre Apple Silicon diventa più interessante quando la capacità di memoria e
+l'efficienza energetica pesano più della massima velocità assoluta
+~\cite{javat2026silicon}. Anche in questo caso la conseguenza metodologica è
+una forma di cautela: non si cerca di dimostrare che Apple Silicon sia migliore
+in senso assoluto, ma di valutare se sia sufficiente e sostenibile nel caso
+aziendale considerato.
+
+\begin{table}[ht]
+  \centering
+  \caption{Fonti principali sull'inferenza locale di LLM su Apple Silicon.}
+  \label{tab:apple_silicon_literature}
+  \small
+  \begin{tabular}{p{3.0cm}p{2.2cm}p{3.0cm}p{5.0cm}}
+    \toprule
+    \textbf{Fonte} & \textbf{Status} & \textbf{Focus} & \textbf{Implicazione per la tesi} \\
+    \midrule
+    Benchmarking and Characterization
+      & Peer-reviewed
+      & Memoria, energia, quantizzazione, Apple/NVIDIA
+      & Motiva una valutazione separata di memoria, latenza, throughput e qualità. \\
+    Profiling LLM Inference
+      & Preprint tecnico
+      & Profilazione e dequantizzazione
+      & Evita l'assunzione che meno bit significhi sempre più velocità. \\
+    Production-Grade Local LLM Inference
+      & Technical report
+      & MLX, MLC-LLM, Ollama, llama.cpp, PyTorch MPS
+      & Supporta la scelta di MLX come runtime principale Apple-first. \\
+    Open-TQ-Metal
+      & Technical report
+      & Long context, KV cache, attention Metal
+      & Definisce estensioni future su KV-cache quantization e kernel fusi. \\
+    Silicon Showdown
+      & Technical report
+      & Apple Silicon e GPU consumer
+      & Impone cautela nel generalizzare oltre hardware, modello e runtime testati. \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[ht]
+  \centering
+  \caption{Risultati di letteratura usati come evidenza di scenario.}
+  \label{tab:apple_silicon_prior_results}
+  \small
+  \begin{tabular}{p{3.2cm}p{3.2cm}p{2.8cm}p{4.0cm}}
+    \toprule
+    \textbf{Fonte} & \textbf{Setup} & \textbf{Risultato riportato} & \textbf{Uso nel disegno sperimentale} \\
+    \midrule
+    Production-Grade Local LLM Inference
+      & Qwen 2.5 su M2 Ultra
+      & MLX circa 230 token/s; MLC-LLM circa 190 token/s
+      & MLX viene scelto come runtime principale; MLC-LLM resta alternativa. \\
+    Benchmarking / Profiling
+      & Modelli 8B--405B, più quantizzazioni
+      & Throughput non proporzionale ai bit per peso; costo di dequantizzazione rilevante
+      & Le metriche includono TTFT, tok/s, memoria e qualità, non solo dimensione. \\
+    Open-TQ-Metal
+      & Llama 70B, 128K token, M1 Max 64 GB
+      & KV cache da 40 GB a 12,5 GB; attention kernel fuso molto più rapido
+      & KV-cache quantization esclusa dal perimetro, ma discussa nei limiti. \\
+    Silicon Showdown
+      & Apple consumer e GPU NVIDIA
+      & Apple vantaggiosa in scenari memory-bound; NVIDIA forte su throughput grezzo
+      & I risultati locali non vanno generalizzati a tutte le piattaforme. \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Quantizzazione e colli di bottiglia su Apple Silicon}
+\label{sec:optimization_quantization_bottlenecks}
+
+La quantizzazione riduce il numero di bit usati per rappresentare i pesi del
+modello. In linea teorica, questa riduzione diminuisce la dimensione su disco e
+il traffico di memoria durante l'inferenza. In pratica, il vantaggio dipende da
+quanto costa ricostruire valori utilizzabili dal runtime. Ogni schema
+quantizzato richiede infatti operazioni di unpacking, scaling e, in alcuni casi,
+consultazione di codebook. Se queste operazioni diventano dominanti, un modello
+più piccolo può non essere più veloce.
+
+Gli studi di Benazir e Lin sono rilevanti perché misurano proprio questo
+fenomeno su Apple Silicon. L'analisi mostra che gli schemi block-based
+K-quants risultano più adatti di alcune quantizzazioni basate su codebook,
+perché richiedono meno accessi e meno operazioni durante la dequantizzazione
+~\cite{benazir2025applebenchmark,benazir2025profiling}. Lo stesso lavoro
+osserva che alcune transizioni tra bit-width non producono incrementi di
+latenza proporzionali alla variazione di dimensione. Ad esempio, il confronto
+tra Q6\_K e Q8\_0 mostra che una rappresentazione con meno bit può eseguire un
+kernel più lento se l'overhead di unpacking supera il risparmio di bandwidth.
+
+Questa evidenza è importante per evitare una lettura ingenua dei risultati del
+Capitolo~\ref{chap:evaluation}. Una variante a 4 bit potrà essere più piccola
+e quindi più facile da caricare in memoria, ma non per questo sarà
+necessariamente più rapida o più utile. Allo stesso modo, una variante a 8 bit
+potrà sembrare meno compressa, ma offrire una latenza più prevedibile o una
+qualità più stabile. La valutazione deve quindi osservare il sistema da più
+punti di vista: memoria, tempo di caricamento, TTFT, throughput, qualità
+generale e qualità nel flusso RAG.
+
+Su Apple Silicon va inoltre considerata la memoria unificata. Il fatto che CPU
+e GPU condividano lo stesso pool evita copie tra RAM di sistema e VRAM discreta,
+ma non elimina il costo degli accessi né quello della cache. Nel caso di una
+macchina con 16 GB, come il MacBook Pro M1 Pro usato in questa tesi, la unified
+memory è allo stesso tempo un vantaggio e un vincolo: permette al runtime di
+usare un unico spazio di memoria, ma quello spazio deve contenere sistema
+operativo, runtime, modello, KV cache, dati della pipeline e processi
+applicativi. Per questo motivo il benchmark deve registrare anche eventi di
+instabilità, swap o out-of-memory, non solo la velocità nei run riusciti.
+
+\section{Runtime disponibili e scelta MLX-first}
+\label{sec:optimization_mlx_runtime}
+
+Per il confronto principale viene scelto MLX. La ragione non è soltanto
+pratica, ma metodologica: se l'oggetto dell'esperimento è Apple Silicon, è
+coerente usare un runtime progettato esplicitamente per questa architettura. La
+documentazione ufficiale descrive MLX come un framework per machine learning
+efficiente e flessibile su Apple Silicon, con attenzione alla memoria unificata
+~\cite{apple2026mlx}. Questa caratteristica è centrale per il lavoro, perché il
+vincolo dei 16 GB di unified memory non è un dettaglio operativo ma parte della
+domanda di ricerca.
+
+Il pacchetto \texttt{mlx-lm} rende MLX utilizzabile nel contesto degli LLM.
+Supporta generazione testuale, streaming, caricamento di modelli da Hugging
+Face, conversione e quantizzazione~\cite{mlx2026lm}. Ciò permette di costruire
+un esperimento in cui il runtime principale è Apple-native e la variabile
+osservata resta la configurazione del modello. In altre parole, MLX consente di
+studiare la quantizzazione dentro un ecosistema coerente con il target hardware,
+invece di trattare Apple Silicon come un backend tra molti.
+
+I risultati del report \emph{Production-Grade Local LLM Inference} rafforzano
+questa scelta, pur con i limiti già indicati. Nel setup M2 Ultra, MLX ottiene il
+throughput sostenuto più alto e una latenza per-token stabile dopo la fase di
+prefill~\cite{rajesh2025productionlocal}. Questo non significa che MLX sia
+sempre superiore. Lo stesso report mostra che MLC-LLM può avere un TTFT più
+basso su prompt moderati e funzionalità server più complete. Tuttavia, per una
+tesi centrata su quantizzazione e Apple Silicon, MLX offre il compromesso
+migliore tra coerenza architetturale, semplicità di setup e pertinenza
+sperimentale.
+
+La scelta di MLX cambia anche il contributo scientifico del lavoro. Con GGUF e
+llama.cpp il focus sarebbe soprattutto la riproducibilità di file quantizzati
+localmente. Con MLX, invece, il focus diventa più direttamente legato
+all'inferenza locale su Apple Silicon: uso della unified memory, backend Metal,
+conversione dei modelli e quantizzazione dentro un runtime pensato per
+l'ecosistema Apple.
+
+\section{Ruolo di GGUF, llama.cpp, Ollama e MLC-LLM}
+\label{sec:optimization_runtime_boundaries}
+
+La scelta di MLX come runtime principale non elimina il ruolo di GGUF,
+llama.cpp e Ollama. Questi strumenti restano rilevanti per due motivi. Primo,
+llama.cpp e GGUF sono ampiamente usati per eseguire modelli locali quantizzati e
+permettono una catena di conversione e benchmark facilmente riproducibile.
+Secondo, Ollama è già parte dell'architettura prototipale descritta nel
+Capitolo~\ref{chap:implementazione}; rappresenta quindi un riferimento
+applicativo concreto per capire quanto l'esperimento si avvicini al deployment
+effettivo.
+
+Nel disegno sperimentale principale, tuttavia, GGUF/Ollama non devono essere
+presentati come la scelta più ottimizzata per Apple Silicon. Il loro ruolo è
+quello di baseline o confronto secondario: utili per collegare la valutazione
+alla pipeline implementata, ma non centrali per dimostrare il comportamento di
+un runtime Apple-first. Questa distinzione evita una sovrapposizione tra due
+domande diverse: quanto incide la quantizzazione su Apple Silicon e quanto
+cambia il comportamento passando da un runtime all'altro.
+
+MLC-LLM è una seconda alternativa rilevante. La documentazione lo descrive come
+un compilatore e motore di deployment ad alte prestazioni per LLM, con una fase
+di conversione dei pesi e, quando necessario, di compilazione della libreria del
+modello~\cite{mlc2025llm}. Questa ricchezza lo rende interessante, ma meno
+adatto come runtime principale della tesi: introdurrebbe una variabile
+ulteriore, cioè il processo di compilazione e ottimizzazione del modello. Per
+mantenere il confronto controllato, MLC-LLM viene discusso come alternativa
+Apple-oriented e possibile estensione futura, non come asse principale
+dell'esperimento.
+
+\begin{table}[ht]
+  \centering
+  \caption{Ruolo dei runtime nel disegno sperimentale.}
+  \label{tab:runtime_roles}
+  \small
+  \begin{tabular}{p{2.8cm}p{3.0cm}p{3.4cm}p{4.0cm}}
+    \toprule
+    \textbf{Runtime} & \textbf{Punto di forza} & \textbf{Limite per questa tesi} & \textbf{Ruolo assegnato} \\
+    \midrule
+    MLX / mlx-lm
+      & Apple-first, Metal, unified memory, quantizzazione integrata
+      & Richiede integrazione applicativa esterna per server completi
+      & Runtime principale. \\
+    llama.cpp / GGUF
+      & Riproducibilità, formato diffuso, toolchain matura
+      & Non è il runtime più Apple-native
+      & Baseline secondaria. \\
+    Ollama
+      & Installazione e API locali semplici
+      & Priorità a ergonomia più che a massimo throughput
+      & Riferimento applicativo. \\
+    MLC-LLM
+      & Paged KV, compilazione ottimizzata, API più ricche
+      & Introduce compilazione e variabili runtime aggiuntive
+      & Estensione o confronto futuro. \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Modello, hardware e configurazioni}
+\label{sec:optimization_model_artifacts}
+
+Il modello scelto è Gemma 3 4B Instruct. La sua dimensione lo rende adatto al
+target sperimentale: è abbastanza piccolo da poter essere eseguito localmente su
+una macchina con 16 GB di memoria unificata, ma abbastanza grande da rendere
+significativa la valutazione del compromesso tra compressione, qualità e
+latenza. Modelli più piccoli rischierebbero di mascherare il problema
+infrastrutturale; modelli più grandi sposterebbero l'esperimento verso limiti
+di memoria troppo severi per il target scelto.
+
+L'hardware di riferimento è un Apple MacBook Pro con chip M1 Pro, 16 GB di
+unified memory, macOS e backend Metal. Questa configurazione non rappresenta il
+massimo disponibile nell'ecosistema Apple. Proprio per questo è utile: il
+capitolo studia un caso vincolato e realistico, più vicino a un prototipo
+aziendale eseguibile su hardware consumer che a una workstation dedicata alla
+ricerca.
+
+Il fatto che molti studi citati usino M2 Ultra o M3 Ultra non indebolisce la
+scelta sperimentale, ma ne chiarisce il posizionamento. La tesi non tenta di
+replicare benchmark su macchine Apple di fascia alta. Studia invece la
+fattibilità di una pipeline RAG locale su un dispositivo più limitato, dove il
+risparmio di memoria prodotto dalla quantizzazione può fare la differenza tra
+un sistema usabile e uno instabile.
+
+\begin{table}[ht]
+  \centering
+  \caption{Configurazioni previste per l'esperimento MLX-first.}
+  \label{tab:quantization_variants}
+  \small
+  \begin{tabular}{p{3cm}p{4cm}p{5.8cm}}
+    \toprule
+    \textbf{Configurazione} & \textbf{Ruolo} & \textbf{Interpretazione sperimentale} \\
+    \midrule
+    MLX FP16/BF16
+      & Baseline qualitativa
+      & Riferimento per qualità, memoria e latenza senza quantizzazione aggressiva. \\
+    MLX 8-bit
+      & Quantizzazione leggera
+      & Candidato vicino alla baseline, da verificare su memoria e throughput. \\
+    MLX 6-bit
+      & Compressione moderata
+      & Possibile compromesso tra footprint e stabilità qualitativa. \\
+    MLX 4-bit
+      & Compressione aggressiva
+      & Configurazione più leggera, utile solo se il degrado resta accettabile. \\
+    GGUF/Ollama
+      & Baseline applicativa
+      & Riferimento secondario per collegare l'esperimento al prototipo RAG. \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Le configurazioni MLX costituiscono il confronto principale. La configurazione
+GGUF/Ollama non ha lo stesso ruolo: serve a mantenere un ponte con
+l'implementazione applicativa, non a stabilire il miglior runtime Apple Silicon
+in assoluto. Se inclusa nei benchmark, dovrà essere interpretata separatamente
+per evitare di confondere l'effetto della quantizzazione con quello del runtime.
+
+\section{Protocollo sperimentale}
+\label{sec:optimization_experimental_protocol}
+
+Il principio metodologico è isolare la variabile di interesse. Nel confronto
+principale cambia il livello di quantizzazione del modello MLX, mentre restano
+costanti architettura del modello, prompt, dimensione del contesto, parametri di
+generazione, corpus RAG, modello di embedding, retriever, \texttt{top\_k} e
+rubriche di valutazione. Questa impostazione permette di attribuire le
+differenze osservate alla configurazione del modello, non a cambiamenti nella
+pipeline.
+
+Il protocollo prevede quattro fasi. La prima riguarda la preparazione degli
+artefatti: download del modello sorgente, conversione nel formato richiesto dal
+runtime MLX e generazione delle varianti quantizzate supportate. La seconda
+misura prestazioni e memoria del modello isolato. La terza misura qualità
+generale su dataset ridotti, scelti per essere eseguibili sul target hardware.
+La quarta inserisce ogni variante nella pipeline RAG e valuta risposte,
+groundedness e generazione strutturata.
+
+\begin{table}[ht]
+  \centering
+  \caption{Fasi del protocollo sperimentale.}
+  \label{tab:experimental_phases}
+  \small
+  \begin{tabular}{p{2.0cm}p{4.2cm}p{6.5cm}}
+    \toprule
+    \textbf{Fase} & \textbf{Output} & \textbf{Controllo metodologico} \\
+    \midrule
+    Preparazione
+      & Modelli MLX baseline e quantizzati
+      & Stesso modello sorgente e stessa revisione. \\
+    Performance
+      & Tempi, memoria, throughput, stabilità
+      & Stessi prompt, stesso numero di token e stessi parametri decoding. \\
+    Qualità generale
+      & Perplexity, MMLU subset, GSM8K subset
+      & Stessi esempi e stessa logica di scoring per ogni variante. \\
+    RAG applicativo
+      & Groundedness, completezza, allucinazioni, latenza
+      & Corpus, embedding, retriever e \texttt{top\_k} invariati. \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Le metriche prestazionali includono dimensione su disco, memoria residente,
+tempo di caricamento, time to first token, tempo totale di generazione, token
+generati e token al secondo. Vengono considerate anche metriche normalizzate,
+come token al secondo per GiB, perché in un deployment locale il throughput
+assoluto non basta: una configurazione leggermente più lenta ma sensibilmente
+più leggera può essere preferibile se mantiene qualità sufficiente e riduce la
+pressione sulla memoria.
+
+La qualità viene valutata su più livelli. La perplexity misura il degrado
+statistico rispetto alla baseline; subset ridotti di MMLU e GSM8K forniscono un
+segnale su conoscenza generale e ragionamento matematico; il benchmark RAG
+custom misura invece l'utilità per il caso i3Guild, valutando aderenza al
+contesto recuperato, completezza, allucinazioni e latenza end-to-end.
+
+Per la generazione di bozze di Gilda, il tasso di errore va misurato come
+rapporto tra output non validi e richieste totali, senza introdurre fallback
+artificiali. Questo punto collega il Capitolo 4 alle correzioni del Capitolo 3:
+se il modello produce un oggetto non conforme allo schema atteso, il sistema non
+genera una risposta alternativa in modo silenzioso. L'utente viene informato
+dell'errore e invitato a riprovare. La frequenza di questi casi è quindi una
+metrica funzionale del sistema.
+
+\section{Collegamento con la pipeline RAG}
+\label{sec:optimization_rag_link}
+
+Il benchmark RAG è la parte più vicina all'obiettivo della tesi. I benchmark
+generali misurano proprietà utili del modello, ma non dicono da soli se il
+sistema sia adatto al caso i3Guild. Una pipeline RAG introduce infatti una
+dipendenza forte dal retrieval: se i documenti recuperati sono incompleti, anche
+un modello non quantizzato può produrre una risposta debole; se il contesto è
+corretto, una variante quantizzata può invece essere sufficiente.
+
+Per isolare l'effetto del modello generativo, il benchmark RAG mantiene fissi
+corpus, chunking, embedding, indice, retriever, prompt template e \texttt{top\_k}.
+Viene modificata esclusivamente la variante del modello usata per generare la
+risposta. Questo permette di confrontare le configurazioni rispetto a criteri
+che hanno senso per l'applicazione: aderenza alle fonti, completezza delle
+informazioni, presenza di allucinazioni e latenza percepita dall'utente.
+
+Il risultato atteso non è una classifica assoluta dei runtime, ma una valutazione
+di sufficienza applicativa. Una variante può essere accettabile anche se perde
+qualche punto nei benchmark generali, purché mantenga risposte RAG fondate,
+complete e abbastanza rapide. Al contrario, una variante molto veloce ma più
+propensa a errori strutturali o ad allucinazioni non sarebbe adatta al sistema,
+anche se il suo throughput isolato risultasse elevato.
+
+\section{Ipotesi di lavoro}
+\label{sec:optimization_hypotheses}
+
+Le ipotesi sperimentali sono quattro. La prima è che una quantizzazione leggera
+mantenga qualità vicina alla baseline, riducendo però il consumo di memoria. La
+seconda è che una configurazione intermedia possa offrire il miglior compromesso
+tra qualità e sostenibilità hardware. La terza è che la quantizzazione più
+aggressiva riduca il footprint ma aumenti il rischio di degrado qualitativo,
+specialmente in attività che richiedono ragionamento o generazione strutturata.
+La quarta è che la configurazione più compressa non sia necessariamente la più
+rapida, a causa del costo di dequantizzazione e delle caratteristiche del
+backend.
+
+Queste ipotesi derivano dalla letteratura, ma devono essere verificate sul caso
+locale. Gemma 3 4B Instruct, MLX, M1 Pro e 16 GB di unified memory formano un
+setup diverso dai lavori che usano Qwen, Llama, M2 Ultra o M3 Ultra. Le misure
+del Capitolo~\ref{chap:evaluation} serviranno quindi a stabilire se i pattern
+osservati in letteratura si ripresentano in un contesto più piccolo e vincolato.
+
+\section{Limiti e minacce alla validità}
+\label{sec:optimization_limits}
+
+Il primo limite è l'hardware. Tutti i risultati saranno raccolti su un solo
+MacBook Pro M1 Pro con 16 GB di unified memory. Questo rende l'esperimento
+coerente con l'obiettivo della tesi, ma limita la generalizzabilità verso altri
+dispositivi Apple. Un Mac Studio M2 Ultra, un M3 Ultra o un MacBook con più
+memoria potrebbero mostrare rapporti diversi tra latenza, memoria e throughput.
+
+Il secondo limite riguarda il runtime. MLX viene scelto come runtime
+principale, mentre MLC-LLM non viene benchmarkato in modo completo. Questa
+decisione riduce il numero di variabili e rende il confronto più controllato,
+ma impedisce di formulare conclusioni generali su tutti i runtime Apple
+Silicon. GGUF/Ollama, se incluso, resta un riferimento applicativo secondario e
+non una prova di superiorità o inferiorità rispetto a MLX.
+
+Il terzo limite riguarda il contesto. Il lavoro non valuta KV-cache
+quantization, kernel di attention fusi o contesti estremi come quelli discussi
+da Open-TQ-Metal. La scelta è intenzionale: il caso i3Guild richiede risposte
+RAG su documenti aziendali, non necessariamente finestre da 128K token. Tuttavia,
+la letteratura mostra che, al crescere del contesto, il collo di bottiglia può
+spostarsi dai pesi del modello alla KV cache; per questo il tema viene
+richiamato come possibile sviluppo futuro.
+
+Il quarto limite riguarda la qualità. Per ragioni di tempo e risorse, MMLU e
+GSM8K verranno eseguiti su subset ridotti. Questi benchmark non produrranno una
+misura universale delle capacità del modello, ma un segnale comparativo tra
+varianti. La valutazione più importante per la tesi resta quella applicativa:
+la capacità di produrre risposte RAG fondate e bozze di Gilda strutturalmente
+valide.
+
+Il Capitolo~\ref{chap:evaluation} userà quindi il disegno definito qui per
+misurare prestazioni e qualità delle configurazioni MLX, mantenendo
+GGUF/Ollama come eventuale riferimento applicativo secondario. La conclusione
+dell'esperimento non dovrà stabilire quale runtime sia migliore in assoluto, ma
+quale configurazione renda sostenibile un LLM locale dentro una pipeline RAG
+enterprise su Apple Silicon con risorse limitate.

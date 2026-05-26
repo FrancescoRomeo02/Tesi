@@ -251,9 +251,9 @@ alto livello, suddivisi per categoria.
       retrieval, sono discussi in letteratura~\cite{zeng2024privacy}; la
       scelta on-premise costituisce la principale misura mitigativa adottata. \\
     \addlinespace
-    Performance & Latenza di risposta nell'ordine del secondo per query
-      semplici; throughput scalabile per carichi concorrenti moderati;
-      inferenza CPU-only come scenario primario. \\
+    Performance & Latenza compatibile con uso interattivo per query semplici,
+      distinguendo tra modello già caricato e cold start; throughput adeguato a
+      carichi concorrenti moderati; inferenza CPU-only come scenario primario. \\
     \addlinespace
     Costi e sostenibilità & Minimizzazione dei costi operativi tramite uso
       efficiente delle risorse (quantizzazione dei modelli, inferenza CPU);
@@ -282,12 +282,13 @@ negoziabili, che orientano direttamente la scelta dei componenti:
     essere coerente con l'infrastruttura esistente (Docker Compose,
     PostgreSQL/Prisma, Next.js, Keycloak per l'autenticazione).
   \item \textbf{Limitazioni hardware}: l'ambiente Docker dispone di 8~GB di
-    RAM complessivi, che dovranno essere condivisi tra
-    il modello di embedding e il modello di generazione del testo.
+    RAM complessivi, condivisi tra database, servizi applicativi, pipeline di
+    embedding quando attiva e modello di generazione del testo.
     Questo vincolo è determinante per la selezione del modello LLM (Sezione~\ref{subsec:llm_choice}).
-  \item \textbf{No API esterne per LLM ed embedding}: tutti i modelli devono
-    essere eseguiti localmente tramite Ollama, eliminando dipendenze da
-    provider come OpenAI o Anthropic.
+  \item \textbf{No API esterne per LLM ed embedding}: generazione ed embedding
+    devono restare locali; Ollama gestisce il modello generativo, mentre
+    FastEmbed/Haystack gestisce i modelli di embedding senza dipendere da API
+    di provider esterni.
 \end{itemize}
 
 % -------------------------------------------------------------
@@ -359,9 +360,9 @@ componenti in produzione~\cite{peliqan2025haystack}.
 
 \noindent \textbf{Scelta motivata: Haystack 2.x.} L'architettura a componenti
 tipizzati, la documentazione rigorosa, le integrazioni native con Qdrant
-(\texttt{QdrantDocumentStore}) e Ollama (\texttt{OllamaDocumentEmbedder},
-\texttt{OllamaTextEmbedder}), il minore overhead di orchestrazione e la
-serializzabilità delle pipeline la rendono la scelta più adeguata per un
+(\texttt{QdrantDocumentStore}), FastEmbed per embedding densi e sparsi e
+Ollama per la generazione, il minore overhead di orchestrazione e la
+serializzabilità delle pipeline rendono Haystack la scelta più adeguata per un
 sistema RAG production-oriented in ambiente on-premise~\cite{tonic2024rag}.
 
 \subsection{Database vettoriale}
@@ -419,9 +420,10 @@ seguenti:
   \item \textbf{Chroma} è implementato in Python e soffre di instabilità della
     persistenza dati nelle versioni precedenti; è più adatto a prototipi
     che a sistemi di produzione.
-  \item \textbf{Qdrant} è scritto in Rust, garantisce prestazioni elevate e
-    latenze stabili. La funzionalità di pre-filtering, che applica i filtri sui
-    payload \emph{prima} della ricerca vettoriale, è cruciale per query
+  \item \textbf{Qdrant} è scritto in Rust e offre buone prestazioni con latenze
+    stabili nei benchmark disponibili. La funzionalità di pre-filtering, che
+    applica i filtri sui payload \emph{prima} della ricerca vettoriale, è
+    particolarmente rilevante per query
     contestuali come ``gilda dell'epoca X'': il filtering riduce lo spazio di
     ricerca prima del calcolo ANN, mantenendo il top-$K$ accurato. Offre Web
     UI integrata su porta 6333, client TypeScript ufficiale compatibile con
@@ -435,139 +437,104 @@ vettoriale più adeguato al contesto del progetto.
 \subsection{Modello di embedding}
 \label{subsec:embedding_choice}
 
-Il modello di embedding converte i documenti testuali in vettori ad alta
-dimensionalità che ne codificano il significato semantico. Poiché il vincolo
-aziendale impone l'assenza di dipendenze da API esterne, tutti i modelli
-candidati devono essere serviti localmente tramite Ollama.
+Il modello di embedding converte i documenti testuali in rappresentazioni
+numeriche interrogabili da Qdrant. Nella prima versione del progetto questa
+funzione era affidata a Ollama e a un singolo vettore denso; la versione
+aggiornata separa invece l'inferenza generativa dall'indicizzazione e usa
+FastEmbed tramite Haystack. La pipeline produce sia embedding densi sia
+embedding sparsi, così il retrieval può combinare similarità semantica e
+corrispondenza lessicale su nomi propri, tecnologie e termini ricorrenti nelle
+Gilde~\cite{haystackFastembedDocument2026,haystackFastembedSparse2026}.
 
 \begin{table}[ht]
   \centering
-  \caption{Confronto dei modelli di embedding candidati per il sistema RAG.}
+  \caption{Configurazione embedding della versione aggiornata del sistema RAG.}
   \label{tab:embedding_models}
   \small
-  \begin{tabular}{p{3.5cm}rrlrp{3cm}}
+  \begin{tabular}{p{3cm}p{4cm}p{2.5cm}p{4cm}}
     \toprule
-    \textbf{Modello} & \textbf{Dim.} & \textbf{Peso} & \textbf{Italiano} &
-      \textbf{Contesto (tok.)} & \textbf{Disponibilità Ollama} \\
+    \textbf{Ruolo} & \textbf{Componente Haystack} & \textbf{Default} &
+      \textbf{Funzione} \\
     \midrule
-    \textbf{nomic-embed-text} & 768 & 275\,MB & Buono & 8.192 & Nativa \\
-    mxbai-embed-large & 1.024 & 670\,MB & Buono & 512 & Nativa \\
-    all-minilm & 384 & 45\,MB & Scarso & 512 & Nativa \\
-    multilingual-e5-large & 1.024 & 1,3\,GB & Ottimo & 512 & Import manuale \\
+    Embedding denso & \texttt{FastembedDocumentEmbedder} /
+      \texttt{FastembedTextEmbedder} & \texttt{BAAI/bge-base-en-v1.5} &
+      Similarità semantica tra query e documenti. \\
+    Embedding sparso & \texttt{FastembedSparseDocumentEmbedder} /
+      \texttt{FastembedSparseTextEmbedder} & \texttt{prithivida/Splade\_PP\_en\_v1} &
+      Matching lessicale pesato, utile per termini specifici. \\
+    Store ibrido & \texttt{QdrantDocumentStore} con
+      \texttt{use\_sparse\_embeddings=true} & \texttt{i3guild\_knowledge} &
+      Persistenza con vettori densi e rappresentazioni sparse. \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\noindent La selezione del modello è guidata da cinque criteri pesati:
-(1)~qualità per la lingua italiana (peso 30\%), in quanto i documenti delle
-Gilde sono interamente in italiano; (2)~footprint di risorse (25\%), essenziale
-in un ambiente Docker con risorse condivise; (3)~compatibilità nativa con
-Ollama (20\%); (4)~dimensione dello spazio vettoriale (15\%); (5)~benchmark
-MTEB~\cite{muennighoff2023mteb} (10\%).
+\noindent La scelta aggiornata risponde a tre esigenze. La prima è eliminare la
+dipendenza da Ollama nella fase batch di indicizzazione: Ollama resta dedicato
+alla generazione LLM, mentre FastEmbed produce gli embedding in un job separato.
+La seconda è rendere il retrieval più robusto rispetto alle sole similarità
+dense. La terza è avvicinare ingestione e query allo stesso schema operativo:
+in scrittura vengono generati embedding densi e sparsi dei documenti; in lettura
+la query viene trasformata nelle due rappresentazioni corrispondenti e inviata a
+\texttt{QdrantHybridRetriever}~\cite{haystackQdrantHybrid2026}. Il valore
+\texttt{EMBEDDING\_DIMENSIONS=768} rimane il riferimento per la componente
+densa.
 
-\noindent \textbf{Scelta motivata: \texttt{nomic-embed-text}.} Il modello,
-introdotto da Nussbaum et al.~\cite{nussbaum2024nomic}, è il primo modello
-open-source completamente riproducibile con finestra di contesto lunga (8.192
-token) che supera \texttt{text-embedding-ada-002} di OpenAI sia sul benchmark
-MTEB che sul benchmark LoCo per contesto lungo. Con soli 137M parametri e un
-peso di 275\,MB, offre il miglior rapporto qualità/footprint tra i candidati.
-La finestra di 8.192~token è determinante: permette di ingerire la quasi
-totalità dei documenti consolidati delle Gilde come singolo vettore senza
-chunking aggressivo, preservando il contesto semantico integrale. È rilasciato
-sotto licenza Apache~2.0, compatibile con l'utilizzo aziendale.
+La scelta della ricerca ibrida non deriva da una valutazione quantitativa
+condotta sul corpus i3Guild, perché durante il progetto non è stato costruito
+un dataset annotato con query e documenti rilevanti. È però coerente con
+evidenze esterne recenti: nei task RAG di TREC 2025 un sistema sparse+dense con
+reranking ottiene i migliori risultati riportati dal team NITATREC
+(\textit{MAP} 0.1037, \textit{nDCG@30} 0.527 e \textit{Recall@100}
+0.158)~\cite{sinha2025nitatrec}; in un benchmark finanziario su documenti misti
+testo-tabella, una pipeline a due stadi con retrieval ibrido e reranking
+raggiunge \textit{Recall@5} 0.816 e \textit{MRR@3} 0.605, superando i metodi
+single-stage~\cite{akarsu2026bm25correctiverag}. Altri studi mostrano però che
+il vantaggio non è universale: nel dominio biomedicale una baseline densa resta
+molto competitiva e le differenze tra strategie dipendono dal corpus e dalle
+metriche considerate~\cite{bal2026biomedicalretrieval}. Per i3Guild questi
+risultati vanno quindi usati come supporto alla scelta progettuale, non come
+prova sperimentale locale: la componente sparsa è motivata soprattutto dalla
+presenza di nomi di Gilde, ruoli, modalità di partecipazione e termini tecnici
+che hanno valore informativo letterale.
 
 \subsection{Server di inferenza LLM e selezione del modello di chat}
 \label{subsec:llm_choice}
 
 Il componente di generazione del testo è gestito da \textbf{Ollama}, server di
 inferenza locale che supporta modelli in formato GGUF e consente l'uso di
-varianti quantizzate a 4 e 8 bit. La scelta del modello di chat è stata trattata
-come un problema sperimentale, non come una semplice preferenza tecnologica:
-sono stati testati dodici modelli disponibili nel registry Ollama per individuare
-il compromesso più adeguato tra qualità delle risposte, latenza e consumo di
-risorse nell'ambiente Docker vincolato a 8~GB di RAM totali.
+varianti quantizzate a 4 e 8 bit. Nel prototipo aziendale la scelta del modello
+di chat è stata condizionata da un vincolo operativo preciso: l'intero stack
+Docker dispone di risorse limitate e deve eseguire, nello stesso ambiente,
+PostgreSQL, Qdrant, il servizio Next.js, la pipeline RAG e Ollama. Per questo
+la selezione non mira a identificare il modello migliore in senso assoluto, ma
+un modello sufficientemente stabile per validare l'integrazione end-to-end.
 
-\subsubsection{Metodologia di valutazione}
-
-Il benchmark ha coinvolto dodici modelli su due categorie di query:
-\emph{General} (comprensione del linguaggio, ragionamento, estrazione di
-entità, scrittura) e \emph{RAG} (risposte basate su contesto recuperato). Per
-ogni query sono stati misurati: TTFT (\emph{Time to First Token}), latenza
-totale, throughput in parole al secondo, picco di RAM e utilizzo medio della
-CPU. La qualità delle risposte è stata valutata su tre assi: accuratezza/
-fedeltà (\emph{Score\textsubscript{1}}), precisione/pertinenza
-(\emph{Score\textsubscript{2}}) e coerenza (\emph{Score\textsubscript{3}},
-valutata solo per query \emph{General}).
-
-Il punteggio globale ($G$) è calcolato come combinazione lineare pesata di
-quattro componenti normalizzate nell'intervallo $[0, 1]$:
-
-\begin{equation}
-  G = 0.50 \cdot Q + 0.20 \cdot T + 0.15 \cdot (1 - R) + 0.15 \cdot (1 - C)
-  \label{eq:global_score}
-\end{equation}
-
-\noindent dove $Q$ è la qualità media normalizzata, $T$ è il throughput
-normalizzato, $R$ è il consumo RAM normalizzato e $C$ è il carico CPU
-normalizzato (con inversione per RAM e CPU perché valori più bassi sono
-preferibili).
-
-\subsubsection{Risultati del benchmark}
-\resizebox{\textwidth}{!}{
-  \begin{tabular}{p{4.5cm}rrrrrr}
-    \toprule
-    \textbf{Modello} & \textbf{Latenza (s)} & \textbf{Throughput (w/s)} &
-      \textbf{RAM (MB)} & \textbf{CPU (\%)} & \textbf{Qualità} & \textbf{G} \\
-    \midrule
-    deepscaler:latest & 18.85 & 29.25 & 42.69 & 1.79 & 7.14 & 83.1 \\
-    llama3.2:latest & 8.94 & 21.43 & 37.26 & 1.78 & 7.50 & 76.7 \\
-    qwen2.5:1.5b & 35.04 & 30.67 & 42.98 & 3.41 & 6.45 & 76.7 \\
-    \textbf{gemma3:1b} & \textbf{6.74} & \textbf{28.01} & \textbf{42.83} &
-      7.05 & 7.74 & 69.7 \\
-    llama3.2:3b & 16.54 & 20.14 & 40.74 & 2.00 & 6.43 & 68.7 \\
-    gemma3:latest & 17.29 & 16.27 & 42.15 & 3.18 & 7.69 & 66.8 \\
-    granite3.3:2b & 10.35 & 20.58 & 41.82 & 5.11 & 7.76 & 66.8 \\
-    phi4-mini:3.8b & 8.78 & 19.90 & 82.20 & 1.91 & 7.31 & 66.3 \\
-    lfm2.5-thinking:1.2b & 14.16 & 13.55 & 43.52 & 2.41 & 7.59 & 65.1 \\
-    ministral-3:3b & 66.79 & 15.09 & 40.26 & 3.12 & 7.19 & 63.4 \\
-    deepseek-r1:1.5b & 19.26 & 14.55 & 42.66 & 2.26 & 6.60 & 61.9 \\
-    phi4-mini-reasoning:latest & 95.53 & 19.55 & 129.14 & 1.87 & 5.00 & 46.8 \\
-    \bottomrule
-  \end{tabular}
-}
-
-\subsubsection{Motivazione della scelta: \texttt{gemma3:1b}}
-
-Alla luce dei risultati del benchmark e del vincolo di 8~GB di RAM disponibili
-per l'intero stack Docker, il modello selezionato è
-\textbf{\texttt{gemma3:1b}}. La scelta non coincide con il punteggio globale più
-alto in assoluto, ma con il miglior equilibrio rispetto allo scenario
-applicativo: risposte sufficientemente accurate, tempi compatibili con l'uso
-interattivo e ridotto impatto sugli altri container. Le motivazioni principali
-sono:
+\noindent \textbf{Scelta motivata: \texttt{gemma3:1b}.} Il modello adottato nel
+prototipo è \texttt{gemma3:1b}. La scelta deriva da prove preliminari interne
+su modelli disponibili nel registry Ollama, valutati rispetto a tre criteri:
+latenza percepita durante l'interazione, consumo di memoria compatibile con gli
+altri container e qualità minima delle risposte in presenza di contesto RAG. Le
+motivazioni principali sono:
 
 \begin{itemize}
-  \item \textbf{RAM compatibile con i vincoli}: il consumo medio di circa
-    43~MB di RAM è contenuto, lasciando margine adeguato per gli altri
-    container (PostgreSQL, Qdrant, Next.js, RAG service).
-  \item \textbf{Latenza più bassa tra i modelli con qualità elevata}: latenza
-    media di 6.74~s, la più bassa tra i modelli con un punteggio di qualità
-    $\geq 7.5$.
-  \item \textbf{Qualità adeguata}: punteggio medio di qualità pari a 7.74,
-    tra i più alti dell'intero benchmark.
-  \item \textbf{Throughput elevato}: 28.01~parole/s, secondo valore più alto
-    dopo \texttt{qwen2.5:1.5b} e \texttt{deepscaler}.
+  \item \textbf{RAM compatibile con i vincoli}: il modello può essere caricato
+    senza saturare le risorse condivise con PostgreSQL, Qdrant, Next.js e il
+    servizio RAG.
+  \item \textbf{Latenza accettabile}: i tempi di risposta sono compatibili con
+    un uso interattivo del chatbot, tenendo conto del cold start del modello.
+  \item \textbf{Qualità sufficiente per il prototipo}: le risposte risultano
+    adeguate quando il modello riceve contesto recuperato da Qdrant.
+  \item \textbf{Integrazione semplice}: il modello è disponibile direttamente in
+    Ollama e non richiede conversioni o runtime aggiuntivi.
 \end{itemize}
 
-\noindent I modelli con punteggio globale superiore (\texttt{deepscaler},
-\texttt{llama3.2:latest}) presentano rispettivamente latenze elevate
-(18.85~s) o qualità inferiore su task RAG. Il modello \texttt{phi4-mini:3.8b},
-pur mostrando buona qualità, richiede circa il doppio della RAM rispetto agli
-altri (82~MB), riducendo il margine disponibile per l'intero stack. La scelta
-di \texttt{gemma3:1b} è da considerarsi adeguata per il prototipo attuale; in
-un ambiente con risorse RAM superiori, modelli più capaci (es.
-\texttt{granite3.3:2b} o \texttt{gemma3:latest}) potrebbero essere
-valutati come alternativa.
+\noindent Questa valutazione resta volutamente interna al progetto aziendale:
+serve a rendere eseguibile il prototipo i3Guild, non a produrre conclusioni
+generali sull'inferenza locale. La generalizzazione del problema, cioè la misura
+sistematica di memoria, cold start, \emph{time-to-first-token}, throughput e
+impatto della quantizzazione su Apple Silicon, viene affrontata nei
+Capitoli~\ref{chap:ottimizzazione} e~\ref{chap:evaluation}.
 
 % -------------------------------------------------------------
 \section{Proposta architetturale}
@@ -600,40 +567,43 @@ Ollama evita dipendenze cloud e FastAPI espone un confine applicativo semplice
 verso Next.js.
 
 \begin{description}
-  \item[Ingestione e pre-processing (\texttt{rag/ingest.py})] Pipeline batch
-    Python che esegue le fasi ETL descritte nella
+  \item[Ingestione e pre-processing (\texttt{i3guild-embedding-pipeline})]
+    Pipeline batch Python che esegue le fasi ETL descritte nella
     Sezione~\ref{subsec:ingestion_pipeline}. Acquisisce i documenti da
-    PostgreSQL, normalizza il testo, esegue il chunking, genera gli embedding
-    tramite Ollama e indicizza su Qdrant.
+    PostgreSQL, normalizza il testo, esegue il chunking, genera embedding densi
+    e sparsi con FastEmbed/Haystack e indicizza su Qdrant.
 
   \item[Strategia di chunking] Sulla base dell'analisi dei dati
     (Sezione~\ref{subsec:data_analysis}), viene adottato l'approccio a
     \emph{documento consolidato} (1 Gilda $\leftrightarrow$ 1 documento
     vettoriale): tutti i campi testuali rilevanti sono concatenati in un unico
-    documento con separatori strutturati. Per i rari outlier che eccedono
-    8.000~token viene applicata una \emph{soft truncation}. Questo approccio
-    preserva il contesto semantico integrale e semplifica la gestione di
-    upsert e cancellazioni su Qdrant.
+    documento con separatori strutturati. Per gli outlier che superano il limite
+    configurato viene applicato chunking con overlap, mantenendo nel chunk
+    l'intestazione della Gilda. Questo approccio preserva il contesto semantico
+    nella maggior parte dei casi e mantiene gestibili upsert e cancellazioni su
+    Qdrant.
 
   \item[Database vettoriale (Qdrant)] Collection principale
-    \texttt{i3guild\_knowledge} con vettori a 768 dimensioni, metrica coseno e
-    indice HNSW. Ogni punto porta un payload JSON con metadati indicizzati per
-    il filtering (Sezione~\ref{subsec:qdrant_collection}).
+    \texttt{i3guild\_knowledge} configurata per retrieval ibrido: vettore denso
+    a 768 dimensioni, rappresentazione sparsa e payload JSON con metadati
+    indicizzati per il filtering (Sezione~\ref{subsec:qdrant_collection}).
 
-  \item[Orchestrazione RAG (Haystack 2.x)] Il container \texttt{i3guild\_rag}
-    espone pipeline Haystack per ingestione e retrieval. I componenti tipizzati
-    (\texttt{DocumentCleaner}, \texttt{DocumentSplitter},
-    \texttt{OllamaDocumentEmbedder}, \texttt{QdrantDocumentStore}) sono
-    collegati in pipeline dichiarative.
+  \item[Orchestrazione RAG (Haystack 2.x)] Haystack è usato sia nel job di
+    indicizzazione sia nel servizio di query. La pipeline batch collega
+    \texttt{FastembedDocumentEmbedder}, \texttt{FastembedSparseDocumentEmbedder}
+    e \texttt{DocumentWriter}; la pipeline di query collega
+    \texttt{FastembedTextEmbedder}, \texttt{FastembedSparseTextEmbedder} e
+    \texttt{QdrantHybridRetriever}.
 
   \item[Inference LLM (Ollama)] Server di inferenza locale; modello di chat
-    adottato: \texttt{gemma3:1b}, selezionato sulla base del benchmark
-    sperimentale condotto su dodici modelli
+    adottato: \texttt{gemma3:1b}, selezionato sulla base di prove preliminari
+    coerenti con i vincoli del prototipo
     (Sezione~\ref{subsec:llm_choice}).
 
-  \item[Servizio API (FastAPI)] Microservizio Python che espone l'endpoint
-    \texttt{POST /rag/retrieve} (porta 8000, mappata a 8002 su host). Restituisce
-    documenti con score di similarità e campi diagnostici.
+  \item[Servizio API (FastAPI)] Microservizio Python che espone endpoint di
+    retrieval e generazione, tra cui \texttt{POST /rag/retrieve} (porta 8000,
+    mappata a 8002 su host). Restituisce documenti con score di similarità e
+    campi diagnostici.
 
   \item[Osservabilità e sicurezza] Logging centralizzato, metriche di latenza
     e utilizzo risorse; autenticazione tramite Keycloak (già presente in
@@ -644,9 +614,9 @@ verso Next.js.
 \label{subsec:qdrant_collection}
 
 La collection \texttt{i3guild\_knowledge} è il punto in cui la conoscenza
-estratta da i3Guild viene trasformata in indice semantico. La configurazione,
-riportata nella Tabella~\ref{tab:qdrant_config}, riflette il modello di
-embedding selezionato e privilegia una metrica adatta alla similarità testuale.
+estratta da i3Guild viene trasformata in indice interrogabile. La configurazione,
+riportata nella Tabella~\ref{tab:qdrant_config}, supporta retrieval ibrido:
+similarità vettoriale densa e componente sparsa nello stesso store.
 
 \begin{table}[ht]
   \centering
@@ -657,9 +627,13 @@ embedding selezionato e privilegia una metrica adatta alla similarità testuale.
     \toprule
     \textbf{Parametro} & \textbf{Valore} & \textbf{Motivazione} \\
     \midrule
-    \texttt{vectors.size} & 768 & Output di \texttt{nomic-embed-text} \\
+    \texttt{embedding\_dim} & 768 & Dimensione della componente densa FastEmbed \\
     \texttt{vectors.distance} & \texttt{Cosine} & Standard per similarità
       semantica testuale \\
+    \texttt{use\_sparse\_embeddings} & \texttt{true} & Abilita la componente
+      sparsa per retrieval ibrido \\
+    \texttt{recreate\_index} & \texttt{true} (job batch) & Ricrea collection
+      dense-only mantenendo lo stesso nome \\
     \texttt{hnsw\_config.m} & 16 (default) & Compromesso velocità/precisione \\
     \texttt{hnsw\_config.ef\_construct} & 100 (default) & Qualità dell'indice
       in fase di build \\
@@ -700,31 +674,32 @@ top-$K$ sia effettuato solo sul sottoinsieme filtrato.
   \end{tabular}
 \end{table}
 
-Gli ID dei punti sono \textbf{UUID deterministici} generati tramite hash di
-\texttt{guild\_id} + \texttt{field\_source} + \texttt{chunk\_index}, garantendo
-l'idempotenza degli upsert: lo stesso documento produce sempre lo stesso ID,
-prevenendo la creazione di duplicati in caso di re-indicizzazione.
+Gli ID dei documenti sono deterministici nel formato
+\texttt{guild-\{guild\_id\}-chunk-\{index\}}. In questo modo la reindicizzazione
+della stessa Gilda produce gli stessi identificativi e consente a Qdrant di
+sovrascrivere i punti esistenti quando la policy è
+\texttt{DuplicatePolicy.OVERWRITE}.
 
 \subsection{Pipeline di ingestione ETL}
 \label{subsec:ingestion_pipeline}
 
 La pipeline ETL ha il compito di mantenere allineata la rappresentazione
-vettoriale con i dati applicativi. Lo script \texttt{rag/ingest.py} esegue le
-seguenti fasi:
+vettoriale con i dati applicativi. Il job
+\texttt{i3guild-embedding-pipeline/pipeline/main.py} esegue le seguenti fasi:
 
 \begin{enumerate}
   \item \textbf{Extract}: connessione a PostgreSQL e query SQL con JOIN su
     \texttt{Epoch}, \texttt{GuildUserRelation} ed \texttt{ExternalUser} per
     estrarre tutti i campi semantici delle Gilde insieme ai nomi dei
     partecipanti.
-  \item \textbf{Transform}: applicazione di \texttt{DocumentCleaner} (stripping
-    HTML dai campi WYSIWYG come \texttt{journal}), normalizzazione degli spazi,
-    rimozione di segnaposti residui.
-  \item \textbf{Embed}: generazione degli embedding tramite
-    \texttt{OllamaDocumentEmbedder} (modello \texttt{nomic-embed-text},
-    endpoint interno Docker \texttt{http://ollama:11434}).
+  \item \textbf{Transform}: normalizzazione HTML tramite \texttt{BeautifulSoup},
+    composizione di documenti Haystack con sezioni marcate e chunking con
+    overlap quando il testo supera \texttt{INGEST\_MAX\_DOCUMENT\_CHARS}.
+  \item \textbf{Embed}: generazione di embedding densi tramite
+    \texttt{FastembedDocumentEmbedder} e di embedding sparsi tramite
+    \texttt{FastembedSparseDocumentEmbedder}.
   \item \textbf{Load}: scrittura su Qdrant tramite \texttt{DocumentWriter} con
-    policy \texttt{DuplicatePolicy.OVERWRITE}.
+    policy configurabile, di default \texttt{DuplicatePolicy.OVERWRITE}.
 \end{enumerate}
 
 La struttura della pipeline Haystack è riportata in Appendice~\ref{app:B},
@@ -732,15 +707,19 @@ Listato~\ref{lst:ingest_pipeline}. Nel capitolo principale è sufficiente
 evidenziare la sequenza logica Extract--Transform--Embed--Load, perché il
 dettaglio del codice non modifica la scelta progettuale.
 
-Con lo stack Docker attivo, l'ingestione può essere avviata da host tramite il
-comando \texttt{docker-compose exec i3guild\_rag python rag/ingest.py}.
+Il container della pipeline mantiene comportamento batch: esegue ingestione,
+upsert su Qdrant e termina con codice 0 in caso di successo o 1 in caso di
+errore. Questa separazione evita che indicizzazione e query interattive
+competano nello stesso processo.
 
 \subsection{Pipeline di retrieval e logica di ranking}
 \label{subsec:retrieval_pipeline}
 
-La pipeline di retrieval (\texttt{rag/api.py}) usa l'indice Qdrant per
-recuperare i documenti più pertinenti alla query e restituisce al livello
-applicativo un contesto già filtrato. Il sistema non adotta un valore
+La pipeline di retrieval usa l'indice ibrido Qdrant per recuperare i documenti
+più pertinenti alla query e restituisce al livello applicativo un contesto già
+filtrato. La query viene trasformata sia in embedding denso sia in embedding
+sparso; le due rappresentazioni alimentano \texttt{QdrantHybridRetriever}. Il
+sistema non adotta un valore
 \texttt{top\_k} fisso: una soglia rigida rischierebbe infatti di includere
 documenti marginali nelle query semplici o di tagliare informazioni utili nelle
 query più ampie. Per questo viene applicato un approccio adattivo in tre stadi:
@@ -748,13 +727,18 @@ query più ampie. Per questo viene applicato un approccio adattivo in tre stadi:
 \begin{enumerate}
   \item \textbf{Soglia di similarità} (default: cosine score $\geq 0.7$):
     esclude documenti semanticamente non pertinenti.
-  \item \textbf{Rilevamento del gap}: se il salto di score tra due documenti
-    consecutivi supera una soglia configurabile (default: 0.08), la lista viene
-    troncata al confine naturale della rilevanza.
+  \item \textbf{Rilevamento del calo relativo}: se la caduta percentuale tra
+    due score consecutivi supera una soglia configurabile (default: 0.08), la
+    lista viene troncata al confine naturale della rilevanza.
   \item \textbf{Cap di sicurezza} (default: $\leq 10$ documenti): limite
     massimo per controllare la dimensione del contesto passato al modello
     generativo.
 \end{enumerate}
+
+Prima del taglio finale viene applicata una deduplicazione post-retrieval: il
+servizio rimuove documenti ripetuti per ID, fingerprint testuale e similarità
+fuzzy. Una cache in-process con TTL breve riduce inoltre richieste ripetute con
+stessi parametri, senza cambiare il modello dati persistente.
 
 \subsubsection{Query rewriting e Topic-First Search}
 \label{subsubsec:query_rewriting}
@@ -816,8 +800,8 @@ e~\ref{lst:api_response}.
 
 I campi \texttt{total\_candidates}, \texttt{threshold\_used},
 \texttt{cutoff\_reason} e \texttt{topic\_query} (presente solo quando il
-rewriting è attivo) sono utili per il debug e la valutazione sperimentale del
-sistema (Capitolo~\ref{chap:evaluation}).
+rewriting è attivo) sono utili per il debug, per il controllo applicativo e per
+eventuali verifiche successive della qualità del retrieval.
 
 % -------------------------------------------------------------
 \section{Integrazione con i3Guild}
@@ -849,10 +833,12 @@ introdotti dal sistema RAG.
     \midrule
     \texttt{qdrant} & \texttt{qdrant:latest} & 6333, 6334 & Database vettoriale; Web UI su \texttt{/dashboard} \\
     \texttt{ollama} & \texttt{ollama:latest} & 11434 & Server di
-      inferenza LLM ed embedding \\
+      inferenza LLM \\
     \texttt{i3guild\_rag} & Build locale & 8002 & FastAPI + Haystack
-      (retrieval e ingestione) \\
-    \texttt{postgres} & già presente & già presente & Source of truth
+      (retrieval ibrido e generazione) \\
+    \texttt{i3guild\_embedding\_pipeline} & Build locale & -- & Job batch
+      PostgreSQL $\rightarrow$ FastEmbed/Haystack $\rightarrow$ Qdrant \\
+    \texttt{postgres} & già presente & già presente & Sorgente autoritativa
       relazionale (nessuna modifica) \\
     \bottomrule
   \end{tabular}
@@ -875,12 +861,17 @@ introdotti dal sistema RAG.
     \texttt{QDRANT\_COLLECTION\_NAME} & \texttt{i3guild\_knowledge} &
       Collection principale \\
     \texttt{OLLAMA\_BASE\_URL} & \texttt{http://localhost:11434} & Endpoint
-      Ollama \\
-    \texttt{OLLAMA\_EMBEDDING\_MODEL} & \texttt{nomic-embed-text} &
-      Modello di embedding \\
-    \texttt{OLLAMA\_CHAT\_MODEL} & \texttt{gemma3:1b} & Modello LLM di
-      chat (selezionato da benchmark) \\
-    \texttt{EMBEDDING\_DIMENSIONS} & \texttt{768} & Dimensione vettore \\
+      Ollama per generazione LLM \\
+    \texttt{OLLAMA\_LLM\_MODEL} / \texttt{OLLAMA\_CHAT\_MODEL} &
+      \texttt{gemma3:1b} / configurabile & Modello LLM usato dal servizio o
+      inoltrato dal frontend \\
+    \texttt{EMBEDDING\_DIMENSIONS} & \texttt{768} & Dimensione vettore denso \\
+    \texttt{FASTEMBED\_DENSE\_MODEL} & \texttt{BAAI/bge-base-en-v1.5} &
+      Modello FastEmbed denso \\
+    \texttt{FASTEMBED\_SPARSE\_MODEL} & \texttt{prithivida/Splade\_PP\_en\_v1} &
+      Modello FastEmbed sparso \\
+    \texttt{RAG\_CACHE\_TTL\_SECONDS} & \texttt{60} & TTL cache retrieval
+      in-process \\
     \texttt{RAG\_API\_URL} & \texttt{http://i3guild\_rag:8000} &
       Endpoint interno del servizio RAG \\
     \bottomrule
@@ -891,30 +882,26 @@ introdotti dal sistema RAG.
 \label{subsec:nextjs_integration}
 
 Lato applicazione Next.js, l'integrazione è concentrata nel servizio TypeScript
-\texttt{src/lib/services/rag.service.ts}, che espone la funzione
-\texttt{searchRAG(query, filters?, options?)}. La funzione invoca l'endpoint
-Python \texttt{/rag/retrieve} con i parametri di retrieval dinamico e restituisce
-un array vuoto in caso di irraggiungibilità del servizio Python. In questo modo
-il chatbot può degradare in modo controllato, senza interrompere il resto
-dell'esperienza applicativa.
-
-Le chiamate a Ollama per la generazione del testo utilizzano un agent
-\texttt{undici} personalizzato con \texttt{headersTimeout: 300s} per evitare
-il \texttt{HeadersTimeoutError} che si manifesta al primo avvio, quando Ollama
-carica il modello in memoria (latenza tipica di 60--120~s su CPU-only).
+\texttt{src/lib/services/rag.service.ts}. Il client espone funzioni per
+retrieval, risposta sincrona e streaming, inoltra al microservizio il modello
+LLM configurato e supporta opzioni applicative come \texttt{use\_rag},
+\texttt{json\_mode}, timeout client e parametri di generazione. In caso di
+errore del retrieval, la ricerca può degradare restituendo un insieme vuoto; nei
+flussi di generazione strutturata, invece, l'errore viene propagato al chiamante
+per attivare fallback applicativi espliciti.
 
 \subsection{Sincronizzazione dei dati}
 \label{subsec:data_sync}
 
-PostgreSQL rimane la \emph{source of truth}; Qdrant è una vista derivata e deve
+PostgreSQL rimane la sorgente autoritativa; Qdrant è una vista derivata e deve
 essere mantenuto sincronizzato con i dati applicativi. Sono state considerate
 tre strategie, in ordine crescente di complessità: re-indicizzazione completa,
 sincronizzazione incrementale e aggiornamento event-driven. Per il prototipo la
-strategia raccomandata è il \textbf{full re-index periodico}: lo script
-\texttt{rag/ingest.py} riscrive l'intera collection su base giornaliera o
-settimanale. La scelta è semplice da implementare, riduce il rischio di
-inconsistenze e rimane sostenibile perché l'embedding è eseguito localmente,
-senza costi a consumo per token. L'evoluzione verso un \emph{sync incrementale}
-basato sul campo \texttt{@updatedAt} di Prisma, o verso un meccanismo
-\emph{event-driven} attivato dalle operazioni CRUD, è lasciata come sviluppo
-futuro.
+strategia raccomandata è il \textbf{full re-index periodico}: il container
+\texttt{i3guild-embedding-pipeline} ricrea la collection di default e riscrive
+i documenti con policy di overwrite. La scelta è semplice da implementare,
+riduce il rischio di inconsistenze tra indici densi e sparsi e rimane
+sostenibile perché l'embedding è eseguito localmente, senza costi a consumo per
+token. L'evoluzione verso un \emph{sync incrementale} basato sul campo
+\texttt{@updatedAt} di Prisma, o verso un meccanismo \emph{event-driven}
+attivato dalle operazioni CRUD, è lasciata come sviluppo futuro.

@@ -10,32 +10,31 @@ lettura.
 
 \begin{lstlisting}[language=Python, frame=single, breaklines=true, caption={Struttura della pipeline di ingestione Haystack 2.x (pseudocodice).}, label={lst:ingest_pipeline}]
 from haystack import Pipeline
-from haystack.components.preprocessors import DocumentCleaner, DocumentSplitter
 from haystack.components.writers import DocumentWriter
-from haystack_integrations.components.embedders.ollama import OllamaDocumentEmbedder
+from haystack_integrations.components.embedders.fastembed import (
+    FastembedDocumentEmbedder,
+    FastembedSparseDocumentEmbedder,
+)
 from haystack_integrations.document_stores.qdrant import QdrantDocumentStore
 
 qdrant_store = QdrantDocumentStore(url="http://qdrant:6333",
-                                   collection_name="i3guild_knowledge",
-                                   embedding_dim=768)
+                                   index="i3guild_knowledge",
+                                   embedding_dim=768,
+                                   use_sparse_embeddings=True)
 
 indexing_pipeline = Pipeline()
-indexing_pipeline.add_component("cleaner",  DocumentCleaner())
-indexing_pipeline.add_component("splitter", DocumentSplitter(
-    split_by="word", split_length=500, split_overlap=50))
-indexing_pipeline.add_component("embedder", OllamaDocumentEmbedder(
-    model="nomic-embed-text",
-    url="http://ollama:11434/api/embed",
-    generation_kwargs={"num_ctx": 8192}))
-indexing_pipeline.add_component("writer",   DocumentWriter(
+indexing_pipeline.add_component("dense_embedder", FastembedDocumentEmbedder(
+    model="BAAI/bge-base-en-v1.5"))
+indexing_pipeline.add_component("sparse_embedder", FastembedSparseDocumentEmbedder(
+    model="prithivida/Splade_PP_en_v1"))
+indexing_pipeline.add_component("writer", DocumentWriter(
     document_store=qdrant_store,
     policy=DuplicatePolicy.OVERWRITE))
 
-indexing_pipeline.connect("cleaner.documents",  "splitter.documents")
-indexing_pipeline.connect("splitter.documents", "embedder.documents")
-indexing_pipeline.connect("embedder.documents", "writer.documents")
+indexing_pipeline.connect("dense_embedder.documents", "sparse_embedder.documents")
+indexing_pipeline.connect("sparse_embedder.documents", "writer.documents")
 
-indexing_pipeline.run({"cleaner": {"documents": raw_docs}})
+indexing_pipeline.run({"dense_embedder": {"documents": raw_docs}})
 \end{lstlisting}
 
 \begin{lstlisting}[frame=single, breaklines=true, caption={Esempio di request body per l'endpoint \texttt{/rag/retrieve}.}, label={lst:api_request}]
@@ -56,7 +55,7 @@ indexing_pipeline.run({"cleaner": {"documents": raw_docs}})
                                     "participants": [...] } } ],
   "total_candidates": 15,
   "threshold_used":   0.5,
-  "cutoff_reason":    "gap",
+  "cutoff_reason":    "relative_gap",
   "topic_query":      "musica"
 }
 \end{lstlisting}
@@ -107,20 +106,25 @@ document_store = QdrantDocumentStore(
     embedding_dim=EMBEDDING_DIMENSIONS,
     similarity="cosine",
     recreate_index=RECREATE_INDEX,
+    use_sparse_embeddings=True,
 )
 
-embedder = OllamaDocumentEmbedder(
-    model=OLLAMA_EMBEDDING_MODEL,
-    url=OLLAMA_BASE_URL,
-    timeout=300,
-    generation_kwargs={"num_ctx": 8192},
+dense_embedder = FastembedDocumentEmbedder(
+    model=FASTEMBED_DENSE_MODEL,
+    cache_dir=FASTEMBED_CACHE_DIR,
+)
+sparse_embedder = FastembedSparseDocumentEmbedder(
+    model=FASTEMBED_SPARSE_MODEL,
+    cache_dir=FASTEMBED_CACHE_DIR,
 )
 
 writer = DocumentWriter(document_store=document_store, policy=policy)
 indexing_pipeline = Pipeline()
-indexing_pipeline.add_component("embedder", embedder)
+indexing_pipeline.add_component("dense_embedder", dense_embedder)
+indexing_pipeline.add_component("sparse_embedder", sparse_embedder)
 indexing_pipeline.add_component("writer", writer)
-indexing_pipeline.connect("embedder.documents", "writer.documents")
+indexing_pipeline.connect("dense_embedder.documents", "sparse_embedder.documents")
+indexing_pipeline.connect("sparse_embedder.documents", "writer.documents")
 \end{lstlisting}
 
 \section{Listati richiamati nel Capitolo 3: retrieval e generazione}
@@ -135,24 +139,30 @@ class RetrieveRequest(BaseModel):
     filters: dict | None = None
 \end{lstlisting}
 
-\begin{lstlisting}[language=Python, frame=single, breaklines=true, caption={Pipeline Haystack per la ricerca semantica.}, label={lst:query_pipeline_impl}]
+\begin{lstlisting}[language=Python, frame=single, breaklines=true, caption={Pipeline Haystack per la ricerca ibrida.}, label={lst:query_pipeline_impl}]
 document_store = QdrantDocumentStore(
     url=QDRANT_URL,
     index=QDRANT_COLLECTION_NAME,
     embedding_dim=768,
     similarity="cosine",
     recreate_index=False,
+    use_sparse_embeddings=True,
 )
-text_embedder = OllamaTextEmbedder(
-    model=OLLAMA_EMBEDDING_MODEL,
-    url=OLLAMA_BASE_URL,
+text_embedder = FastembedTextEmbedder(
+    model=FASTEMBED_DENSE_MODEL,
 )
-retriever = QdrantEmbeddingRetriever(document_store=document_store)
+sparse_text_embedder = FastembedSparseTextEmbedder(
+    model=FASTEMBED_SPARSE_MODEL,
+)
+retriever = QdrantHybridRetriever(document_store=document_store)
 
 pipeline = Pipeline()
 pipeline.add_component("text_embedder", text_embedder)
+pipeline.add_component("sparse_text_embedder", sparse_text_embedder)
 pipeline.add_component("retriever", retriever)
 pipeline.connect("text_embedder.embedding", "retriever.query_embedding")
+pipeline.connect("sparse_text_embedder.sparse_embedding",
+                 "retriever.query_sparse_embedding")
 \end{lstlisting}
 
 \begin{lstlisting}[language=Python, frame=single, breaklines=true, caption={Logica semplificata di taglio dinamico dei risultati.}, label={lst:dynamic_filtering}]
@@ -191,29 +201,21 @@ final_message = (
 {"type": "stream_end"}
 \end{lstlisting}
 
-\section{Listati richiamati nel Capitolo 3: workflow agentico e frontend}
+\section{Listati richiamati nel Capitolo 3: frontend e generazione bozza}
 
-\begin{lstlisting}[language=Python, frame=single, breaklines=true, caption={Modello di stato usato dal workflow agentico.}, label={lst:agent_state}]
-class ProposalDraft(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    risks: str | None = None
-    resources: str | None = None
-    outcomes: str | None = None
-
-class AgentState(BaseModel):
-    phase: AgentPhase = "triage"
-    topic: str | None = None
-    current_field: ProposalField | None = None
-    proposal: ProposalDraft = Field(default_factory=ProposalDraft)
+\begin{lstlisting}[frame=single, breaklines=true, caption={Esempio di eventi NDJSON prodotti dalla generazione bozza.}, label={lst:draft_ndjson}]
+{"type": "status", "message": "generation_started", "promptLength": 4200}
+{"type": "status", "message": "generation_in_progress"}
+{"type": "draft", "source": "llm", "draft": {"name": "..."}}
 \end{lstlisting}
 
-\begin{lstlisting}[frame=single, breaklines=true, caption={Esempio di eventi NDJSON prodotti dalla modalità agentica.}, label={lst:agentic_ndjson}]
-{"type": "agent_decision", "decision": "benchmark", "rewritten_query": "musica"}
-{"type": "rag", "retrieved": 5, "docs": []}
-{"type": "stream_start", "model": "deterministic-orchestrator"}
-{"type": "token", "content": "Ho "}
-{"type": "stream_end", "agent_state": {...}}
+\begin{lstlisting}[frame=single, breaklines=true, caption={Chiamata TypeScript per generazione bozza senza retrieval.}, label={lst:draft_generation_call}]
+const ragResponse = await generateRAGChatReply(prompt, [], {
+    model,
+    useRag: false,
+    jsonMode: true,
+    options: { num_predict: -1, timeout_seconds: 0 },
+});
 \end{lstlisting}
 
 \begin{lstlisting}[frame=single, breaklines=true, caption={Chiamata TypeScript al retrieval RAG.}, label={lst:typescript_search_rag}]
