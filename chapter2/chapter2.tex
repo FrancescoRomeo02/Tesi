@@ -121,18 +121,17 @@ team.
 
 \subsection{Obiettivi del caso d'uso}
 
-\begin{itemize}
-  \item Fornire risposte affidabili e tracciabili su contenuti presenti nei
-    repository aziendali, riducendo il rischio di allucinazioni tipico della
-    generazione puramente parametrica~\cite{lewis2020rag}.
-  \item Ridurre il tempo di ricerca delle informazioni per attività operative e
-    decisionali interne a Intré.
-  \item Consentire l'esecuzione del servizio in ambiente on-premise per
-    requisiti di sovranità del dato, in conformità al Regolamento Generale
-    sulla Protezione dei Dati (GDPR)~\cite{gdpr2016}.
-  \item Integrare il sistema nel flusso i3Guild esistente, minimizzando
-    l'impatto sul processo operativo consolidato.
-\end{itemize}
+Gli obiettivi del caso d'uso derivano direttamente dalla natura del corpus e dal
+contesto aziendale in cui il sistema deve essere inserito. Il primo obiettivo è
+fornire risposte affidabili e tracciabili sui contenuti presenti nei repository
+aziendali, riducendo il rischio di allucinazioni tipico della generazione
+puramente parametrica~\cite{lewis2020rag}. A questo si affianca l'esigenza di
+ridurre il tempo necessario a reperire informazioni utili per attività operative
+e decisionali interne a Intré. Il sistema deve inoltre poter essere eseguito in
+ambiente on-premise, così da rispettare i requisiti di sovranità del dato e il
+Regolamento Generale sulla Protezione dei Dati (GDPR)~\cite{gdpr2016}. Infine,
+l'integrazione deve avvenire nel flusso i3Guild esistente, limitando l'impatto
+sul processo operativo già consolidato.
 
 \subsection{Descrizione dei dati e analisi del corpus}
 \label{subsec:data_analysis}
@@ -269,27 +268,24 @@ alto livello, suddivisi per categoria.
 \subsection{Vincoli architetturali}
 \label{subsec:constraints}
 
-I requisiti precedenti si traducono in alcuni vincoli architetturali non
-negoziabili, che orientano direttamente la scelta dei componenti:
+I requisiti precedenti si traducono in vincoli architetturali non negoziabili.
+Il primo riguarda l'esecuzione on-premise: i dati delle Gilde, incluse le
+informazioni sui partecipanti e sui progetti, non possono transitare su
+infrastrutture cloud di terze parti. Il deployment locale è quindi la condizione
+tecnica che consente di rispettare i principi di integrità e riservatezza
+previsti dal GDPR~\cite{gdpr2016}. Il secondo vincolo è la compatibilità con lo
+stack i3Guild esistente, basato su Docker Compose, PostgreSQL/Prisma, Next.js e
+Keycloak per l'autenticazione.
 
-\begin{itemize}
-  \item \textbf{On-premise obbligatorio}: i dati delle Gilde, incluse
-    informazioni sui partecipanti e sui progetti, non possono transitare su
-    infrastrutture cloud di terze parti. Il deployment locale consente di
-    soddisfare il principio di integrità e riservatezza previsto dal
-    GDPR~\cite{gdpr2016}.
-  \item \textbf{Compatibilità con lo stack i3Guild}: l'integrazione deve
-    essere coerente con l'infrastruttura esistente (Docker Compose,
-    PostgreSQL/Prisma, Next.js, Keycloak per l'autenticazione).
-  \item \textbf{Limitazioni hardware}: l'ambiente Docker dispone di 8~GB di
-    RAM complessivi, condivisi tra database, servizi applicativi, pipeline di
-    embedding quando attiva e modello di generazione del testo.
-    Questo vincolo è determinante per la selezione del modello LLM (Sezione~\ref{subsec:llm_choice}).
-  \item \textbf{No API esterne per LLM ed embedding}: generazione ed embedding
-    devono restare locali; Ollama gestisce il modello generativo, mentre
-    FastEmbed/Haystack gestisce i modelli di embedding senza dipendere da API
-    di provider esterni.
-\end{itemize}
+Un terzo vincolo, meno visibile ma determinante, è quello hardware. L'ambiente
+Docker dispone di 8~GB di RAM complessivi, condivisi tra database, servizi
+applicativi, pipeline di embedding quando attiva e modello di generazione del
+testo. Questa disponibilità limita la scelta del modello LLM, discussa nella
+Sezione~\ref{subsec:llm_choice}, e impone di evitare componenti con requisiti di
+memoria elevati. Per la stessa ragione, generazione ed embedding devono restare
+locali senza fare affidamento su API esterne: Ollama gestisce il modello
+generativo, mentre FastEmbed/Haystack produce gli embedding senza dipendere da
+provider cloud.
 
 % -------------------------------------------------------------
 \section{Scelte tecnologiche: analisi comparativa}
@@ -358,12 +354,15 @@ componenti in produzione~\cite{peliqan2025haystack}.
   \end{tabular}
 \end{table}
 
-\noindent \textbf{Scelta motivata: Haystack 2.x.} L'architettura a componenti
-tipizzati, la documentazione rigorosa, le integrazioni native con Qdrant
-(\texttt{QdrantDocumentStore}), FastEmbed per embedding densi e sparsi e
-Ollama per la generazione, il minore overhead di orchestrazione e la
-serializzabilità delle pipeline rendono Haystack la scelta più adeguata per un
-sistema RAG production-oriented in ambiente on-premise~\cite{tonic2024rag}.
+\noindent Alla luce di questo confronto, Haystack 2.x risulta la soluzione più
+coerente con il progetto. L'architettura a componenti tipizzati, la
+documentazione rigorosa, le integrazioni native con Qdrant
+(\texttt{QdrantDocumentStore}), FastEmbed per embedding densi e sparsi e Ollama
+per la generazione permettono di costruire una pipeline osservabile senza
+introdurre un framework agentico più complesso del necessario. Il minore
+overhead di orchestrazione e la possibilità di serializzare le pipeline
+rafforzano questa scelta in un sistema RAG orientato alla produzione e vincolato
+all'esecuzione on-premise~\cite{tonic2024rag}.
 
 \subsection{Database vettoriale}
 \label{subsec:vectordb_choice}
@@ -430,9 +429,11 @@ seguenti:
     Next.js, e deploy in singolo container Docker~\cite{qdrant2024bench}.
 \end{itemize}
 
-\noindent \textbf{Scelta motivata: Qdrant.} Per le ragioni sopra esposte e in
-linea con il vincolo aziendale di self-hosting, Qdrant rappresenta il database
-vettoriale più adeguato al contesto del progetto.
+\noindent Per le ragioni discusse, e in particolare per il bilanciamento tra
+prestazioni, semplicità di deployment e supporto al filtering sui metadati,
+Qdrant è stato selezionato come database vettoriale del progetto. La scelta è
+coerente con il vincolo aziendale di self-hosting e con la necessità di
+mantenere il sistema manutenibile anche in un contesto prototipale.
 
 \subsection{Modello di embedding}
 \label{subsec:embedding_choice}
@@ -467,13 +468,15 @@ Gilde~\cite{haystackFastembedDocument2026,haystackFastembedSparse2026}.
   \end{tabular}
 \end{table}
 
-\noindent La scelta aggiornata risponde a tre esigenze. La prima è eliminare la
-dipendenza da Ollama nella fase batch di indicizzazione: Ollama resta dedicato
-alla generazione LLM, mentre FastEmbed produce gli embedding in un job separato.
-La seconda è rendere il retrieval più robusto rispetto alle sole similarità
-dense. La terza è avvicinare ingestione e query allo stesso schema operativo:
-in scrittura vengono generati embedding densi e sparsi dei documenti; in lettura
-la query viene trasformata nelle due rappresentazioni corrispondenti e inviata a
+\noindent La configurazione aggiornata elimina la dipendenza da Ollama nella
+fase batch di indicizzazione: Ollama rimane dedicato alla generazione LLM,
+mentre FastEmbed produce gli embedding in un job separato. La presenza della
+componente sparsa rende inoltre il retrieval meno dipendente dalla sola
+similarità densa, aspetto rilevante in un corpus dove nomi propri, tecnologie e
+termini ricorrenti hanno spesso valore informativo letterale. In questo modo
+ingestione e query seguono lo stesso schema operativo: in scrittura vengono
+generati embedding densi e sparsi dei documenti; in lettura la query viene
+trasformata nelle due rappresentazioni corrispondenti e inviata a
 \texttt{QdrantHybridRetriever}~\cite{haystackQdrantHybrid2026}. Il valore
 \texttt{EMBEDDING\_DIMENSIONS=768} rimane il riferimento per la componente
 densa.
@@ -508,24 +511,16 @@ PostgreSQL, Qdrant, il servizio Next.js, la pipeline RAG e Ollama. Per questo
 la selezione non mira a identificare il modello migliore in senso assoluto, ma
 un modello sufficientemente stabile per validare l'integrazione end-to-end.
 
-\noindent \textbf{Scelta motivata: \texttt{gemma3:1b}.} Il modello adottato nel
-prototipo è \texttt{gemma3:1b}. La scelta deriva da prove preliminari interne
-su modelli disponibili nel registry Ollama, valutati rispetto a tre criteri:
-latenza percepita durante l'interazione, consumo di memoria compatibile con gli
-altri container e qualità minima delle risposte in presenza di contesto RAG. Le
-motivazioni principali sono:
-
-\begin{itemize}
-  \item \textbf{RAM compatibile con i vincoli}: il modello può essere caricato
-    senza saturare le risorse condivise con PostgreSQL, Qdrant, Next.js e il
-    servizio RAG.
-  \item \textbf{Latenza accettabile}: i tempi di risposta sono compatibili con
-    un uso interattivo del chatbot, tenendo conto del cold start del modello.
-  \item \textbf{Qualità sufficiente per il prototipo}: le risposte risultano
-    adeguate quando il modello riceve contesto recuperato da Qdrant.
-  \item \textbf{Integrazione semplice}: il modello è disponibile direttamente in
-    Ollama e non richiede conversioni o runtime aggiuntivi.
-\end{itemize}
+\noindent Il modello adottato nel prototipo è \texttt{gemma3:1b}. La scelta
+deriva da prove preliminari interne su modelli disponibili nel registry Ollama,
+valutati rispetto alla latenza percepita durante l'interazione, al consumo di
+memoria e alla qualità minima delle risposte in presenza di contesto RAG. Il
+modello può essere caricato senza saturare le risorse condivise con PostgreSQL,
+Qdrant, Next.js e il servizio RAG; i tempi di risposta restano compatibili con
+un uso interattivo del chatbot, tenendo conto del cold start, e l'integrazione
+non richiede conversioni o runtime aggiuntivi. Le risposte non sono usate come
+prova generale della qualità del modello, ma risultano sufficienti per validare
+il flusso applicativo quando il contesto recuperato da Qdrant è pertinente.
 
 \noindent Questa valutazione resta volutamente interna al progetto aziendale:
 serve a rendere eseguibile il prototipo i3Guild, non a produrre conclusioni
@@ -558,11 +553,12 @@ riporta lo schema di alto livello dell'architettura.
 \subsection{Componenti principali}
 \label{subsec:components}
 
-I componenti non sono indipendenti solo dal punto di vista del deployment: ciascuno
+I componenti non sono separati soltanto per ragioni di deployment: ciascuno
 risponde a un requisito emerso nelle sezioni precedenti. PostgreSQL rimane la
-sorgente autoritativa, Qdrant rende interrogabile il corpus per similarità,
-Ollama evita dipendenze cloud e FastAPI espone un confine applicativo semplice
-verso Next.js.
+sorgente autoritativa dei dati; Qdrant rende interrogabile il corpus per
+similarità; Ollama consente di mantenere la generazione in locale; FastAPI
+espone verso Next.js un confine applicativo chiaro, senza incorporare la logica
+RAG direttamente nel frontend.
 
 \begin{description}
   \item[Ingestione e pre-processing (\texttt{i3guild-embedding-pipeline})]

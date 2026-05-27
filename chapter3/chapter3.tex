@@ -14,17 +14,16 @@ ma non come scelta finale, perché a parità di risorse hardware introduceva un
 costo computazionale più elevato e un vantaggio limitato rispetto a un flusso
 RAG più classico.
 
-La realizzazione è distribuita su tre repository applicativi. Il primo è
-\texttt{i3guild}, che contiene l'applicazione web Next.js e il database
-PostgreSQL~\cite{postgresql2024}. Il secondo è
-\texttt{i3guild-embedding-pipeline}, responsabile dell'estrazione dei dati,
-della normalizzazione testuale, della generazione di embedding densi e sparsi
-con FastEmbed/Haystack e dell'upsert su Qdrant. Il terzo è
-\texttt{i3guild-rag}, un microservizio Python che espone le API di retrieval e
-chat. Questa separazione riduce l'accoppiamento tra applicazione e componente
-RAG: i3Guild rimane la sorgente autoritativa dei dati, Qdrant conserva la
-knowledge base ibrida e Ollama viene usato solo per la generazione
-LLM~\cite{qdrant2023,ollama2023}.
+La realizzazione è distribuita su tre repository applicativi, ciascuno
+associato a una responsabilità precisa. Il repository principale i3Guild
+contiene l'applicazione web Next.js e il database
+PostgreSQL~\cite{postgresql2024}. La pipeline di embedding gestisce
+l'estrazione dei dati, la normalizzazione testuale, la generazione di embedding
+densi e sparsi con FastEmbed/Haystack e l'upsert su Qdrant. Il microservizio
+RAG espone invece le API Python per retrieval e chat. Questa separazione riduce
+l'accoppiamento tra applicazione e componente RAG: i3Guild rimane la sorgente
+autoritativa dei dati, Qdrant conserva la knowledge base ibrida e Ollama viene
+usato solo per la generazione LLM~\cite{qdrant2023,ollama2023}.
 
 \begin{figure}[ht]
   \centering
@@ -81,12 +80,12 @@ dedicato~\cite{nextjs2024}.
   \end{tabular}
 \end{table}
 
-La scelta di mantenere l'ingestione fuori dal servizio di query evita che
-operazioni batch e richieste interattive competano nello stesso processo. La
-pipeline di embedding può essere eseguita manualmente, schedulata o avviata in
-container dedicato; il servizio RAG, invece, rimane ottimizzato per rispondere a
-richieste HTTP a bassa latenza. La containerizzazione isola dipendenze e servizi
-di supporto~\cite{docker2024}.
+Mantenere l'ingestione fuori dal servizio di query evita che operazioni batch e
+richieste interattive competano nello stesso processo. La pipeline di embedding
+può essere eseguita manualmente, schedulata o avviata in un container dedicato;
+il servizio RAG rimane invece ottimizzato per rispondere a richieste HTTP a
+bassa latenza. La containerizzazione completa questa separazione, isolando
+dipendenze e servizi di supporto~\cite{docker2024}.
 
 % -------------------------------------------------------------
 \section{Pipeline di ingestione}
@@ -106,11 +105,14 @@ dell'indicizzazione~\cite{docker2024}.
 \subsection{Configurazione e controlli preliminari}
 \label{subsec:implementation_ingestion_config}
 
-La configurazione avviene tramite variabili d'ambiente. Le più rilevanti
-definiscono connessione a PostgreSQL, endpoint e collection Qdrant, modelli
-FastEmbed e dimensione del vettore denso. Il modulo legge anche parametri
-operativi per ricreazione dell'indice, dimensione dei batch, soglia di chunking
-e overlap. La pipeline non richiede più variabili Ollama per l'indicizzazione.
+La configurazione avviene tramite variabili d'ambiente, così da mantenere lo
+stesso container riutilizzabile in ambienti diversi. I parametri principali
+definiscono la connessione a PostgreSQL, l'endpoint e la collection Qdrant, i
+modelli FastEmbed e la dimensione del vettore denso. A questi si aggiungono
+opzioni operative per ricreare l'indice, controllare la dimensione dei batch e
+stabilire quando applicare il chunking con overlap. La generazione degli embedding 
+avviene attraverso i modelli mostrati nella Tabella~\ref{tab:embedding_models}
+così da non dipendere da Ollama.
 
 \begin{table}[ht]
   \centering
@@ -183,13 +185,14 @@ testuale per le domande dell'utente.
 \label{subsec:implementation_document_building}
 
 Ogni riga estratta viene trasformata in uno o più documenti Haystack. La
-funzione di costruzione compone un testo con sezioni marcate per sommario,
-obiettivi, rischi, risultati raggiunti e partecipanti. I campi HTML vengono
-normalizzati con BeautifulSoup~\cite{beautifulsoup2024}: il codice rimuove i
-tag, conserva il testo e compatta gli spazi. Per il retrieval serve un testo
-pulito e stabile, non una resa editoriale. Uno schema semplificato della
-costruzione del documento è riportato
-in Appendice~\ref{app:B}, Listato~\ref{lst:create_document_simplified}.
+funzione di costruzione compone un testo articolato in sezioni riconoscibili,
+dedicate a sommario, obiettivi, rischi, risultati raggiunti e partecipanti. I
+campi HTML vengono normalizzati con BeautifulSoup~\cite{beautifulsoup2024}: il
+codice rimuove i tag, conserva il contenuto testuale e compatta gli spazi. In
+questa fase non interessa ottenere una resa editoriale del documento, ma una
+rappresentazione pulita e stabile, adatta al retrieval. Uno schema semplificato
+della costruzione del documento è riportato in Appendice~\ref{app:B},
+Listato~\ref{lst:create_document_simplified}.
 
 La strategia descritta nel Capitolo~\ref{chap:requirements_design} prevedeva un
 documento consolidato per Gilda. L'implementazione mantiene questa impostazione
@@ -212,12 +215,12 @@ I metadati associati includono \texttt{guild\_id}, \texttt{guild\_name},
 \subsection{Embedding e scrittura in Qdrant}
 \label{subsec:implementation_embedding_write}
 
-La fase finale costruisce una pipeline Haystack con un embedder denso, un
-embedder sparso e un writer. Il primo componente aggiunge ai documenti la
-rappresentazione densa; il secondo aggiunge la rappresentazione sparsa; il writer
-persiste entrambi i segnali nel document store Qdrant. La configurazione
-essenziale della pipeline è riportata in Appendice~\ref{app:B},
-Listato~\ref{lst:embedding_pipeline_impl}.
+La fase finale costruisce una pipeline Haystack composta da un embedder denso,
+un embedder sparso e un writer. I due embedder arricchiscono gli stessi
+documenti con rappresentazioni complementari: la prima orientata alla similarità
+semantica, la seconda al matching lessicale. Il writer persiste poi entrambi i
+segnali nel document store Qdrant. La configurazione essenziale della pipeline è
+riportata in Appendice~\ref{app:B}, Listato~\ref{lst:embedding_pipeline_impl}.
 
 La pipeline viene eseguita in batch applicativi, con una dimensione configurabile
 tramite variabile d'ambiente. Questa scelta riduce il picco di memoria dello
@@ -232,11 +235,11 @@ knowledge base.
 % -------------------------------------------------------------
 
 Il microservizio RAG è implementato con FastAPI nel repository
-\texttt{i3guild-rag}. Espone endpoint per retrieval, chat sincrona e chat in
+\texttt{i3guild-rag} ed espone endpoint per retrieval, chat sincrona e chat in
 streaming. La configurazione è centralizzata nel modulo delle impostazioni e usa
-\texttt{pydantic-settings}; i valori di default
-permettono lo sviluppo locale, mentre gli ambienti Docker possono sovrascriverli
-con variabili d'ambiente~\cite{fastapi2024,pydantic2024}.
+\texttt{pydantic-settings}; i valori di default permettono lo sviluppo locale,
+mentre gli ambienti Docker possono sovrascriverli tramite variabili
+d'ambiente~\cite{fastapi2024,pydantic2024}.
 
 \begin{table}[ht]
   \centering
@@ -269,10 +272,9 @@ con variabili d'ambiente~\cite{fastapi2024,pydantic2024}.
 Il file \texttt{app/main.py} definisce l'applicazione FastAPI e registra CORS,
 rate limiting e handler globale delle eccezioni. Il rate limiter usa
 \texttt{slowapi} con limite predefinito di 100 richieste al minuto per IP sugli
-endpoint principali. Il sistema
-non tratta tutti gli errori allo stesso modo: se il messaggio suggerisce una
-dipendenza non raggiungibile, ad esempio Qdrant o Ollama, la risposta HTTP è
-503; negli altri casi viene restituito 500.
+endpoint principali. La gestione degli errori distingue i fallimenti dovuti a
+dipendenze non raggiungibili, come Qdrant o Ollama, dagli errori applicativi
+generici: nel primo caso il servizio restituisce 503, nel secondo 500.
 
 Per ridurre il rischio operativo in ambienti con risorse limitate, il servizio
 controlla la memoria disponibile prima delle chiamate a modelli locali. La
@@ -284,14 +286,15 @@ viene propagato nella risposta quando disponibile.
 \subsection{Endpoint di retrieval}
 \label{subsec:implementation_retrieve_endpoint}
 
-L'endpoint \texttt{POST /rag/retrieve} riceve una query, parametri di retrieval
-e filtri opzionali. Il modello Pydantic \texttt{RetrieveRequest} definisce i
-valori di default: \texttt{top\_k=20}, \texttt{score\_threshold=0.7},
-\texttt{max\_documents=10} e \texttt{gap\_threshold=0.08}. La risposta include
-i documenti selezionati, il numero di candidati iniziali, la soglia usata, il
-motivo del taglio, l'eventuale query riscritta e gli eventuali filtri estratti
-automaticamente. Lo schema della richiesta è riportato in
-Appendice~\ref{app:B}, Listato~\ref{lst:retrieve_request}.
+L'endpoint \texttt{POST /rag/retrieve} riceve una query, i parametri di
+retrieval e gli eventuali filtri applicativi. Il modello Pydantic
+\texttt{RetrieveRequest} definisce valori di default conservativi:
+\texttt{top\_k=20}, \texttt{score\_threshold=0.7},
+\texttt{max\_documents=10} e \texttt{gap\_threshold=0.08}. La risposta non
+contiene soltanto i documenti selezionati, ma anche informazioni diagnostiche:
+numero di candidati iniziali, soglia usata, motivo del taglio, eventuale query
+riscritta e filtri estratti automaticamente. Lo schema della richiesta è
+riportato in Appendice~\ref{app:B}, Listato~\ref{lst:retrieve_request}.
 
 L'endpoint è volutamente sottile: valida l'input, esegue il controllo RAM e
 delega la logica a \texttt{retrieve\_documents()}. Questa separazione rende più
@@ -377,12 +380,13 @@ applicato \texttt{max\_documents}. La risposta indica il motivo del taglio:
 \texttt{exhausted}. Uno schema della logica di taglio è riportato in
 Appendice~\ref{app:B}, Listato~\ref{lst:dynamic_filtering}.
 
-Questa scelta evita un limite \texttt{top\_k} fisso. Per query molto specifiche
-il sistema restituisce pochi documenti; per query più ampie può mantenere più
-contesto, entro il cap configurato. Il risultato è più stabile per l'utente e
-riduce la probabilità di passare al modello generativo documenti debolmente
-pertinenti. Ridurre contesto non pertinente è utile anche per mitigare risposte
-non fondate sulle fonti recuperate~\cite{shuster2021retrieval}.
+Questa scelta evita di fissare a priori un unico valore di \texttt{top\_k}. Per
+query molto specifiche il sistema restituisce pochi documenti, mentre per query
+più ampie può mantenere più contesto entro il limite configurato. Il risultato è
+più stabile per l'utente e riduce la probabilità di passare al modello
+generativo documenti debolmente pertinenti. La riduzione del contesto non
+pertinente contribuisce inoltre a mitigare risposte non fondate sulle fonti
+recuperate~\cite{shuster2021retrieval}.
 
 % -------------------------------------------------------------
 \section{Generazione con Ollama}
@@ -532,10 +536,10 @@ comportamento rende misurabile il tasso di fallimento della generazione: in una
 valutazione applicativa, tale tasso può essere espresso come rapporto tra bozze
 non valide e numero totale di richieste di generazione.
 
-La risposta della route è NDJSON streaming: invia eventi di stato periodici
-mentre il modello lavora e conclude con un evento \texttt{draft} oppure con un
-evento \texttt{error}. Questa scelta evita che un gateway con timeout aggressivo
-interrompa operazioni LLM lente prima che il frontend riceva un esito
+La route restituisce una risposta NDJSON in streaming. Durante l'elaborazione
+invia eventi di stato periodici e conclude con un evento \texttt{draft} oppure
+con un evento \texttt{error}. Questa scelta evita che un gateway con timeout
+aggressivo interrompa operazioni LLM lente prima che il frontend riceva un esito
 interpretabile.
 
 
@@ -600,20 +604,21 @@ generazione.
 \label{sec:implementation_summary}
 % -------------------------------------------------------------
 
-Il sistema implementato combina componenti semplici, ma separati con precisione.
-La pipeline di embedding prepara l'indice ibrido a partire da PostgreSQL; il
-microservizio RAG espone retrieval e generazione; Qdrant gestisce vettori densi,
-rappresentazioni sparse e metadati; Ollama mantiene l'inferenza generativa in
-locale; Next.js integra chat, generazione bozza e fallback applicativi. Le parti
-più specifiche del lavoro sono la normalizzazione del corpus i3Guild, il
-retrieval ibrido con query rewriting, cache e deduplicazione, e la separazione
-tra chat RAG e generazione strutturata senza retrieval. Il workflow agentico è
-stato trattato come una linea sperimentale e non come soluzione finale, perché a
-parità di hardware introduceva maggiore complessità e maggiore costo
-computazionale. Queste scelte rendono il prototipo coerente con i vincoli di
-privacy e di risorse discussi nei capitoli precedenti, lasciando aperti margini
-di evoluzione su sincronizzazione incrementale, agenti più flessibili e
-valutazione sistematica della qualità delle risposte.
+Il sistema implementato combina componenti relativamente semplici, ma separati
+con attenzione. La pipeline di embedding prepara l'indice ibrido a partire da
+PostgreSQL; il microservizio RAG espone retrieval e generazione; Qdrant gestisce
+vettori densi, rappresentazioni sparse e metadati; Ollama mantiene l'inferenza
+generativa in locale; Next.js integra chat, generazione della bozza e fallback
+applicativi. Il contributo implementativo risiede soprattutto nella
+normalizzazione del corpus i3Guild, nel retrieval ibrido con query rewriting,
+cache e deduplicazione, e nella separazione tra chat RAG e generazione
+strutturata senza retrieval. Il workflow agentico è stato trattato come una
+linea sperimentale e non come soluzione finale, perché a parità di hardware
+introduceva maggiore complessità e maggiore costo computazionale. Nel complesso,
+queste scelte rendono il prototipo coerente con i vincoli di privacy e di
+risorse discussi nei capitoli precedenti, lasciando aperti margini di evoluzione
+su sincronizzazione incrementale, agenti più flessibili e valutazione
+sistematica della qualità delle risposte.
 
 L'esperienza aziendale porta anche a un problema più generale, che supera il
 solo caso i3Guild: quando un sistema RAG deve essere eseguito localmente, la

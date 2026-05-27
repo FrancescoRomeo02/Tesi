@@ -13,11 +13,12 @@ concetti tecnici minimi su cui si fonda la soluzione: modelli linguistici
 generativi, inferenza locale, \textit{Retrieval-Augmented Generation} (RAG),
 embedding, database vettoriali e orchestrazione della pipeline.
 
-Il capitolo non ha l'obiettivo di esaurire lo stato dell'arte sull'inferenza
-locale o sulla quantizzazione. Questi temi diventano oggetto specifico dei
-Capitoli~\ref{chap:ottimizzazione} e~\ref{chap:evaluation}. Qui vengono
-presentati solo nella misura necessaria a comprendere il prototipo realizzato in
-azienda e le sue scelte progettuali.
+Il capitolo non intende esaurire lo stato dell'arte sull'inferenza locale o
+sulla quantizzazione, temi che saranno ripresi in modo specifico nei
+Capitoli~\ref{chap:ottimizzazione} e~\ref{chap:evaluation}. In questa sede
+vengono introdotti solo gli elementi necessari a leggere il prototipo
+realizzato in azienda e a comprendere le decisioni progettuali discusse nei
+capitoli successivi.
 
 % -------------------------------------------------------------
 \section{Architetture Transformer}
@@ -382,21 +383,18 @@ attivata in tempo reale a ogni richiesta utente.
 
 La pipeline di ingestione trasforma i documenti grezzi in una rappresentazione
 adatta alla ricerca semantica. Il risultato non è più soltanto un archivio di
-testi, ma un indice vettoriale interrogabile per similarità. Le fasi principali
-sono le seguenti:
+testi, ma un indice interrogabile per similarità. Il primo passaggio consiste
+nel pre-processing e nel chunking: il documento viene normalizzato e, quando
+necessario, suddiviso in unità testuali di dimensione controllata. Questa scelta
+incide direttamente sulla qualità del retrieval, perché chunk troppo piccoli
+perdono contesto, mentre chunk troppo grandi possono diluire il segnale
+semantico o superare la finestra del modello di
+embedding~\cite{chen2023benchmarking}.
 
-\begin{itemize}
-\item \textbf{Pre-processing e chunking.} Il documento viene suddiviso in unità
-testuali (\textit{chunk}) di dimensione controllata. La strategia di chunking
-influisce direttamente sulla qualità del retrieval: chunk troppo piccoli perdono
-contesto, mentre chunk troppo grandi possono diluire il segnale semantico e
-superare la finestra di contesto del modello di embedding~\cite{chen2023benchmarking}.
-
-\item \textbf{Generazione degli embedding.} Ogni chunk viene trasformato in due
-rappresentazioni complementari. La prima è un vettore denso prodotto da un
-modello di embedding $f\colon \mathcal{T} \rightarrow \mathbb{R}^d$, in modo
-che documenti semanticamente simili producano vettori vicini secondo la
-similarità coseno:
+Ogni chunk viene poi trasformato in due rappresentazioni complementari. La
+prima è un vettore denso prodotto da un modello di embedding
+$f\colon \mathcal{T} \rightarrow \mathbb{R}^d$, in modo che documenti
+semanticamente simili producano vettori vicini secondo la similarità coseno:
 
 \begin{equation}
   \text{sim}(\mathbf{u}, \mathbf{v})
@@ -404,44 +402,35 @@ similarità coseno:
   \label{eq:cosine}
 \end{equation}
 
-La seconda è una rappresentazione sparsa, nella quale il testo è descritto da
-pesi associati a termini o feature lessicali. Questa componente preserva segnali
-che l'embedding denso può attenuare, ad esempio nomi propri, tecnologie,
-sigle o termini specifici del dominio.
+La seconda rappresentazione è sparsa: il testo viene descritto attraverso pesi
+associati a termini o feature lessicali. Questa componente conserva segnali che
+l'embedding denso può attenuare, come nomi propri, tecnologie, sigle o termini
+specifici del dominio.
 
-\item \textbf{Indicizzazione nel database vettoriale.} Le rappresentazioni
-dense e sparse vengono persistite in \textbf{Qdrant}~\cite{qdrant2023}, insieme
-ai metadati strutturati necessari al filtraggio. Per la componente densa Qdrant
-usa l'algoritmo HNSW (\textit{Hierarchical Navigable Small World})
-~\cite{malkov2018efficient} per la ricerca approssimata
-(\textit{Approximate Nearest Neighbor}, ANN); la componente sparsa abilita il
-matching lessicale pesato. La scelta di Qdrant rispetto ad alternative quali
-pgvector, Chroma e Milvus è motivata nel Capitolo~\ref{chap:progettazione}.
-\end{itemize}
+Le rappresentazioni dense e sparse vengono infine persistite in
+\textbf{Qdrant}~\cite{qdrant2023}, insieme ai metadati strutturati necessari al
+filtraggio. Per la componente densa Qdrant usa l'algoritmo HNSW
+(\textit{Hierarchical Navigable Small World})~\cite{malkov2018efficient} per la
+ricerca approssimata (\textit{Approximate Nearest Neighbor}, ANN), mentre la
+componente sparsa abilita il matching lessicale pesato. La scelta di Qdrant
+rispetto ad alternative quali pgvector, Chroma e Milvus è motivata nel
+Capitolo~\ref{chap:progettazione}.
 
 \subsubsection{Pipeline di inferenza}
 
 La pipeline di inferenza utilizza l'indice costruito offline per rispondere a
 una query utente. A differenza dell'ingestione, questa fase è vincolata dalla
-latenza percepita e deve quindi bilanciare qualità del recupero, numero di
-documenti restituiti e costo della generazione.
-
-\begin{itemize}
-\item \textbf{Embedding della query.} La query dell'utente viene trasformata
-nelle stesse due rappresentazioni usate in indicizzazione: un embedding denso
-per la similarità semantica e una rappresentazione sparsa per il matching
-lessicale.
-
-\item \textbf{Retrieval.} Si esegue una ricerca ibrida in Qdrant combinando il
-punteggio denso e quello sparso. La ricerca può essere limitata tramite
-\textit{metadata filtering} a sottoinsiemi coerenti, ad esempio documenti
-appartenenti a una specifica epoca temporale.
-
-\item \textbf{Augmented generation.} Il contesto recuperato viene concatenato alla
-query nel prompt inviato all'LLM. Il modello genera la risposta basandosi sulla
-propria conoscenza parametrica e sulle informazioni esterne fornite.
-
-\end{itemize}
+latenza percepita e deve bilanciare qualità del recupero, numero di documenti
+restituiti e costo della generazione. La query viene trasformata nelle stesse
+due rappresentazioni usate in indicizzazione: un embedding denso per la
+similarità semantica e una rappresentazione sparsa per il matching lessicale.
+Su queste rappresentazioni si esegue una ricerca ibrida in Qdrant, combinando
+il punteggio denso e quello sparso; quando la query contiene vincoli
+strutturati, il retrieval può essere limitato tramite \textit{metadata
+filtering}, ad esempio ai documenti appartenenti a una specifica epoca
+temporale. Il contesto recuperato viene quindi concatenato alla query nel prompt
+inviato all'LLM, che genera la risposta usando sia la propria conoscenza
+parametrica sia le informazioni esterne fornite dal sistema.
 
 \begin{figure}[ht]
   \centering
@@ -726,12 +715,12 @@ descritto nel Capitolo~\ref{chap:implementazione}.
 \label{sec:background_summary}
 % -------------------------------------------------------------
 
-Il presente capitolo ha fornito il quadro tecnico necessario a comprendere il
-progetto aziendale descritto nei capitoli successivi. Le architetture
-Transformer costituiscono il substrato comune a generazione ed embedding; i loro
-limiti in contesti a conoscenza chiusa, cioè conoscenza statica, allucinazioni e
-assenza di accesso nativo ai dati interni, motivano l'adozione del paradigma
-RAG. La scelta di operare con modelli e infrastrutture on-premise, come Ollama,
-Qdrant e Haystack, risponde ai vincoli di riservatezza e manutenibilità del
-caso i3Guild. Il capitolo successivo traduce questi fondamenti in requisiti,
-scelte tecnologiche e architettura del sistema.
+Il capitolo ha definito il quadro tecnico necessario per comprendere il progetto
+aziendale descritto nel seguito della tesi. Le architetture Transformer sono il
+substrato comune della generazione e degli embedding; i loro limiti nei contesti
+a conoscenza chiusa, in particolare conoscenza statica, allucinazioni e assenza
+di accesso nativo ai dati interni, spiegano l'adozione del paradigma RAG. La
+scelta di operare con modelli e infrastrutture on-premise, come Ollama, Qdrant
+e Haystack, risponde invece ai vincoli di riservatezza e manutenibilità del caso
+i3Guild. Su queste basi, il capitolo successivo traduce i fondamenti teorici in
+requisiti, scelte tecnologiche e architettura del sistema.
