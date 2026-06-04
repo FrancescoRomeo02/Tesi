@@ -40,11 +40,11 @@ difficoltà nel preservare dipendenze informative tra elementi molto distanti
 nella sequenza (\textit{vanishing gradient}).
 
 Il Transformer affronta tali limiti sostituendo la ricorrenza con un meccanismo
-di \textit{self-attention} globale. In questo modo ogni token può essere messo in
-relazione diretta con tutti gli altri token della sequenza, indipendentemente
-dalla loro distanza posizionale. Questa scelta architetturale spiega sia la
-maggiore efficienza in addestramento sia la capacità dei modelli successivi di
-costruire rappresentazioni contestuali più ricche.
+di \textit{self-attention} globale, che mette ogni token in relazione diretta
+con tutti gli altri token della sequenza, indipendentemente dalla loro distanza
+posizionale. Da questa impostazione derivano sia la maggiore efficienza in
+addestramento sia la capacità dei modelli successivi di costruire
+rappresentazioni contestuali più ricche.
 
 \subsection{Il meccanismo di Self-Attention}
 \label{subsec:attention}
@@ -383,12 +383,11 @@ attivata in tempo reale a ogni richiesta utente.
 
 La pipeline di ingestione trasforma i documenti grezzi in una rappresentazione
 adatta alla ricerca semantica. Il risultato non è più soltanto un archivio di
-testi, ma un indice interrogabile per similarità. Il primo passaggio consiste
-nel pre-processing e nel chunking: il documento viene normalizzato e, quando
-necessario, suddiviso in unità testuali di dimensione controllata. Questa scelta
-incide direttamente sulla qualità del retrieval, perché chunk troppo piccoli
-perdono contesto, mentre chunk troppo grandi possono diluire il segnale
-semantico o superare la finestra del modello di
+testi, ma un indice interrogabile per similarità. Il documento viene anzitutto
+normalizzato e, quando necessario, suddiviso in unità testuali di dimensione
+controllata. La granularità del chunking incide direttamente sulla qualità del
+retrieval: chunk troppo piccoli perdono contesto, mentre chunk troppo grandi
+possono diluire il segnale semantico o superare la finestra del modello di
 embedding~\cite{chen2023benchmarking}.
 
 Ogni chunk viene poi trasformato in due rappresentazioni complementari. La
@@ -402,10 +401,10 @@ semanticamente simili producano vettori vicini secondo la similarità coseno:
   \label{eq:cosine}
 \end{equation}
 
-La seconda rappresentazione è sparsa: il testo viene descritto attraverso pesi
-associati a termini o feature lessicali. Questa componente conserva segnali che
-l'embedding denso può attenuare, come nomi propri, tecnologie, sigle o termini
-specifici del dominio.
+La rappresentazione sparsa descrive invece il testo attraverso pesi associati a
+termini o feature lessicali. Questa componente conserva segnali che l'embedding
+denso può attenuare, come nomi propri, tecnologie, sigle o termini specifici del
+dominio.
 
 Le rappresentazioni dense e sparse vengono infine persistite in
 \textbf{Qdrant}~\cite{qdrant2023}, insieme ai metadati strutturati necessari al
@@ -671,8 +670,9 @@ pesi, ma cattura con minore efficacia le variazioni di magnitudine osservate nel
 fine-tuning completo. DoRA separa quindi il tensore dei pesi in una componente
 di magnitudine e una componente direzionale: la prima viene aggiornata
 direttamente, mentre la seconda sfrutta l'approssimazione a rango basso di LoRA.
-In questo modo si riduce il divario prestazionale rispetto al fine-tuning
-completo, mantenendo un numero contenuto di parametri addestrabili.
+Il divario prestazionale rispetto al fine-tuning completo si riduce così senza
+rinunciare al vantaggio principale degli adattatori, cioè il numero contenuto di
+parametri addestrabili.
 
 \subsubsection{Prompt engineering e inference-time intervention}
 

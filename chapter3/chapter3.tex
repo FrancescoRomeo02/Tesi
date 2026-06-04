@@ -17,10 +17,10 @@ RAG più classico.
 La realizzazione è distribuita su tre repository applicativi, ciascuno
 associato a una responsabilità precisa. Il repository principale i3Guild
 contiene l'applicazione web Next.js e il database
-PostgreSQL~\cite{postgresql2024}. La pipeline di embedding gestisce
+PostgreSQL~\cite{postgresql2024}; la pipeline di embedding gestisce
 l'estrazione dei dati, la normalizzazione testuale, la generazione di embedding
-densi e sparsi con FastEmbed/Haystack e l'upsert su Qdrant. Il microservizio
-RAG espone invece le API Python per retrieval e chat. Questa separazione riduce
+densi e sparsi con FastEmbed/Haystack e l'upsert su Qdrant; il microservizio
+RAG espone infine le API Python per retrieval e chat. La separazione riduce
 l'accoppiamento tra applicazione e componente RAG: i3Guild rimane la sorgente
 autoritativa dei dati, Qdrant conserva la knowledge base ibrida e Ollama viene
 usato solo per la generazione LLM~\cite{qdrant2023,ollama2023}.
@@ -110,9 +110,9 @@ stesso container riutilizzabile in ambienti diversi. I parametri principali
 definiscono la connessione a PostgreSQL, l'endpoint e la collection Qdrant, i
 modelli FastEmbed e la dimensione del vettore denso. A questi si aggiungono
 opzioni operative per ricreare l'indice, controllare la dimensione dei batch e
-stabilire quando applicare il chunking con overlap. La generazione degli embedding 
-avviene attraverso i modelli mostrati nella Tabella~\ref{tab:embedding_models}
-così da non dipendere da Ollama.
+stabilire quando applicare il chunking con overlap. La generazione degli
+embedding usa i modelli riportati nella Tabella~\ref{tab:embedding_models} e
+rimane quindi separata da Ollama.
 
 \begin{table}[ht]
   \centering
@@ -199,10 +199,10 @@ documento consolidato per Gilda. L'implementazione mantiene questa impostazione
 come caso normale, ma introduce una soglia di sicurezza:
 \texttt{INGEST\_MAX\_DOCUMENT\_CHARS}. Se il testo supera il limite, la funzione
 \texttt{split\_text\_with\_overlap()} lo divide in chunk con sovrapposizione
-controllata. In questo modo gli outlier non impediscono l'ingestione e, allo
-stesso tempo, i chunk successivi mantengono il riferimento alla Gilda tramite
-l'intestazione. La granularità dei chunk condiziona qualità del retrieval e
-quantità di contesto disponibile per il modello generativo~\cite{chen2023benchmarking}.
+controllata. Gli outlier non impediscono così l'ingestione e i chunk successivi
+mantengono il riferimento alla Gilda tramite l'intestazione. La granularità dei
+chunk condiziona qualità del retrieval e quantità di contesto disponibile per il
+modello generativo~\cite{chen2023benchmarking}.
 
 Gli identificativi dei documenti sono deterministici:
 \texttt{guild-\{guild\_id\}-chunk-\{index\}}. La scelta rende idempotente la
@@ -223,10 +223,10 @@ segnali nel document store Qdrant. La configurazione essenziale della pipeline �
 riportata in Appendice~\ref{app:B}, Listato~\ref{lst:embedding_pipeline_impl}.
 
 La pipeline viene eseguita in batch applicativi, con una dimensione configurabile
-tramite variabile d'ambiente. Questa scelta riduce il picco di memoria dello
-sparse embedder e mantiene il comportamento batch del container: il job parte,
-scrive su Qdrant e termina. La normalizzazione dei campi avviene prima della
-costruzione dei documenti, rendendo esplicito quali testi entrano nella
+tramite variabile d'ambiente. L'elaborazione a batch riduce il picco di memoria
+dello sparse embedder e mantiene il comportamento atteso del container: il job
+parte, scrive su Qdrant e termina. La normalizzazione dei campi avviene prima
+della costruzione dei documenti, rendendo esplicito quali testi entrano nella
 knowledge base.
 
 % -------------------------------------------------------------
@@ -290,11 +290,11 @@ L'endpoint \texttt{POST /rag/retrieve} riceve una query, i parametri di
 retrieval e gli eventuali filtri applicativi. Il modello Pydantic
 \texttt{RetrieveRequest} definisce valori di default conservativi:
 \texttt{top\_k=20}, \texttt{score\_threshold=0.7},
-\texttt{max\_documents=10} e \texttt{gap\_threshold=0.08}. La risposta non
-contiene soltanto i documenti selezionati, ma anche informazioni diagnostiche:
-numero di candidati iniziali, soglia usata, motivo del taglio, eventuale query
-riscritta e filtri estratti automaticamente. Lo schema della richiesta è
-riportato in Appendice~\ref{app:B}, Listato~\ref{lst:retrieve_request}.
+\texttt{max\_documents=10} e \texttt{gap\_threshold=0.08}. La risposta include
+i documenti selezionati e una serie di informazioni diagnostiche: numero di
+candidati iniziali, soglia usata, motivo del taglio, eventuale query riscritta e
+filtri estratti automaticamente. Lo schema della richiesta è riportato in
+Appendice~\ref{app:B}, Listato~\ref{lst:retrieve_request}.
 
 L'endpoint è volutamente sottile: valida l'input, esegue il controllo RAM e
 delega la logica a \texttt{retrieve\_documents()}. Questa separazione rende più
@@ -380,7 +380,7 @@ applicato \texttt{max\_documents}. La risposta indica il motivo del taglio:
 \texttt{exhausted}. Uno schema della logica di taglio è riportato in
 Appendice~\ref{app:B}, Listato~\ref{lst:dynamic_filtering}.
 
-Questa scelta evita di fissare a priori un unico valore di \texttt{top\_k}. Per
+L'approccio evita di fissare a priori un unico valore di \texttt{top\_k}. Per
 query molto specifiche il sistema restituisce pochi documenti, mentre per query
 più ampie può mantenere più contesto entro il limite configurato. Il risultato è
 più stabile per l'utente e riduce la probabilità di passare al modello
@@ -471,8 +471,9 @@ futura, da rivalutare con modelli locali più capaci o con hardware più ampio.
 L'applicazione i3Guild accede al microservizio tramite
 \texttt{src/lib/services/rag.service.ts}. Il client centralizza l'URL del
 servizio, legge \texttt{I3GUILD\_RAG\_URL} o \texttt{RAG\_API\_URL}, serializza
-le richieste e normalizza gli errori. Questa scelta evita di distribuire chiamate
-HTTP dirette al servizio RAG in più componenti React o route API~\cite{nextjs2024}.
+le richieste e normalizza gli errori. Le chiamate HTTP dirette al servizio RAG
+rimangono così concentrate in un unico punto, invece di essere replicate in più
+componenti React o route API~\cite{nextjs2024}.
 
 \subsection{Client di retrieval}
 \label{subsec:implementation_nextjs_retrieval}
@@ -538,8 +539,9 @@ non valide e numero totale di richieste di generazione.
 
 La route restituisce una risposta NDJSON in streaming. Durante l'elaborazione
 invia eventi di stato periodici e conclude con un evento \texttt{draft} oppure
-con un evento \texttt{error}. Questa scelta evita che un gateway con timeout
-aggressivo interrompa operazioni LLM lente prima che il frontend riceva un esito
+con un evento \texttt{error}. Gli eventi intermedi mantengono viva la
+connessione anche quando l'operazione LLM è lenta, evitando che un gateway con
+timeout aggressivo interrompa la richiesta prima che il frontend riceva un esito
 interpretabile.
 
 
@@ -592,12 +594,11 @@ per sé il costo computazionale del prompt durante l'inferenza.
 
 Il servizio espone dati diagnostici in più punti: \texttt{cutoff\_reason},
 \texttt{topic\_query}, \texttt{extracted\_filters}, warning RAM, numero di
-candidati, documenti restituiti e log di timeout verso Ollama. Questi campi non
-sono solo utili per il debug. Permettono di ricostruire il comportamento del
-sistema durante la valutazione applicativa: quale query è stata effettivamente
-cercata, quanti documenti sono stati recuperati, perché alcuni risultati sono
-stati scartati e se il collo di bottiglia si trova nel retrieval o nella
-generazione.
+candidati, documenti restituiti e log di timeout verso Ollama. Oltre al debug,
+questi campi permettono di ricostruire il comportamento del sistema durante la
+valutazione applicativa: quale query è stata effettivamente cercata, quanti
+documenti sono stati recuperati, perché alcuni risultati sono stati scartati e
+se il collo di bottiglia si trova nel retrieval o nella generazione.
 
 % -------------------------------------------------------------
 \section{Sintesi del capitolo}

@@ -122,16 +122,16 @@ team.
 \subsection{Obiettivi del caso d'uso}
 
 Gli obiettivi del caso d'uso derivano direttamente dalla natura del corpus e dal
-contesto aziendale in cui il sistema deve essere inserito. Il primo obiettivo è
+contesto aziendale in cui il sistema deve essere inserito. Il sistema deve
 fornire risposte affidabili e tracciabili sui contenuti presenti nei repository
 aziendali, riducendo il rischio di allucinazioni tipico della generazione
-puramente parametrica~\cite{lewis2020rag}. A questo si affianca l'esigenza di
-ridurre il tempo necessario a reperire informazioni utili per attività operative
-e decisionali interne a Intré. Il sistema deve inoltre poter essere eseguito in
-ambiente on-premise, così da rispettare i requisiti di sovranità del dato e il
-Regolamento Generale sulla Protezione dei Dati (GDPR)~\cite{gdpr2016}. Infine,
-l'integrazione deve avvenire nel flusso i3Guild esistente, limitando l'impatto
-sul processo operativo già consolidato.
+puramente parametrica~\cite{lewis2020rag}, e deve rendere più rapido il recupero
+di informazioni utili per attività operative e decisionali interne a Intré.
+Questi obiettivi devono essere raggiunti senza spostare i dati fuori
+dall'infrastruttura aziendale, in coerenza con i requisiti di sovranità del dato
+e con il Regolamento Generale sulla Protezione dei Dati
+(GDPR)~\cite{gdpr2016}. L'integrazione, inoltre, deve inserirsi nel flusso
+i3Guild esistente senza alterare il processo operativo già consolidato.
 
 \subsection{Descrizione dei dati e analisi del corpus}
 \label{subsec:data_analysis}
@@ -269,23 +269,23 @@ alto livello, suddivisi per categoria.
 \label{subsec:constraints}
 
 I requisiti precedenti si traducono in vincoli architetturali non negoziabili.
-Il primo riguarda l'esecuzione on-premise: i dati delle Gilde, incluse le
-informazioni sui partecipanti e sui progetti, non possono transitare su
-infrastrutture cloud di terze parti. Il deployment locale è quindi la condizione
-tecnica che consente di rispettare i principi di integrità e riservatezza
-previsti dal GDPR~\cite{gdpr2016}. Il secondo vincolo è la compatibilità con lo
-stack i3Guild esistente, basato su Docker Compose, PostgreSQL/Prisma, Next.js e
-Keycloak per l'autenticazione.
+L'esecuzione on-premise è il vincolo più rilevante: i dati delle Gilde, incluse
+le informazioni sui partecipanti e sui progetti, non possono transitare su
+infrastrutture cloud di terze parti. Il deployment locale diventa quindi la
+condizione tecnica per rispettare i principi di integrità e riservatezza
+previsti dal GDPR~\cite{gdpr2016}. L'integrazione deve inoltre rimanere
+compatibile con lo stack i3Guild esistente, basato su Docker Compose,
+PostgreSQL/Prisma, Next.js e Keycloak per l'autenticazione.
 
-Un terzo vincolo, meno visibile ma determinante, è quello hardware. L'ambiente
-Docker dispone di 8~GB di RAM complessivi, condivisi tra database, servizi
-applicativi, pipeline di embedding quando attiva e modello di generazione del
-testo. Questa disponibilità limita la scelta del modello LLM, discussa nella
-Sezione~\ref{subsec:llm_choice}, e impone di evitare componenti con requisiti di
-memoria elevati. Per la stessa ragione, generazione ed embedding devono restare
-locali senza fare affidamento su API esterne: Ollama gestisce il modello
-generativo, mentre FastEmbed/Haystack produce gli embedding senza dipendere da
-provider cloud.
+Un vincolo meno visibile, ma altrettanto determinante, riguarda le risorse
+hardware. L'ambiente Docker dispone di 8~GB di RAM complessivi, condivisi tra
+database, servizi applicativi, pipeline di embedding quando attiva e modello di
+generazione del testo. Questa disponibilità limita la scelta del modello LLM,
+discussa nella Sezione~\ref{subsec:llm_choice}, e impone di evitare componenti
+con requisiti di memoria elevati. Per la stessa ragione, generazione ed
+embedding devono restare locali senza fare affidamento su API esterne: Ollama
+gestisce il modello generativo, mentre FastEmbed/Haystack produce gli embedding
+senza dipendere da provider cloud.
 
 % -------------------------------------------------------------
 \section{Scelte tecnologiche: analisi comparativa}
@@ -457,7 +457,8 @@ Gilde~\cite{haystackFastembedDocument2026,haystackFastembedSparse2026}.
     \textbf{Ruolo} & \textbf{Componente Haystack} & \textbf{Default} &
       \textbf{Funzione} \\
     \midrule
-    Embedding denso & Document/text embedder denso & \breakcode{BAAI/bge-base-en-v1.5} &
+    Embedding denso & Document/text embedder denso &
+      \makecell[l]{\texttt{sentence-}\\\texttt{transformers/}\\\texttt{paraphrase-}\\\texttt{multilingual-}\\\texttt{mpnet-base-v2}} &
       Similarità semantica tra query e documenti. \\
     Embedding sparso & Document/text embedder sparso & \makecell[l]{\texttt{prithivida/}\\\texttt{Splade\_PP\_en\_v1}} &
       Matching lessicale pesato, utile per termini specifici. \\
@@ -470,13 +471,13 @@ Gilde~\cite{haystackFastembedDocument2026,haystackFastembedSparse2026}.
 
 \noindent La configurazione aggiornata elimina la dipendenza da Ollama nella
 fase batch di indicizzazione: Ollama rimane dedicato alla generazione LLM,
-mentre FastEmbed produce gli embedding in un job separato. La presenza della
-componente sparsa rende inoltre il retrieval meno dipendente dalla sola
-similarità densa, aspetto rilevante in un corpus dove nomi propri, tecnologie e
-termini ricorrenti hanno spesso valore informativo letterale. In questo modo
-ingestione e query seguono lo stesso schema operativo: in scrittura vengono
-generati embedding densi e sparsi dei documenti; in lettura la query viene
-trasformata nelle due rappresentazioni corrispondenti e inviata a
+mentre FastEmbed produce gli embedding in un job separato. La componente sparsa
+rende inoltre il retrieval meno dipendente dalla sola similarità densa, aspetto
+rilevante in un corpus dove nomi propri, tecnologie e termini ricorrenti hanno
+spesso valore informativo letterale. Ingestione e query seguono quindi lo stesso
+schema operativo: in scrittura vengono generati embedding densi e sparsi dei
+documenti; in lettura la query viene trasformata nelle due rappresentazioni
+corrispondenti e inviata a
 \texttt{QdrantHybridRetriever}~\cite{haystackQdrantHybrid2026}. Il valore
 \texttt{EMBEDDING\_DIMENSIONS=768} rimane il riferimento per la componente
 densa.
@@ -667,8 +668,8 @@ top-$K$ sia effettuato solo sul sottoinsieme filtrato.
 \end{table}
 
 Gli ID dei documenti sono deterministici nel formato
-\texttt{guild-\{guild\_id\}-chunk-\{index\}}. In questo modo la reindicizzazione
-della stessa Gilda produce gli stessi identificativi e consente a Qdrant di
+\texttt{guild-\{guild\_id\}-chunk-\{index\}}. La reindicizzazione della stessa
+Gilda produce quindi gli stessi identificativi e consente a Qdrant di
 sovrascrivere i punti esistenti quando la policy è
 \texttt{DuplicatePolicy.OVERWRITE}.
 
@@ -803,9 +804,9 @@ eventuali verifiche successive della qualità del retrieval.
 L'integrazione del sistema RAG nell'infrastruttura i3Guild esistente è pensata
 per ridurre l'impatto sul sistema già operativo. PostgreSQL, Next.js, Keycloak e
 Kong mantengono il proprio ruolo; il sistema RAG si aggiunge come insieme di
-servizi nel file \texttt{dev\_containers/docker-compose.yml}. Questa scelta
-permette di introdurre il retrieval semantico senza modificare il modello dati
-principale né il flusso di autenticazione.
+servizi nel file \texttt{dev\_containers/docker-compose.yml}. Il retrieval
+semantico viene così introdotto senza modificare il modello dati principale né
+il flusso di autenticazione.
 
 \subsection{Servizi Docker aggiuntivi}
 \label{subsec:docker_services}
@@ -858,9 +859,10 @@ introdotti dal sistema RAG.
       \breakcode{gemma3:1b} / configurabile & Modello LLM usato dal servizio o
       inoltrato dal frontend \\
     \breakcode{EMBEDDING_DIMENSIONS} & \breakcode{768} & Dimensione vettore denso \\
-    \breakcode{FASTEMBED_DENSE_MODEL} & \breakcode{BAAI/bge-base-en-v1.5} &
+    \breakcode{FASTEMBED_DENSE_MODEL} &
+      \makecell[l]{\texttt{sentence-}\\\texttt{transformers/}\\\texttt{paraphrase-}\\\texttt{multilingual-}\\\texttt{mpnet-base-v2}} &
       Modello FastEmbed denso \\
-    \breakcode{FASTEMBED_SPARSE_MODEL} & \breakcode{prithivida/Splade_PP_en_v1} &
+    \breakcode{FASTEMBED_SPARSE_MODEL} & \breakcode{Qdrant/bm25} &
       Modello FastEmbed sparso \\
     \breakcode{RAG_CACHE_TTL_SECONDS} & \breakcode{60} & TTL cache retrieval
       in-process \\
