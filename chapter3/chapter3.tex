@@ -3,19 +3,21 @@
 \label{chap:implementazione}
 
 Il capitolo descrive l'implementazione del sistema RAG integrato in i3Guild.
-L'obiettivo non è ripetere le scelte architetturali già motivate nel
-Capitolo~\ref{chap:requirements_design}, ma mostrare come tali scelte siano
+L'obiettivo è dimostrare come le scelte architetturali motivate nel
+Capitolo~\ref{chap:requirements_design} sono
 state tradotte in componenti eseguibili: una pipeline di ingestione per
 popolare Qdrant, un microservizio FastAPI per il retrieval e la generazione,
 un'integrazione applicativa lato Next.js e una generazione controllata delle
-bozze di nuove Gilde. Durante lo sviluppo è stato anche implementato ed
+bozze di nuove Gilde. 
+
+Durante lo sviluppo è stato anche implementato ed
 esplorato un workflow agentico; viene documentato come soluzione sperimentale,
 ma non come scelta finale, perché a parità di risorse hardware introduceva un
 costo computazionale più elevato e un vantaggio limitato rispetto a un flusso
 RAG più classico.
 
-La realizzazione è distribuita su tre repository applicativi, ciascuno
-associato a una responsabilità precisa. Il repository principale i3Guild
+La realizzazione (Figura~\ref{fig:implementation_end_to_end} e Tabella~\ref{tab:implementation_components}) è stata distribuita su tre repository applicativi, ciascuno
+associato ad una responsabilità precisa. Il repository principale i3Guild
 contiene l'applicazione web Next.js e il database
 PostgreSQL~\cite{postgresql2024}; la pipeline di embedding gestisce
 l'estrazione dei dati, la normalizzazione testuale, la generazione di embedding
@@ -42,7 +44,7 @@ La suddivisione dei moduli segue il flusso dei dati. PostgreSQL contiene le
 Gilde, le epoche e le relazioni con gli utenti; la pipeline di embedding legge
 queste informazioni e produce documenti Haystack~\cite{haystack2023}; Qdrant
 memorizza vettori densi, rappresentazioni sparse e metadati; il microservizio
-RAG interroga l'indice ibrido e, quando richiesto, invoca Ollama per generare la
+RAG interroga l'indice ibrido e, quando richiesto, invoca Collana per generare la
 risposta. L'applicazione Next.js consuma il servizio tramite un client HTTP
 dedicato~\cite{nextjs2024}.
 
@@ -163,7 +165,7 @@ connessione a PostgreSQL, configurazione FastEmbed, dimensione del vettore denso
 e raggiungibilità della collection Qdrant tramite il document store Haystack. La
 collection viene creata con distanza coseno, dimensione pari a
 \texttt{EMBEDDING\_DIMENSIONS} e \texttt{use\_sparse\_embeddings=true}. Il
-valore usato per la componente densa è 768.
+valore usato per la componente densa è 768.\todo{C'è un motivo per questo valore? Come è stato scelto?}
 
 \subsection{Estrazione dei dati da PostgreSQL}
 \label{subsec:implementation_postgres_extract}
@@ -235,7 +237,7 @@ knowledge base.
 % -------------------------------------------------------------
 
 Il microservizio RAG è implementato con FastAPI nel repository
-\texttt{i3guild-rag} ed espone endpoint per retrieval, chat sincrona e chat in
+\texttt{i3guild-rag} \todo{se usi texttt per i nomi di repository, funzioni, moduli ecc. inseriti nel testo ricordati di usarlo ovunque (fai un check). Ad es. per i3Guild, o per i codici di errore HTTP più avanti non lo hai usato} ed espone endpoint per retrieval, chat sincrona e chat in
 streaming. La configurazione è centralizzata nel modulo delle impostazioni e usa
 \texttt{pydantic-settings}; i valori di default permettono lo sviluppo locale,
 mentre gli ambienti Docker possono sovrascriverli tramite variabili
@@ -274,7 +276,7 @@ rate limiting e handler globale delle eccezioni. Il rate limiter usa
 \texttt{slowapi} con limite predefinito di 100 richieste al minuto per IP sugli
 endpoint principali. La gestione degli errori distingue i fallimenti dovuti a
 dipendenze non raggiungibili, come Qdrant o Ollama, dagli errori applicativi
-generici: nel primo caso il servizio restituisce 503, nel secondo 500.
+generici: nel primo caso il servizio restituisce il codice 503, nel secondo 500.
 
 Per ridurre il rischio operativo in ambienti con risorse limitate, il servizio
 controlla la memoria disponibile prima delle chiamate a modelli locali. La
