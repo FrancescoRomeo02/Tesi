@@ -28,8 +28,6 @@
 \usepackage{booktabs}
 \usepackage[italian]{babel}
 \usepackage[integrals]{wasysym}
-\usepackage{pgfplots}
-\pgfplotsset{compat=1.18}
 \addbibresource{bibliography/bibliography.bib}
 \usepackage[colorinlistoftodos]{todonotes}
 \usepackage{fancyhdr}
@@ -117,16 +115,16 @@
 
 \include{chapter3/chapter3}
 
-\include{chapter4/chapter4}
+% \include{chapter4/chapter4}
 
-\include{chapter5/chapter5}
+% \include{chapter5/chapter5}
 
 \addcontentsline{toc}{chapter}{Conclusioni e Sviluppi Futuri}
 \include{conclusions/conclusions}
 
 \appendix
 \include{appendices/conventions}
-% \include{appendices/code}
+\include{appendices/code}
 
 %%%% BIBLIOGRAPHY %%%%%
 \printbibheading[title={Bibliografia}]

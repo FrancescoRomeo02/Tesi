@@ -209,6 +209,78 @@ casi una Gilda può essere trattata come documento consolidato, senza frammentar
 aggressivamente i campi testuali e senza perdere il contesto semantico che lega
 obiettivi, rischi e risultati.
 
+\subsection{Struttura informativa delle Gilde e implicazioni per il retrieval}
+\label{subsec:guild_information_structure}
+
+L'analisi dello schema dati i3Guild conferma che la Gilda è l'unità informativa
+più adatta all'indicizzazione. La tabella \texttt{Guild} raccoglie campi
+descrittivi, campi progettuali e metadati organizzativi: nome, sommario,
+obiettivi, opportunità, risultati attesi, rischi, risorse, budget, modalità di
+partecipazione, riferimento all'epoch e descrizione dei risultati raggiunti. Le
+tabelle collegate hanno un ruolo diverso. \texttt{Epoch} fornisce il contesto
+temporale; \texttt{GuildUserRelation} collega partecipanti, Gilde ed epoch;
+\texttt{GuildAchievedResult} contiene allegati binari, dei quali in questa fase
+può essere indicizzato solo il nome del file, salvo introdurre una pipeline
+dedicata di estrazione testuale.
+
+Questa distinzione separa contenuto da metadato. I campi testuali della Gilda
+alimentano embedding e ricerca semantica; epoch, partecipanti, modalità di
+partecipazione e identificativi restano nel payload strutturato e servono per
+filtrare o contestualizzare la risposta. La separazione evita due problemi:
+inserire nel testo indicizzato informazioni poco semantiche, come identificativi
+o date, e perdere però la possibilità di rispondere a domande operative che
+richiedono vincoli strutturati. Una domanda come ``quali Gilde sull'intelligenza
+artificiale sono state proposte in una certa epoch?'' richiede entrambe le
+componenti: similarità semantica sul tema e filtro temporale sull'epoch.
+
+\begin{table}[ht]
+  \centering
+  \caption{Ruolo dei principali dati i3Guild nella pipeline RAG.}
+  \label{tab:guild_retrieval_roles}
+  \small
+  \begin{tabular}{L{3.2cm}L{4.8cm}L{5.3cm}}
+    \toprule
+    \textbf{Elemento} & \textbf{Informazione disponibile} &
+      \textbf{Uso nella pipeline} \\
+    \midrule
+    \texttt{Guild} & Nome, sommario, obiettivi, opportunità, outcome, rischi,
+      risorse, budget, risultati raggiunti &
+      Documento principale da incorporare e recuperare semanticamente. \\
+    \texttt{Epoch} & Inizio e fine del ciclo di Gilde &
+      Filtro temporale e contesto della risposta. \\
+    \texttt{GuildUserRelation} & Partecipante, Gilda, epoch, data di adesione &
+      Payload per domande su partecipazione e composizione dei gruppi. \\
+    \texttt{GuildAchievedResult} & File allegati e nome del file &
+      Fonte secondaria; il contenuto binario richiede estrazione separata. \\
+    \texttt{GuildDraft} & Proposte non ancora consolidate &
+      Esclusa dall'indice principale se non validata come conoscenza storica. \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Gli esempi presenti nella documentazione interna del progetto chiariscono il
+tipo di interrogazioni attese. Una query esplorativa come ``vorrei fondare una
+gilda sulla musica'' deve essere ridotta ai termini informativi principali e
+recuperare Gilde tematicamente vicine, ad esempio \emph{The Rolling Updates} o
+\emph{Visual note for piano}, quando presenti nel corpus indicizzato. Domande
+come ``quali Gilde si occupano di AI?'' privilegiano invece il recupero
+semantico su \texttt{summary}, \texttt{goals} e \texttt{achievedResultsDescription};
+domande come ``chi ha partecipato alla Gilda X?'' o ``quali erano i rischi
+della Gilda Y?'' richiedono il raccordo tra retrieval, metadati e campi
+specifici. Il corpus, quindi, non è una semplice collezione di testi: è un
+insieme di documenti con struttura interna, relazioni e vincoli temporali.
+
+Da questa lettura deriva la scelta di costruire documenti consolidati con
+etichette di campo esplicite, ad esempio \texttt{[SOMMARIO]},
+\texttt{[OBIETTIVI]}, \texttt{[RISCHI]} e
+\texttt{[RISULTATI RAGGIUNTI]}. Le etichette mantengono riconoscibile la
+provenienza dell'informazione anche dopo la concatenazione dei campi e aiutano
+il generatore a distinguere tra intenzioni, rischi e risultati effettivamente
+raggiunti. La strategia è coerente con le dimensioni osservate: poiché la Gilda
+media rimane breve, il documento consolidato conserva più contesto rispetto a
+una segmentazione per singolo campo, senza introdurre un carico eccessivo per
+il modello di embedding.
+
 % Segnaposto figura caso d'uso
 \begin{figure}[ht]
   \centering
