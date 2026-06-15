@@ -46,39 +46,14 @@ RAG interroga l'indice ibrido e, quando richiesto, invoca Ollama per generare la
 risposta. L'applicazione Next.js consuma il servizio tramite un client HTTP
 dedicato~\cite{nextjs2024}.
 
-\begin{table}[ht]
-  \centering
-  \caption{Componenti implementativi principali.}
-  \label{tab:implementation_components}
-  \small
-  \begin{tabular}{L{3.4cm}L{4.5cm}L{5.3cm}}
-    \toprule
-    \textbf{Repository / modulo} & \textbf{File principali} & \textbf{Responsabilità} \\
-    \midrule
-    \breakcode{i3guild}
-      & \breakcode{services/rag.service.ts}
-      & Client TypeScript verso il microservizio RAG; gestione dello streaming e
-        degradazione controllata in caso di errore. \\
-    \addlinespace
-    \makecell[l]{\texttt{i3guild-}\\\texttt{embedding-pipeline}}
-      & \breakcode{pipeline/main.py}
-      & Estrazione da PostgreSQL, normalizzazione, chunking, embedding denso e
-        sparso con FastEmbed e scrittura su Qdrant. \\
-    \addlinespace
-    \breakcode{i3guild-rag}
-      & \breakcode{app/main.py}, \breakcode{app/rag.py},
-        \breakcode{app/pipeline.py}, \breakcode{app/ollama_service.py}
-      & API FastAPI, pipeline Haystack di query ibrida, retrieval dinamico,
-        chiamate a Ollama e streaming NDJSON. \\
-    \addlinespace
-    \breakcode{i3guild-rag/app/agent}
-      & \breakcode{orchestrator.py}, \breakcode{state.py}, \breakcode{models.py}
-      & Workflow agentico deterministico esplorato per ricerca, ideazione e
-        compilazione progressiva della proposta di Gilda; non adottato nella
-        soluzione finale. \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+L'applicazione web contiene il client TypeScript che dialoga con il
+microservizio RAG e gestisce lo streaming verso l'interfaccia. La pipeline di
+embedding svolge il lavoro batch: estrae i dati da PostgreSQL, normalizza i
+testi, produce embedding densi e sparsi e aggiorna Qdrant. Il microservizio
+Python concentra invece retrieval, ranking, chiamate a Ollama e formato di
+risposta. La parte agentica è rimasta isolata dal flusso principale: è stata
+utile per valutare una generazione più guidata della proposta di Gilda, ma non
+è stata adottata come architettura finale.
 
 Mantenere l'ingestione fuori dal servizio di query evita che operazioni batch e
 richieste interattive competano nello stesso processo. La pipeline di embedding
@@ -92,11 +67,10 @@ dipendenze e servizi di supporto~\cite{docker2024}.
 \label{sec:implementation_ingestion}
 % -------------------------------------------------------------
 
-La pipeline di ingestione è implementata in
-\texttt{i3guild-embedding-pipeline/pipeline/main.py}. Il processo viene avviato
-come job: verifica le dipendenze, legge le sorgenti dati, produce documenti
-Haystack, genera embedding densi e sparsi tramite FastEmbed e scrive i risultati
-in Qdrant~\cite{haystack2023,qdrant2023}. In
+La pipeline di ingestione viene avviata come job batch: verifica le dipendenze,
+legge le sorgenti dati, produce documenti Haystack, genera embedding densi e
+sparsi tramite FastEmbed e scrive i risultati in
+Qdrant~\cite{haystack2023,qdrant2023}. In
 caso di errore in una dipendenza essenziale, ad esempio PostgreSQL o Qdrant non
 raggiungibile, il processo termina con codice diverso da zero. Questo comportamento
 è utile in ambiente Docker o CI, perché rende immediatamente visibile il fallimento
@@ -146,7 +120,7 @@ rimane quindi separata da Ollama.
       & Dimensione dei vettori densi salvati in Qdrant. \\
     \breakcode{RECREATE_INDEX}
       & Operatività
-      & Ricrea la collection; nella versione aggiornata il default è
+      & Ricrea la collection; il default operativo del job batch è
         \breakcode{true}. \\
     \breakcode{INGEST_PIPELINE_BATCH_SIZE}
       & Operatività
@@ -168,8 +142,8 @@ valore usato per la componente densa è 768.
 \subsection{Estrazione dei dati da PostgreSQL}
 \label{subsec:implementation_postgres_extract}
 
-La funzione \texttt{fetch\_all\_guilds()} estrae le informazioni semantiche
-delle Gilde tramite una query SQL con join su \texttt{Epoch},
+La fase di estrazione recupera le informazioni semantiche delle Gilde tramite
+una query SQL con join su \texttt{Epoch},
 \texttt{GuildUserRelation} ed \texttt{ExternalUser}. Il risultato include i
 campi testuali principali della Gilda, i riferimenti all'epoca, la modalità di
 partecipazione, l'indicazione di Gilda individuale e la lista dei partecipanti.
@@ -184,8 +158,8 @@ testuale per le domande dell'utente.
 \subsection{Normalizzazione e costruzione dei documenti}
 \label{subsec:implementation_document_building}
 
-Ogni riga estratta viene trasformata in uno o più documenti Haystack. La
-funzione di costruzione compone un testo articolato in sezioni riconoscibili,
+Ogni riga estratta viene trasformata in uno o più documenti Haystack. Il
+processo di costruzione compone un testo articolato in sezioni riconoscibili,
 dedicate a sommario, obiettivi, rischi, risultati raggiunti e partecipanti. I
 campi HTML vengono normalizzati con BeautifulSoup~\cite{beautifulsoup2024}: il
 codice rimuove i tag, conserva il contenuto testuale e compatta gli spazi. In
@@ -197,12 +171,12 @@ Listato~\ref{lst:create_document_simplified}.
 La strategia descritta nel Capitolo~\ref{chap:requirements_design} prevedeva un
 documento consolidato per Gilda. L'implementazione mantiene questa impostazione
 come caso normale, ma introduce una soglia di sicurezza:
-\texttt{INGEST\_MAX\_DOCUMENT\_CHARS}. Se il testo supera il limite, la funzione
-\texttt{split\_text\_with\_overlap()} lo divide in chunk con sovrapposizione
-controllata. Gli outlier non impediscono così l'ingestione e i chunk successivi
-mantengono il riferimento alla Gilda tramite l'intestazione. La granularità dei
-chunk condiziona qualità del retrieval e quantità di contesto disponibile per il
-modello generativo~\cite{chen2023benchmarking}.
+\texttt{INGEST\_MAX\_DOCUMENT\_CHARS}. Se il testo supera il limite, il
+documento viene diviso in chunk con sovrapposizione controllata. Gli outlier non
+impediscono così l'ingestione e i chunk successivi mantengono il riferimento
+alla Gilda tramite l'intestazione. La granularità dei chunk condiziona qualità
+del retrieval e quantità di contesto disponibile per il modello
+generativo~\cite{chen2023benchmarking}.
 
 Gli identificativi dei documenti sono deterministici:
 \texttt{guild-\{guild\_id\}-chunk-\{index\}}. La scelta rende idempotente la
@@ -234,9 +208,9 @@ knowledge base.
 \label{sec:implementation_rag_service}
 % -------------------------------------------------------------
 
-Il microservizio RAG è implementato con FastAPI nel repository
-\texttt{i3guild-rag} ed espone endpoint per retrieval, chat sincrona e chat in
-streaming. La configurazione è centralizzata nel modulo delle impostazioni e usa
+Il microservizio RAG è implementato con FastAPI ed espone endpoint per
+retrieval, chat sincrona e chat in streaming. La configurazione è centralizzata
+nel modulo delle impostazioni e usa
 \texttt{pydantic-settings}; i valori di default permettono lo sviluppo locale,
 mentre gli ambienti Docker possono sovrascriverli tramite variabili
 d'ambiente~\cite{fastapi2024,pydantic2024}.
@@ -269,7 +243,7 @@ d'ambiente~\cite{fastapi2024,pydantic2024}.
 \subsection{Avvio, middleware e gestione errori}
 \label{subsec:implementation_fastapi}
 
-Il file \texttt{app/main.py} definisce l'applicazione FastAPI e registra CORS,
+L'applicazione FastAPI registra CORS,
 rate limiting e handler globale delle eccezioni. Il rate limiter usa
 \texttt{slowapi} con limite predefinito di 100 richieste al minuto per IP sugli
 endpoint principali. La gestione degli errori distingue i fallimenti dovuti a
@@ -289,29 +263,27 @@ viene propagato nella risposta quando disponibile.
 L'endpoint \texttt{POST /rag/retrieve} riceve una query, i parametri di
 retrieval e gli eventuali filtri applicativi. Il modello Pydantic
 \texttt{RetrieveRequest} definisce valori di default conservativi:
-\texttt{top\_k=20}, \texttt{score\_threshold=0.7},
-\texttt{max\_documents=10} e \texttt{gap\_threshold=0.08}. La risposta include
+\texttt{top\_k=20}, \texttt{score\_threshold=0.5},
+\texttt{max\_documents=5} e \texttt{gap\_threshold=0.08}. La risposta include
 i documenti selezionati e una serie di informazioni diagnostiche: numero di
 candidati iniziali, soglia usata, motivo del taglio, eventuale query riscritta e
 filtri estratti automaticamente. Lo schema della richiesta è riportato in
 Appendice~\ref{app:B}, Listato~\ref{lst:retrieve_request}.
 
 L'endpoint è volutamente sottile: valida l'input, esegue il controllo RAM e
-delega la logica a \texttt{retrieve\_documents()}. Questa separazione rende più
-semplice testare il retrieval senza dover passare da FastAPI.
+delega la logica al livello applicativo del retrieval. Questa separazione rende
+più semplice testare il retrieval senza dover passare da FastAPI.
 
 \subsection{Pipeline Haystack di query}
 \label{subsec:implementation_query_pipeline}
 
-La pipeline di query è costruita in \texttt{app/pipeline.py}. Il
-\texttt{QdrantDocumentStore} punta alla collection configurata, usa embedding
-densi di dimensione 768 con similarità coseno e abilita la componente sparsa.
-La query utente viene elaborata da due
-componenti: \texttt{FastembedTextEmbedder}, che produce l'embedding denso, e
-\texttt{FastembedSparseTextEmbedder}, che produce la rappresentazione sparsa. I
-due output alimentano \texttt{QdrantHybridRetriever}, responsabile della ricerca
-ibrida in Qdrant~\cite{haystack2023,qdrant2023}. Il listato della pipeline è
-riportato in Appendice~\ref{app:B}, Listato~\ref{lst:query_pipeline_impl}.
+La pipeline di query collega il document store Qdrant agli embedder FastEmbed
+usati per la query. La collection usa embedding densi di dimensione 768 con
+similarità coseno e abilita anche la componente sparsa. La query utente viene
+quindi trasformata in due rappresentazioni, una densa e una sparsa, che
+alimentano il retriever ibrido Qdrant~\cite{haystack2023,qdrant2023}. Il
+listato della pipeline è riportato in Appendice~\ref{app:B},
+Listato~\ref{lst:query_pipeline_impl}.
 
 La pipeline è inizializzata in modo lazy e protetta da un lock. Alla prima
 richiesta viene creato l'oggetto Haystack e vengono predisposti gli indici sui
@@ -327,25 +299,25 @@ classe di problemi~\cite{malkov2018efficient}.
 \label{sec:implementation_retrieval_logic}
 % -------------------------------------------------------------
 
-La funzione \texttt{retrieve\_documents()} in \texttt{app/rag.py} contiene la
-parte più specifica del sistema. Il retrieval non è una semplice chiamata a
-Qdrant: prima della ricerca la query viene normalizzata e, quando possibile,
-riscritta; dopo la ricerca i risultati vengono deduplicati e filtrati con una
-logica dinamica. Questa struttura segue il principio RAG di separare conoscenza
-parametrica e recupero esplicito di documenti esterni~\cite{lewis2020retrieval}.
+La logica di retrieval contiene la parte più specifica del sistema. Il retrieval
+non è una semplice chiamata a Qdrant: prima della ricerca la query viene
+normalizzata e, quando possibile, riscritta; dopo la ricerca i risultati vengono
+deduplicati e filtrati con una logica dinamica. Questa struttura segue il
+principio RAG di separare conoscenza parametrica e recupero esplicito di
+documenti esterni~\cite{lewis2020retrieval}.
 
 \subsection{Riscrittura della query e filtri}
 \label{subsec:implementation_query_rewriting}
 
-La funzione \texttt{extract\_topic\_query()} rimuove parole frequenti nel dominio
-i3Guild, come "gilda", "fondare" o "consigli", quando non contribuiscono al tema
-ricercato. Se dalla frase "vorrei fondare una gilda sulla musica" viene estratto
-il topic "musica", la ricerca viene eseguita su tale topic. La risposta conserva
-la query riscritta nel campo \texttt{topic\_query}, così il frontend può
-mostrarla o usarla per diagnostica.
+Il rewriting rimuove parole frequenti nel dominio i3Guild, come "gilda",
+"fondare" o "consigli", quando non contribuiscono al tema ricercato. Se dalla
+frase "vorrei fondare una gilda sulla musica" viene estratto il topic
+"musica", la ricerca viene eseguita su tale topic. La risposta conserva la query
+riscritta nel campo \texttt{topic\_query}, così il frontend può mostrarla o
+usarla per diagnostica.
 
-In parallelo, \texttt{extract\_filters\_from\_query()} cerca vincoli espressi in
-linguaggio naturale: epoca, Gilde individuali o di gruppo, modalità di
+In parallelo, un estrattore di filtri cerca vincoli espressi in linguaggio
+naturale: epoca, Gilde individuali o di gruppo, modalità di
 partecipazione e partecipanti. Se l'utente passa anche filtri espliciti, il
 servizio li combina con quelli estratti tramite un operatore \texttt{AND}. Questo
 permette di usare la ricerca vettoriale senza perdere vincoli strutturati
@@ -354,10 +326,9 @@ presenti nei metadati.
 \subsection{Cache e deduplicazione}
 \label{subsec:implementation_cache_dedupe}
 
-Per evitare interrogazioni ripetute identiche, \texttt{retrieve\_documents()}
-mantiene una cache in memoria con TTL configurabile tramite
-\texttt{rag\_cache\_ttl\_seconds}. La chiave include query effettiva, parametri
-di retrieval e filtri. Si tratta di una cache locale al processo, sufficiente per
+Per evitare interrogazioni ripetute identiche, il servizio mantiene una cache in
+memoria con TTL configurabile. La chiave include query effettiva, parametri di
+retrieval e filtri. Si tratta di una cache locale al processo, sufficiente per
 lo scenario prototipale; in un deployment multi replica andrebbe sostituita con
 una cache condivisa o disabilitata per evitare differenze tra istanze.
 
@@ -371,9 +342,8 @@ sorgenti diverse o chunk molto simili generati dalla sovrapposizione.
 \subsection{Selezione dinamica dei documenti}
 \label{subsec:implementation_dynamic_filtering}
 
-La selezione finale avviene in \texttt{filter\_documents\_dynamically()}. I
-documenti vengono ordinati per score, filtrati con una soglia minima e poi
-tagliati quando il calo relativo tra due score consecutivi supera
+La selezione finale ordina i documenti per score, applica la soglia minima e poi
+taglia la lista quando il calo relativo tra due score consecutivi supera
 \texttt{gap\_threshold}. Se il numero di risultati resta troppo alto, viene
 applicato \texttt{max\_documents}. La risposta indica il motivo del taglio:
 \texttt{threshold}, \texttt{relative\_gap}, \texttt{max\_cap} o
@@ -393,10 +363,9 @@ recuperate~\cite{shuster2021retrieval}.
 \label{sec:implementation_generation}
 % -------------------------------------------------------------
 
-Il modulo \texttt{app/ollama\_service.py} gestisce le chiamate al modello di
-chat. Le funzioni principali sono \texttt{generate\_chat\_reply()} per risposte
-complete e \texttt{generate\_chat\_reply\_stream()} per risposte in streaming.
-Entrambe usano l'endpoint \texttt{/api/chat} di Ollama~\cite{ollama2023}.
+Il servizio di generazione gestisce le chiamate al modello di chat. Espone sia
+risposte complete sia risposte in streaming, usando in entrambi i casi
+l'endpoint \texttt{/api/chat} di Ollama~\cite{ollama2023}.
 
 \subsection{Risoluzione del modello}
 \label{subsec:implementation_model_resolution}
@@ -415,9 +384,9 @@ processo e ha solo funzione di riduzione dell'overhead.
 \subsection{Costruzione del prompt aumentato}
 \label{subsec:implementation_augmented_prompt}
 
-Prima di inviare la richiesta a Ollama, \texttt{\_prepare\_messages()} costruisce
-la lista dei messaggi. Il system prompt, se presente, viene aggiunto per primo.
-La cronologia conversazionale viene limitata agli ultimi
+Prima di inviare la richiesta a Ollama, il servizio costruisce la lista dei
+messaggi. Il system prompt, se presente, viene aggiunto per primo. La cronologia
+conversazionale viene limitata agli ultimi
 \texttt{max\_history\_messages}, in modo da controllare la dimensione del
 contesto. Se il retrieval ha restituito documenti, il testo viene aggiunto al
 messaggio utente dentro una sezione esplicita:
@@ -437,9 +406,14 @@ tutta la finestra di contesto né impedire al modello di vedere altre fonti.
 Per la chat interattiva il servizio espone \texttt{POST /chat/stream}. Prima
 invia un evento \texttt{rag} con i metadati del retrieval, poi inoltra gli eventi
 generati da Ollama. La risposta HTTP usa il media type
-\texttt{application/x-ndjson}; ogni riga è un oggetto JSON indipendente. Questo
-formato è semplice da consumare lato frontend e permette di distinguere token,
-warning, errori e fine stream. Un esempio di sequenza NDJSON è riportato in
+\texttt{application/x-ndjson}. NDJSON significa \emph{Newline Delimited JSON}:
+la risposta non è un singolo array JSON, ma una sequenza di oggetti JSON
+separati da newline. Ogni riga è quindi completa e parsabile in modo
+indipendente. Questa proprietà è utile nello streaming, perché il frontend può
+processare subito un evento \texttt{rag}, un token, un warning o un errore senza
+attendere la chiusura dell'intera risposta. Il formato è anche più robusto di un
+JSON parziale: se una generazione viene interrotta, gli eventi già ricevuti
+restano validi. Un esempio di sequenza NDJSON è riportato in
 Appendice~\ref{app:B}, Listato~\ref{lst:ndjson_standard}.
 
 % -------------------------------------------------------------
@@ -449,10 +423,10 @@ Appendice~\ref{app:B}, Listato~\ref{lst:ndjson_standard}.
 
 Durante il progetto è stata esplorata anche una modalità agentica per guidare
 l'utente nella proposta di nuove Gilde. Questa linea non costituisce però il
-flusso finale del prototipo: la versione aggiornata mantiene il servizio RAG
-centrato su retrieval ibrido, chat e generazione controllata, mentre la
-compilazione della bozza viene gestita lato applicazione attraverso prompt
-strutturati e validazione del risultato.
+flusso finale del prototipo: il servizio RAG rimane centrato su retrieval
+ibrido, chat e generazione controllata, mentre la compilazione della bozza viene
+gestita lato applicazione attraverso prompt strutturati e validazione del
+risultato.
 
 La scelta è coerente con i vincoli osservati durante lo sviluppo. Un agente che
 mantiene stato, pianifica passaggi e invoca più volte il modello introduce
@@ -468,27 +442,26 @@ futura, da rivalutare con modelli locali più capaci o con hardware più ampio.
 \label{sec:implementation_nextjs}
 % -------------------------------------------------------------
 
-L'applicazione i3Guild accede al microservizio tramite
-\texttt{src/lib/services/rag.service.ts}. Il client centralizza l'URL del
-servizio, legge \texttt{I3GUILD\_RAG\_URL} o \texttt{RAG\_API\_URL}, serializza
-le richieste e normalizza gli errori. Le chiamate HTTP dirette al servizio RAG
-rimangono così concentrate in un unico punto, invece di essere replicate in più
-componenti React o route API~\cite{nextjs2024}.
+L'applicazione i3Guild accede al microservizio tramite un client TypeScript
+dedicato. Il client centralizza l'URL del servizio, legge
+\texttt{I3GUILD\_RAG\_URL} o \texttt{RAG\_API\_URL}, serializza le richieste e
+normalizza gli errori. Le chiamate HTTP dirette al servizio RAG rimangono così
+concentrate in un unico punto, invece di essere replicate in più componenti
+React o route API~\cite{nextjs2024}.
 
 \subsection{Client di retrieval}
 \label{subsec:implementation_nextjs_retrieval}
 
-La funzione \texttt{searchRAGWithMeta()} invoca \texttt{/rag/retrieve} e
-restituisce sia documenti sia metadati. In caso di errore non solleva
+Il client di retrieval invoca \texttt{/rag/retrieve} e restituisce sia documenti
+sia metadati. In caso di errore non solleva
 un'eccezione: restituisce una lista vuota e un \texttt{cutoff\_reason} pari a
 \texttt{error}. Per la sola ricerca semantica questo comportamento è corretto:
 il chatbot non deve bloccarsi se il servizio Python è temporaneamente non
 raggiungibile. La chiamata TypeScript essenziale è riportata in
 Appendice~\ref{app:B}, Listato~\ref{lst:typescript_search_rag}.
 
-La funzione \texttt{searchRAG()} è un wrapper più semplice che restituisce solo
-i documenti. Viene mantenuta per i punti dell'applicazione che non hanno bisogno
-della diagnostica.
+Una seconda interfaccia, più semplice, restituisce solo i documenti. Viene
+mantenuta per i punti dell'applicazione che non hanno bisogno della diagnostica.
 
 \subsection{Client chat e generazione controllata}
 \label{subsec:implementation_nextjs_chat}
@@ -588,6 +561,19 @@ quantità di testo serializzata nelle richieste. Non va però interpretata come 
 riuso effettivo della KV Cache del modello: il system prompt incorporato nella
 definizione del modello rende più pulita la configurazione, ma non elimina di
 per sé il costo computazionale del prompt durante l'inferenza.
+
+La soluzione ha anche limiti operativi. Se il system prompt cambia spesso, i
+modelli derivati possono accumularsi nello storage di Ollama e richiedere una
+policy di pulizia. In un deployment multi replica, più processi potrebbero
+tentare di creare lo stesso modello derivato nello stesso momento; un lock
+locale è sufficiente nel prototipo, ma non basta come garanzia distribuita. Un
+miglioramento futuro consiste nel versionare esplicitamente i prompt, salvare
+metadati di creazione e usare una procedura di cleanup controllata. Un secondo
+miglioramento riguarda la misurazione: per le risposte non streaming Ollama
+espone metriche finali come token di prompt e durate, mentre nello streaming
+sarebbe utile emettere un evento conclusivo con le stesse statistiche. In questo
+modo diventerebbe possibile confrontare payload, latenza e costo del prompt
+senza introdurre strumenti esterni.
 
 \subsection{Tracciabilità}
 \label{subsec:implementation_tracing}

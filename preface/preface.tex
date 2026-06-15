@@ -1,18 +1,15 @@
 \chapter*{Introduzione}
 
-Negli ultimi anni i Large Language Model hanno cambiato il modo in cui le
-organizzazioni possono accedere alla conoscenza testuale.
-Questi modelli sono in grado di generare risposte fluide, sintetizzare
-documenti, assistere nella scrittura e supportare attivita' decisionali. Nel
-contesto aziendale, tuttavia, il loro impiego non puo' essere valutato soltanto
-in termini di capacita' generativa. Le risposte devono essere ancorate a dati
-interni aggiornati, devono ridurre il rischio di allucinazioni e devono
-rispettare vincoli di riservatezza, controllo dell'infrastruttura e
-manutenibilita'. Un modello pre-addestrato, usato in modo isolato, non conosce
-la documentazione privata di un'organizzazione e non dispone di un meccanismo
-nativo per verificarla. Questo limite e' particolarmente rilevante quando il
-sistema deve rispondere su contenuti aziendali specifici, non su conoscenza
-generale.
+I Large Language Model hanno reso più accessibile l'interazione con grandi
+quantità di testo: possono sintetizzare documenti, formulare risposte in
+linguaggio naturale e assistere attività di scrittura o analisi. In ambito
+aziendale, però, queste capacità non bastano. Una risposta utile deve riferirsi
+a dati interni aggiornati, deve essere verificabile e deve rispettare vincoli di
+riservatezza, controllo dell'infrastruttura e manutenibilità. Un modello
+pre-addestrato, usato da solo, non conosce la documentazione privata di
+un'organizzazione e non possiede un meccanismo nativo per controllarla. Il
+problema emerge soprattutto quando il sistema deve rispondere su contenuti
+specifici dell'azienda, non su conoscenza generale.
 
 Il paradigma \emph{Retrieval-Augmented Generation} (RAG) affronta questo
 problema combinando due componenti: un modulo di recupero, che seleziona
@@ -20,8 +17,8 @@ documenti pertinenti da una base di conoscenza esterna, e un modello
 generativo, che produce la risposta a partire dalla domanda e dal contesto
 recuperato~\cite{lewis2020rag}. In questo modo la conoscenza usata dal sistema
 non risiede soltanto nei parametri del modello, ma anche in un indice
-aggiornabile e ispezionabile. Per scenari enterprise, tale impostazione e'
-interessante perche' consente di integrare fonti interne, mantenere traccia dei
+aggiornabile e ispezionabile. Per scenari enterprise, tale impostazione è
+interessante perché consente di integrare fonti interne, mantenere traccia dei
 documenti usati e separare il problema della generazione dal problema della
 gestione della conoscenza.
 
@@ -36,15 +33,15 @@ sempre facile da interrogare: le informazioni sono distribuite tra database,
 metadati e contenuti testuali, e il recupero manuale richiede conoscenza
 pregressa del dominio.
 
-L'obiettivo principale della tesi e' progettare, implementare e valutare un
+L'obiettivo principale della tesi è progettare, implementare e valutare un
 sistema RAG integrato in i3Guild, capace di rendere interrogabile il corpus
 delle Gilde tramite linguaggio naturale. Il sistema deve rispettare tre vincoli
-di fondo. Il primo e' la riservatezza: i dati aziendali devono restare entro un
+di fondo. Il primo è la riservatezza: i dati aziendali devono restare entro un
 perimetro controllato, in coerenza con le esigenze di protezione del dato e con
-il quadro normativo europeo~\cite{gdpr2016}. Il secondo e' la sostenibilita'
+il quadro normativo europeo~\cite{gdpr2016}. Il secondo è la sostenibilità
 infrastrutturale: il prototipo deve poter funzionare con risorse realistiche,
-senza assumere la disponibilita' di GPU server dedicate. Il terzo e' la
-manutenibilita': la soluzione deve integrarsi con l'applicazione esistente e
+senza assumere la disponibilità di GPU server dedicate. Il terzo è la
+manutenibilità: la soluzione deve integrarsi con l'applicazione esistente e
 conservarne la separazione tra sorgente dati, indicizzazione, retrieval e
 generazione.
 
@@ -59,18 +56,18 @@ implementativa include inoltre query rewriting, filtri strutturati,
 deduplicazione, selezione dinamica dei documenti, streaming della risposta e
 generazione controllata di bozze di nuove Gilde.
 
-Durante lo sviluppo e' stato esplorato anche un workflow agentico per guidare
-l'utente nella proposta di nuove Gilde. Tale workflow e' stato implementato e
-testato, ma non adottato come nucleo della soluzione finale. La ragione e'
-pratica: a parita' di hardware locale, l'approccio agentico introduce piu'
-passaggi, maggiore costo computazionale e maggiore complessita' operativa. Nel
-perimetro del prototipo, un RAG piu' classico e deterministico e' risultato piu'
-stabile e piu' semplice da mantenere. La componente agentica rimane quindi
+Durante lo sviluppo è stato esplorato anche un workflow agentico per guidare
+l'utente nella proposta di nuove Gilde. Tale workflow è stato implementato e
+testato, ma non adottato come nucleo della soluzione finale. La ragione è
+pratica: a parità di hardware locale, l'approccio agentico introduce più
+passaggi, maggiore costo computazionale e maggiore complessità operativa. Nel
+perimetro del prototipo, un RAG più classico e deterministico è risultato più
+stabile e più semplice da mantenere. La componente agentica rimane quindi
 documentata come sperimentazione e possibile sviluppo futuro.
 
 La seconda parte del lavoro affronta un problema emerso dal prototipo: la
-sostenibilita' dell'inferenza locale. Un sistema RAG aziendale puo' essere
-correttamente progettato, ma la sua utilita' pratica dipende anche dal modello
+sostenibilità dell'inferenza locale. Un sistema RAG aziendale può essere
+correttamente progettato, ma la sua utilità pratica dipende anche dal modello
 generativo usato nella fase finale. Il modello deve essere
 caricabile, deve rientrare nella memoria disponibile, deve rispondere con una
 latenza accettabile e deve mantenere un livello qualitativo compatibile con il
@@ -82,17 +79,17 @@ L'esperimento misura il compromesso introdotto dalla quantizzazione MLX su un
 MacBook Pro con chip M1 Pro e 16 GB di memoria unificata. Le varianti FP16,
 Q8, Q6 e Q4 vengono confrontate rispetto a dimensione su disco, memoria di
 picco, tempo di caricamento, time-to-first-token, throughput di decodifica e
-qualita' su subset ridotti MMLU e GSM8K. I risultati mostrano che, per i
+qualità su subset ridotti MMLU e GSM8K. I risultati mostrano che, per i
 modelli piccoli, Q4 riduce la dimensione di circa il 72\%, riduce il picco di
 memoria di circa 67--70\% e aumenta il throughput di decodifica di circa
 2.6--2.8 volte rispetto a FP16, senza mostrare un degrado macroscopico nei
-controlli automatici ridotti. Per i modelli medi e grandi, la quantizzazione e'
-soprattutto una leva di fattibilita': rende eseguibili configurazioni che
+controlli automatici ridotti. Per i modelli medi e grandi, la quantizzazione è
+soprattutto una leva di fattibilità: rende eseguibili configurazioni che
 sarebbero meno realistiche nel vincolo dei 16 GB, ma richiede una valutazione
 attenta di latenza, formato dell'output e uso concorrente con gli altri servizi
 del sistema.
 
-La tesi e' organizzata come segue. Il Capitolo~\ref{chap:background} introduce
+La tesi è organizzata come segue. Il Capitolo~\ref{chap:background} introduce
 i fondamenti tecnologici: Transformer, LLM, inferenza locale, RAG, embedding,
 database vettoriali, Agentic RAG e Haystack. Il
 Capitolo~\ref{chap:requirements_design} analizza il contesto aziendale di

@@ -65,7 +65,7 @@ di un risultato condivisibile. Le sue caratteristiche principali sono:
     una Gilda su qualsiasi argomento, tecnico o non tecnico (es. linguaggi
     di programmazione, ceramica, game development, intelligenza artificiale).
   \item \textbf{Ciclo temporale (Epoch)}: le Gilde si ricreano ogni quattro
-    mesi; ogni ciclo costituisce un'``epoca'' distinta, con nuovi temi e nuovi
+    mesi; ogni ciclo costituisce un'``epocà' distinta, con nuovi temi e nuovi
     gruppi. Questa scansione periodica evita che l'apprendimento rimanga legato
     a iniziative isolate e lo inserisce in una routine aziendale riconoscibile.
   \item \textbf{Output condivisibile}: al termine del periodo la Gilda produce
@@ -260,7 +260,7 @@ componenti: similarità semantica sul tema e filtro temporale sull'epoch.
 
 Gli esempi presenti nella documentazione interna del progetto chiariscono il
 tipo di interrogazioni attese. Una query esplorativa come ``vorrei fondare una
-gilda sulla musica'' deve essere ridotta ai termini informativi principali e
+gilda sulla musicà' deve essere ridotta ai termini informativi principali e
 recuperare Gilde tematicamente vicine, ad esempio \emph{The Rolling Updates} o
 \emph{Visual note for piano}, quando presenti nel corpus indicizzato. Domande
 come ``quali Gilde si occupano di AI?'' privilegiano invece il recupero
@@ -511,17 +511,17 @@ mantenere il sistema manutenibile anche in un contesto prototipale.
 \label{subsec:embedding_choice}
 
 Il modello di embedding converte i documenti testuali in rappresentazioni
-numeriche interrogabili da Qdrant. Nella prima versione del progetto questa
-funzione era affidata a Ollama e a un singolo vettore denso; la versione
-aggiornata separa invece l'inferenza generativa dall'indicizzazione e usa
-FastEmbed tramite Haystack. La pipeline produce sia embedding densi sia
-embedding sparsi, così il retrieval può combinare similarità semantica e
-corrispondenza lessicale su nomi propri, tecnologie e termini ricorrenti nelle
+numeriche interrogabili da Qdrant. Nel progetto questa funzione è separata
+dall'inferenza generativa: Ollama serve il modello di chat, mentre FastEmbed,
+tramite Haystack, produce le rappresentazioni usate per l'indicizzazione. La
+pipeline genera sia embedding densi sia embedding sparsi, così il retrieval può
+combinare similarità semantica e corrispondenza lessicale su nomi propri,
+tecnologie e termini ricorrenti nelle
 Gilde~\cite{haystackFastembedDocument2026,haystackFastembedSparse2026}.
 
 \begin{table}[ht]
   \centering
-  \caption{Configurazione embedding della versione aggiornata del sistema RAG.}
+  \caption{Configurazione embedding del sistema RAG.}
   \label{tab:embedding_models}
   \small
   \begin{tabular}{L{2.7cm}L{4.1cm}L{3cm}L{3.6cm}}
@@ -541,16 +541,16 @@ Gilde~\cite{haystackFastembedDocument2026,haystackFastembedSparse2026}.
   \end{tabular}
 \end{table}
 
-\noindent La configurazione aggiornata elimina la dipendenza da Ollama nella
-fase batch di indicizzazione: Ollama rimane dedicato alla generazione LLM,
-mentre FastEmbed produce gli embedding in un job separato. La componente sparsa
-rende inoltre il retrieval meno dipendente dalla sola similarità densa, aspetto
-rilevante in un corpus dove nomi propri, tecnologie e termini ricorrenti hanno
-spesso valore informativo letterale. Ingestione e query seguono quindi lo stesso
-schema operativo: in scrittura vengono generati embedding densi e sparsi dei
-documenti; in lettura la query viene trasformata nelle due rappresentazioni
-corrispondenti e inviata a
-\texttt{QdrantHybridRetriever}~\cite{haystackQdrantHybrid2026}. Il valore
+\noindent La separazione tra indicizzazione e generazione riduce
+l'accoppiamento operativo: Ollama rimane dedicato alla risposta LLM, mentre il
+job batch produce gli embedding senza dipendere dal server di chat. La
+componente sparsa rende inoltre il retrieval meno dipendente dalla sola
+similarità densa, aspetto rilevante in un corpus dove nomi propri, tecnologie e
+termini ricorrenti hanno spesso valore informativo letterale. Ingestione e query
+seguono quindi lo stesso schema operativo: in scrittura vengono generati
+embedding densi e sparsi dei documenti; in lettura la query viene trasformata
+nelle due rappresentazioni corrispondenti e inviata al retriever ibrido
+Qdrant~\cite{haystackQdrantHybrid2026}. Il valore
 \texttt{EMBEDDING\_DIMENSIONS=768} rimane il riferimento per la componente
 densa.
 
@@ -584,16 +584,31 @@ PostgreSQL, Qdrant, il servizio Next.js, la pipeline RAG e Ollama. Per questo
 la selezione non mira a identificare il modello migliore in senso assoluto, ma
 un modello sufficientemente stabile per validare l'integrazione end-to-end.
 
-\noindent Il modello adottato nel prototipo è \texttt{gemma3:1b}. La scelta
-deriva da prove preliminari interne su modelli disponibili nel registry Ollama,
-valutati rispetto alla latenza percepita durante l'interazione, al consumo di
-memoria e alla qualità minima delle risposte in presenza di contesto RAG. Il
-modello può essere caricato senza saturare le risorse condivise con PostgreSQL,
-Qdrant, Next.js e il servizio RAG; i tempi di risposta restano compatibili con
-un uso interattivo del chatbot, tenendo conto del cold start, e l'integrazione
-non richiede conversioni o runtime aggiuntivi. Le risposte non sono usate come
-prova generale della qualità del modello, ma risultano sufficienti per validare
-il flusso applicativo quando il contesto recuperato da Qdrant è pertinente.
+\noindent Il modello adottato nel prototipo è \texttt{gemma3:4b}, distribuito
+in Ollama come \texttt{gemma3:latest}. La scelta deriva da prove preliminari
+interne su modelli disponibili nel registry Ollama, valutati rispetto a latenza
+percepita, consumo di memoria e qualità minima delle risposte in presenza di
+contesto RAG. Il modello resta caricabile nello stesso ambiente dei servizi
+PostgreSQL, Qdrant, Next.js e FastAPI, ma offre un margine qualitativo maggiore
+rispetto a modelli da circa 1B parametri. Le risposte non sono usate come prova
+generale della qualità del modello; sono sufficienti per validare il flusso
+applicativo quando il contesto recuperato da Qdrant è pertinente.
+
+Le prove locali hanno confrontato dodici modelli Ollama su 14 query, divise tra
+prompt generali e prompt RAG. La valutazione manuale ha assegnato tre punteggi
+per accuratezza o fedeltà, pertinenza e coerenza. I risultati non costituiscono
+un benchmark scientifico, perché il numero di query è ridotto e il carico della
+macchina non è stato isolato; sono però utili come criterio progettuale. In
+media, \texttt{gemma3:1b} ha mostrato la latenza totale più bassa
+(\(\approx 6.7\) s) e un buon throughput (\(\approx 28\) parole/s), ma una
+coerenza più debole nelle risposte RAG. \texttt{gemma3:4b} ha richiesto più
+tempo (\(\approx 17.3\) s in media), mantenendo però il punteggio medio più alto
+tra i modelli di dimensione compatibile con il prototipo. Modelli ragionativi
+come \texttt{phi4-mini-reasoning} hanno prodotto latenze troppo elevate per
+l'uso interattivo, mentre alcune alternative molto compatte hanno mostrato
+output meno controllabili. La scelta di \texttt{gemma3:4b} privilegia quindi un
+compromesso pratico: qualità sufficiente, integrazione immediata in Ollama e
+risorse ancora compatibili con l'ambiente condiviso.
 
 \noindent Questa valutazione resta volutamente interna al progetto aziendale:
 serve a rendere eseguibile il prototipo i3Guild, non a produrre conclusioni
@@ -634,7 +649,7 @@ espone verso Next.js un confine applicativo chiaro, senza incorporare la logica
 RAG direttamente nel frontend.
 
 \begin{description}
-  \item[Ingestione e pre-processing (\texttt{i3guild-embedding-pipeline})]
+  \item[Ingestione e pre-processing]
     Pipeline batch Python che esegue le fasi ETL descritte nella
     Sezione~\ref{subsec:ingestion_pipeline}. Acquisisce i documenti da
     PostgreSQL, normalizza il testo, esegue il chunking, genera embedding densi
@@ -661,7 +676,7 @@ RAG direttamente nel frontend.
     componenti corrispondenti e il retriever ibrido Qdrant.
 
   \item[Inference LLM (Ollama)] Server di inferenza locale; modello di chat
-    adottato: \texttt{gemma3:1b}, selezionato sulla base di prove preliminari
+    adottato: \texttt{gemma3:4b}, selezionato sulla base di prove preliminari
     coerenti con i vincoli del prototipo
     (Sezione~\ref{subsec:llm_choice}).
 
@@ -697,8 +712,8 @@ similarità vettoriale densa e componente sparsa nello stesso store.
       semantica testuale \\
     \breakcode{use_sparse_embeddings} & \breakcode{true} & Abilita la componente
       sparsa per retrieval ibrido \\
-    \breakcode{recreate_index} & \breakcode{true} (job batch) & Ricrea collection
-      dense-only mantenendo lo stesso nome \\
+    \breakcode{recreate_index} & \breakcode{true} (job batch) & Ricrea la
+      collection ibrida mantenendo lo stesso nome \\
     \breakcode{hnsw_config.m} & 16 (default) & Compromesso velocità/precisione \\
     \breakcode{hnsw_config.ef_construct} & 100 (default) & Qualità dell'indice
       in fase di build \\
@@ -749,8 +764,7 @@ sovrascrivere i punti esistenti quando la policy è
 \label{subsec:ingestion_pipeline}
 
 La pipeline ETL ha il compito di mantenere allineata la rappresentazione
-vettoriale con i dati applicativi. Il job
-\texttt{i3guild-embedding-pipeline/pipeline/main.py} esegue le seguenti fasi:
+vettoriale con i dati applicativi. Il job batch esegue le seguenti fasi:
 
 \begin{enumerate}
   \item \textbf{Extract}: connessione a PostgreSQL e query SQL con JOIN su
@@ -790,12 +804,12 @@ documenti marginali nelle query semplici o di tagliare informazioni utili nelle
 query più ampie. Per questo viene applicato un approccio adattivo in tre stadi:
 
 \begin{enumerate}
-  \item \textbf{Soglia di similarità} (default: cosine score $\geq 0.7$):
+  \item \textbf{Soglia di similarità} (default: cosine score $\geq 0.5$):
     esclude documenti semanticamente non pertinenti.
   \item \textbf{Rilevamento del calo relativo}: se la caduta percentuale tra
     due score consecutivi supera una soglia configurabile (default: 0.08), la
     lista viene troncata al confine naturale della rilevanza.
-  \item \textbf{Cap di sicurezza} (default: $\leq 10$ documenti): limite
+  \item \textbf{Cap di sicurezza} (default: $\leq 5$ documenti): limite
     massimo per controllare la dimensione del contesto passato al modello
     generativo.
 \end{enumerate}
@@ -808,8 +822,8 @@ stessi parametri, senza cambiare il modello dati persistente.
 \subsubsection{Query rewriting e Topic-First Search}
 \label{subsubsec:query_rewriting}
 
-Nel contesto i3Guild, molte query contengono parole ricorrenti come ``gilda'',
-``fondare'' o ``consigli''. Questi termini descrivono l'interazione con il
+Nel contesto i3Guild, molte query contengono parole ricorrenti come ``gildà',
+``fondarè' o ``consigli''. Questi termini descrivono l'interazione con il
 sistema, ma non il tema informativo cercato; se mantenuti nella query, possono
 dominare lo spazio degli embedding e produrre risultati generici. Il
 \emph{query rewriting}, discusso anche in framework come
@@ -842,7 +856,7 @@ query campione.
     ``vorrei fondare una gilda sulla musica, cosa mi consigli?'' &
       \texttt{musica} &
       Gilda a tema musicale \\
-    ``intelligenza artificiale'' & \texttt{intelligenza artificiale} &
+    ``intelligenza artificialè' & \texttt{intelligenza artificiale} &
       (nessun rewriting) \\
     ``chi ha partecipato al progetto di design?'' & \texttt{design} &
       Gilda con partecipanti nel settore design \\
@@ -876,35 +890,36 @@ eventuali verifiche successive della qualità del retrieval.
 L'integrazione del sistema RAG nell'infrastruttura i3Guild esistente è pensata
 per ridurre l'impatto sul sistema già operativo. PostgreSQL, Next.js, Keycloak e
 Kong mantengono il proprio ruolo; il sistema RAG si aggiunge come insieme di
-servizi nel file \texttt{dev\_containers/docker-compose.yml}. Il retrieval
-semantico viene così introdotto senza modificare il modello dati principale né
-il flusso di autenticazione.
+servizi containerizzati. Il retrieval semantico viene così introdotto senza
+modificare il modello dati principale né il flusso di autenticazione.
 
 \subsection{Servizi Docker aggiuntivi}
 \label{subsec:docker_services}
 
-La Tabella~\ref{tab:docker_services} elenca i container aggiuntivi
-introdotti dal sistema RAG.
+La Tabella~\ref{tab:docker_services} riassume i servizi coinvolti
+dall'integrazione RAG. Il dettaglio delle porte host e delle immagini Docker è
+lasciato alla configurazione operativa, perché non incide sulla scelta
+architetturale.
 
 \begin{table}[ht]
   \centering
   \caption{Servizi Docker introdotti dall'integrazione RAG in i3Guild.}
   \label{tab:docker_services}
   \small
-  \begin{tabular}{L{3.1cm}L{2.4cm}L{1.5cm}L{5.1cm}}
+  \begin{tabular}{L{3.3cm}L{4.1cm}L{5.6cm}}
     \toprule
-    \textbf{Container} & \textbf{Immagine} & \textbf{Porta host} &
-      \textbf{Ruolo} \\
+    \textbf{Servizio} & \textbf{Responsabilità} & \textbf{Note progettuali} \\
     \midrule
-    \breakcode{qdrant} & \breakcode{qdrant:latest} & 6333, 6334 & Database vettoriale; Web UI su \breakcode{/dashboard} \\
-    \breakcode{ollama} & \breakcode{ollama:latest} & 11434 & Server di
-      inferenza LLM \\
-    \breakcode{i3guild_rag} & Build locale & 8002 & FastAPI + Haystack
-      (retrieval ibrido e generazione) \\
-    \breakcode{i3guild_embedding_pipeline} & Build locale & -- & Job batch
-      PostgreSQL $\rightarrow$ FastEmbed/Haystack $\rightarrow$ Qdrant \\
-    \breakcode{postgres} & già presente & già presente & Sorgente autoritativa
-      relazionale (nessuna modifica) \\
+    Qdrant & Database vettoriale ibrido & Conserva vettori densi,
+      rappresentazioni sparse e payload filtrabili. \\
+    Ollama & Inferenza LLM locale & Serve il modello di chat
+      \texttt{gemma3:4b}. \\
+    Servizio RAG & API FastAPI e pipeline Haystack & Espone retrieval, chat e
+      generazione controllata verso Next.js. \\
+    Pipeline embedding & Job batch di indicizzazione & Legge PostgreSQL,
+      produce embedding densi e sparsi e aggiorna Qdrant. \\
+    PostgreSQL & Sorgente autoritativa & Rimane il database applicativo
+      principale, senza duplicare la logica di dominio. \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -914,32 +929,23 @@ introdotti dal sistema RAG.
 
 \begin{table}[ht]
   \centering
-  \caption{Variabili d'ambiente introdotte dalla componente RAG.}
+  \caption{Configurazione esterna della componente RAG.}
   \label{tab:env_vars}
   \small
-  \begin{tabular}{L{4.1cm}L{3.6cm}L{5.1cm}}
+  \begin{tabular}{L{4.3cm}L{8.3cm}}
     \toprule
-    \textbf{Variabile} & \textbf{Valore di default} & \textbf{Descrizione} \\
+    \textbf{Gruppo di variabili} & \textbf{Ruolo} \\
     \midrule
-    \breakcode{QDRANT_URL} & \breakcode{http://localhost:6333} & Endpoint REST
-      Qdrant \\
-    \breakcode{QDRANT_COLLECTION_NAME} & \breakcode{i3guild_knowledge} &
-      Collection principale \\
-    \breakcode{OLLAMA_BASE_URL} & \breakcode{http://localhost:11434} & Endpoint
-      Ollama per generazione LLM \\
-    \breakcode{OLLAMA_LLM_MODEL} / \breakcode{OLLAMA_CHAT_MODEL} &
-      \breakcode{gemma3:1b} / configurabile & Modello LLM usato dal servizio o
-      inoltrato dal frontend \\
-    \breakcode{EMBEDDING_DIMENSIONS} & \breakcode{768} & Dimensione vettore denso \\
-    \breakcode{FASTEMBED_DENSE_MODEL} &
-      \makecell[l]{\texttt{sentence-}\\\texttt{transformers/}\\\texttt{paraphrase-}\\\texttt{multilingual-}\\\texttt{mpnet-base-v2}} &
-      Modello FastEmbed denso \\
-    \breakcode{FASTEMBED_SPARSE_MODEL} & \breakcode{Qdrant/bm25} &
-      Modello FastEmbed sparso \\
-    \breakcode{RAG_CACHE_TTL_SECONDS} & \breakcode{60} & TTL cache retrieval
-      in-process \\
-    \breakcode{RAG_API_URL} & \breakcode{http://i3guild_rag:8000} &
-      Endpoint interno del servizio RAG \\
+    Connessione Qdrant & Endpoint del database vettoriale e nome della
+      collection principale. \\
+    Modello LLM & Endpoint Ollama e modello di chat configurabile, con
+      \texttt{gemma3:4b} come scelta adottata nel prototipo. \\
+    Embedding & Modelli FastEmbed denso e sparso, dimensione del vettore denso
+      e directory di cache locale. \\
+    Retrieval & Parametri di soglia, numero massimo di documenti, cache
+      in-process e opzioni di query rewriting. \\
+    Integrazione applicativa & Endpoint interno del servizio RAG usato da
+      Next.js e timeout delle chiamate di generazione. \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -947,14 +953,14 @@ introdotti dal sistema RAG.
 \subsection{Integrazione lato Next.js}
 \label{subsec:nextjs_integration}
 
-Lato applicazione Next.js, l'integrazione è concentrata in un servizio
-TypeScript dedicato, \breakcode{src/lib/services/rag.service.ts}. Il client espone funzioni per
-retrieval, risposta sincrona e streaming, inoltra al microservizio il modello
-LLM configurato e supporta opzioni applicative come \texttt{use\_rag},
-\texttt{json\_mode}, timeout client e parametri di generazione. In caso di
-errore del retrieval, la ricerca può degradare restituendo un insieme vuoto; nei
-flussi di generazione strutturata, invece, l'errore viene propagato al chiamante
-per attivare fallback applicativi espliciti.
+Lato applicazione Next.js, l'integrazione è concentrata in un client TypeScript
+dedicato. Il client espone funzioni per retrieval, risposta sincrona e
+streaming, inoltra al microservizio il modello LLM configurato e supporta
+opzioni applicative come \texttt{use\_rag}, \texttt{json\_mode}, timeout client
+e parametri di generazione. In caso di errore del retrieval, la ricerca può
+degradare restituendo un insieme vuoto; nei flussi di generazione strutturata,
+invece, l'errore viene propagato al chiamante per attivare fallback applicativi
+espliciti.
 
 \subsection{Sincronizzazione dei dati}
 \label{subsec:data_sync}
@@ -963,11 +969,30 @@ PostgreSQL rimane la sorgente autoritativa; Qdrant è una vista derivata e deve
 essere mantenuto sincronizzato con i dati applicativi. Sono state considerate
 tre strategie, in ordine crescente di complessità: re-indicizzazione completa,
 sincronizzazione incrementale e aggiornamento event-driven. Per il prototipo la
-strategia raccomandata è il \textbf{full re-index periodico}: il container
-\texttt{i3guild-embedding-pipeline} ricrea la collection di default e riscrive
-i documenti con policy di overwrite. La scelta è semplice da implementare,
+strategia raccomandata è il \textbf{full re-index periodico}: il job di
+embedding ricrea la collection di default e riscrive i documenti con policy di
+overwrite. La scelta è semplice da implementare,
 riduce il rischio di inconsistenze tra indici densi e sparsi e rimane
 sostenibile perché l'embedding è eseguito localmente, senza costi a consumo per
 token. L'evoluzione verso un \emph{sync incrementale} basato sul campo
 \texttt{@updatedAt} di Prisma, o verso un meccanismo \emph{event-driven}
 attivato dalle operazioni CRUD, è lasciata come sviluppo futuro.
+
+\section{Sintesi del capitolo}
+\label{sec:requirements_design_summary}
+
+Il capitolo ha trasformato il caso d'uso i3Guild in una proposta architetturale
+coerente con i vincoli aziendali. Il corpus delle Gilde è abbastanza contenuto
+da rendere praticabile una reindicizzazione completa, ma abbastanza ricco da
+richiedere una rappresentazione semantica e metadati filtrabili. Da qui deriva
+la scelta di Qdrant come store ibrido, FastEmbed/Haystack per embedding densi e
+sparsi, Ollama per l'inferenza locale e FastAPI come confine applicativo tra
+retrieval e frontend.
+
+Le decisioni principali restano guidate da un criterio pratico: mantenere i
+dati nel perimetro aziendale e usare componenti sostituibili, senza introdurre
+complessità non necessaria. Il modello di chat \texttt{gemma3:4b}, la soglia di
+similarità pari a 0.5 e il limite di 5 documenti recuperati riflettono questo
+equilibrio tra qualità del contesto, capacità del modello e costo operativo
+del prompt. Il capitolo successivo descrive come queste scelte siano state
+tradotte in componenti eseguibili.

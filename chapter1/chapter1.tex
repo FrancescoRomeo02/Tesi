@@ -162,30 +162,35 @@ modelli considerati come riferimento tecnologico.
 
 \begin{table}[ht]
   \centering
-  \caption{Panorama comparativo dei principali LLM (2024--2025). \textsuperscript{†}~Esecuzione
-    garantita on-premise senza dipendenze cloud; \textsuperscript{‡}~pesi
-    scaricabili pubblicamente; MoE~=~\textit{Mixture of Experts}.}
+  \caption{Panorama comparativo dei principali LLM rilevanti per il progetto
+    (cutoff: 1 maggio 2026). \textsuperscript{†}~Esecuzione on-premise senza
+    dipendenze cloud; \textsuperscript{‡}~pesi scaricabili pubblicamente;
+    MoE~=~\textit{Mixture of Experts}.}
   \label{tab:llm_comparison}
   \small
-  \begin{tabular}{llllp{2cm}cc}
+  \begin{tabular}{llllp{2.4cm}cc}
     \toprule
     \textbf{Modello} & \textbf{Sviluppatore} & \textbf{Licenza}
       & \textbf{Accesso} & \textbf{Architettura / Param. attivi}
       & \textbf{Ctx} & \textbf{Multi-modale} \\
     \midrule
-    GPT-5 / o3       & OpenAI        & Proprietaria  & API cloud
-      & Dense, n.d.          & 400k  & $\checkmark$ \\
-    Claude 4 Sonnet  & Anthropic     & Proprietaria  & API cloud
-      & Dense, n.d.          & 200k  & $\checkmark$ \\
-    Gemini 3 Pro     & Google DM     & Proprietaria  & API cloud
-      & Dense, n.d.          & 1M    & $\checkmark$ \\
+    GPT-5.x          & OpenAI        & Proprietaria  & API cloud
+      & Dense, n.d.          & 400k--1M  & $\checkmark$ \\
+    Claude 4.x       & Anthropic     & Proprietaria  & API cloud
+      & Dense, n.d.          & 200k      & $\checkmark$ \\
+    Gemini 3.x       & Google DM     & Proprietaria  & API cloud
+      & Dense, n.d.          & fino a 1M & $\checkmark$ \\
     \midrule
-    Llama 4 Scout    & Meta AI       & Open-weight\textsuperscript{‡}
-      & Self-hosted\textsuperscript{†} & MoE, 17B & 10M & $\checkmark$ \\
-    Mistral Large 3  & Mistral AI    & Apache 2.0\textsuperscript{‡}
-      & Self-hosted\textsuperscript{†} & MoE, 41B & 256k & $\checkmark$ \\
-    Qwen3-8B         & Alibaba Cloud & Apache 2.0\textsuperscript{‡}
-      & Self-hosted\textsuperscript{†} & Dense, 8B & 128k & -- \\
+    Gemma 3 4B       & Google        & Gemma terms\textsuperscript{‡}
+      & Self-hosted\textsuperscript{†} & Dense, 4B & 128k & $\checkmark$ \\
+    Qwen3 4B/8B      & Alibaba Cloud & Apache 2.0\textsuperscript{‡}
+      & Self-hosted\textsuperscript{†} & Dense, 4--8B & 128k & -- \\
+    Llama 3.2 3B     & Meta AI       & Open-weight\textsuperscript{‡}
+      & Self-hosted\textsuperscript{†} & Dense, 3B & 128k & -- \\
+    Mistral 7B v0.3  & Mistral AI    & Apache 2.0\textsuperscript{‡}
+      & Self-hosted\textsuperscript{†} & Dense, 7B & 32k & -- \\
+    Phi-3.5 mini     & Microsoft     & MIT\textsuperscript{‡}
+      & Self-hosted\textsuperscript{†} & Dense, 3.8B & 128k & -- \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -193,30 +198,36 @@ modelli considerati come riferimento tecnologico.
 \subsection{Modelli proprietari}
 
 I modelli proprietari offrono prestazioni elevate sui benchmark generali, ma
-presentano vincoli rilevanti per l'adozione in contesti con requisiti di
-riservatezza.
+l'adozione in contesti con dati riservati richiede una valutazione separata del
+perimetro contrattuale e tecnico. L'uso tramite API pubbliche non è equivalente
+all'uso tramite servizi enterprise: Azure OpenAI Service, Amazon Bedrock per
+modelli Anthropic e piattaforme cloud analoghe possono prevedere accordi di
+trattamento dati, isolamento logico, regioni controllate e opzioni di mancata
+conservazione dei prompt~\cite{openaiModels2026,anthropicModels2026}. Queste
+garanzie riducono il rischio rispetto a un accesso consumer, ma non eliminano
+la dipendenza da infrastrutture esterne. Nel progetto i3Guild, tale dipendenza
+resta incompatibile con il vincolo architetturale scelto: mantenere dati,
+retrieval e generazione entro un ambiente controllato.
 
-\paragraph{GPT-5 e OpenAI o-series.}
-La famiglia GPT-5~\cite{openai2025gpt5} rappresenta un riferimento recente per
-pianificazione complessa, sviluppo software e integrazione multimodale. La
-serie "o" (\texttt{o1}, \texttt{o3}) è invece orientata a compiti che
-richiedono ragionamento deliberato, con miglioramenti osservati in ambiti
-scientifici e logico-matematici~\cite{openai2024o1}. L'erogazione è vincolata
-ad API cloud proprietarie; in ambito enterprise è possibile operare tramite
-servizi dedicati, ad esempio Azure OpenAI Service, che offrono garanzie
-contrattuali di isolamento dei dati.
+\paragraph{GPT-5.x e OpenAI o-series.}
+La famiglia GPT-5.x~\cite{openaiModels2026} rappresenta un riferimento recente
+per pianificazione complessa, sviluppo software e integrazione multimodale. La
+serie "o" rimane orientata a compiti che richiedono ragionamento deliberato,
+con miglioramenti osservati in ambiti scientifici e logico-matematici
+~\cite{openai2024o1}. L'erogazione avviene tramite API cloud proprietarie o
+servizi enterprise collegati.
 
-\paragraph{Claude 4 (Anthropic).}
+\paragraph{Claude 4.x (Anthropic).}
 I modelli Claude adottano approcci come la \textit{Constitutional AI}~\cite{bai2022constitutional}, un protocollo di addestramento guidato da principi
 per migliorare l'allineamento. Anche questi modelli sono erogati in modalità
-cloud; Anthropic propone modalità contrattuali (ad esempio \textit{Zero Data Retention})
-per rispondere a esigenze enterprise~\cite{anthropic2025claude4}.
+cloud; Anthropic documenta l'uso dei propri modelli anche tramite Amazon
+Bedrock e altre piattaforme enterprise, con opzioni di routing e gestione dati
+adatte a scenari regolati~\cite{anthropicModels2026}.
 
 \paragraph{Gemini (Google DeepMind).}
-La famiglia Gemini~\cite{google2025gemini3} è caratterizzata da multimodalità
-nativa e da finestre di contesto molto estese, fino a un milione di token per
-Gemini 3 Pro.
-Anche in questo caso l'accesso è fornito tramite servizi cloud.
+La famiglia Gemini~\cite{googleGeminiModels2026} è caratterizzata da
+multimodalità nativa e da finestre di contesto molto estese. Anche in questo
+caso l'accesso è fornito tramite servizi cloud.
 
 \subsection{Motivazioni per l'adozione di modelli locali}
 \label{subsec:onpremise_motivations}
@@ -264,27 +275,29 @@ capitoli successivi.
 
 \subsection{Modelli open-weight per uso on-premise}
 
-\paragraph{Llama 4 (Meta AI).}
-Rilasciata nell'aprile 2025, la famiglia Llama 4~\cite{meta2025llama4} adotta
-architetture \textit{Mixture of Experts} (MoE) e supporta la multimodalità.
-Le varianti \textit{Scout} e \textit{Maverick} bilanciano parametri effettivi e
-numero di esperti per gestire contesti estesi fino a 10 milioni di token. La
-licenza open-weight presenta clausole specifiche da valutare in fase di adozione,
-in particolare per operatori e per l'Unione Europea.
-
-\paragraph{Mistral 3 (Mistral AI).}
-Nel 2025 Mistral AI ha ampliato la propria offerta con modelli orientati
-all'integrazione locale~\cite{mistral2025large3}. Il modello di punta,
-\textit{Mistral Large 3}, è un modello MoE multilingue; la famiglia include
-varianti ottimizzate per l'esecuzione su hardware locale. La distribuzione sotto
-licenza Apache 2.0 facilita l'impiego in progetti aperti.
+\paragraph{Gemma 3 (Google).}
+Gemma 3~\cite{googleGemmaModels2026} è una famiglia open-weight pensata anche
+per l'esecuzione locale. La variante da 4B parametri è particolarmente rilevante
+per questa tesi: mantiene un footprint compatibile con hardware aziendale non
+dedicato e coincide con il modello adottato nel prototipo i3Guild tramite
+Ollama.
 
 \paragraph{Qwen3 (Alibaba Cloud).}
-La generazione Qwen3~\cite{qwen2025qwen3} introduce modalità operative differenziate
-per task logici ed efficienza. La famiglia copre modelli da dimensioni molto
-ridotte fino a varianti MoE con finestre di contesto estese. Nel Capitolo~\ref{chap:implementazione}
-si descrive la scelta della variante 8B per il sistema proposto, motivata dal
-bilancio tra qualità semantica e velocità di inferenza su CPU-only.
+La generazione Qwen3~\cite{qwen2025qwen3} copre taglie diverse, dai modelli
+compatti fino a varianti più grandi e MoE. Le taglie 4B e 8B sono interessanti
+per l'esecuzione locale perché offrono un compromesso tra capacità generativa,
+finestra di contesto e requisiti di memoria. Nei test sperimentali dei
+Capitoli~\ref{chap:ottimizzazione} e~\ref{chap:evaluation}, Qwen3 è incluso
+proprio per valutare questo equilibrio.
+
+\paragraph{Llama 3.2, Mistral 7B e Phi-3.5 mini.}
+Accanto a Gemma e Qwen, il panorama locale comprende modelli compatti come
+Llama 3.2 3B, Mistral 7B Instruct v0.3 e Phi-3.5 mini. Queste famiglie non
+sono equivalenti per licenza, lingua, template di chat e comportamento di
+output, ma appartengono alla fascia più realistica per una macchina aziendale
+senza GPU server dedicata. Per questo compaiono nella matrice sperimentale
+successiva: non come classifica definitiva, ma come campione rappresentativo di
+modelli eseguibili entro un budget locale.
 
 \subsection{Inferenza locale nel prototipo aziendale}
 
@@ -551,9 +564,9 @@ La qualità del retrieval dipende in larga misura dal modello di embedding: se
 la rappresentazione vettoriale non preserva correttamente il significato dei
 documenti, anche il modello generativo riceverà un contesto poco pertinente. Il
 vincolo di esecuzione on-premise restringe quindi la scelta a modelli
-distribuibili localmente. La versione aggiornata del progetto usa FastEmbed
-tramite Haystack e produce due segnali complementari: embedding densi, adatti
-alla similarità semantica, ed embedding sparsi, utili per il matching di termini
+distribuibili localmente. Nel sistema progettato, FastEmbed viene usato tramite
+Haystack per produrre due segnali complementari: embedding densi, adatti alla
+similarità semantica, ed embedding sparsi, utili per il matching di termini
 specifici. L'analisi completa della configurazione adottata è presentata nel
 Capitolo~\ref{chap:progettazione}.
 
@@ -568,8 +581,33 @@ si cercano i vettori più vicini accettando un trade-off tra richiamo
 (\textit{recall}) e velocità (\textit{throughput}).
 
 L'algoritmo HNSW costruisce un grafo gerarchico multi-livello nello spazio
-vettoriale, con complessità di ricerca approssimativamente $O(\log n)$ rispetto
-al numero di punti $n$ — contro $O(n)$ della ricerca lineare esatta~\cite{malkov2018efficient} — garantendo scalabilità anche per ampi \textit{corpora}.
+vettoriale~\cite{malkov2018efficient}. Ogni punto è collegato a un numero
+limitato di vicini; i livelli superiori contengono meno nodi e consentono salti
+lunghi, mentre i livelli inferiori raffinano la ricerca nella regione più
+promettente. La query parte da un nodo di ingresso, si muove verso vicini più
+simili e scende progressivamente di livello fino a individuare un insieme di
+candidati. Il parametro $M$ controlla il numero massimo di collegamenti per
+nodo, mentre $ef$ regola ampiezza e accuratezza della ricerca: valori più alti
+aumentano il richiamo, ma richiedono più memoria e più confronti.
+
+Rispetto alla scansione lineare, che confronta la query con tutti i vettori e
+ha costo $O(n)$, HNSW riduce drasticamente il numero di confronti necessari. La
+complessità effettiva dipende dalla struttura del grafo e dai parametri scelti,
+ma nella pratica rende possibile l'Approximate Nearest Neighbor su collezioni
+molto più ampie di quelle gestibili con ricerca esatta. Qdrant usa HNSW per la
+componente vettoriale densa e lo combina con indici di payload per applicare
+filtri strutturati prima o durante il retrieval~\cite{qdrantIndexing2026}.
+
+La ricerca sparsa segue una logica diversa. Un vettore sparso contiene solo gli
+indici dei termini o delle feature presenti e i relativi pesi; per questo può
+essere interrogato con strutture simili a un indice invertito, dove il sistema
+recupera rapidamente i documenti che condividono feature non nulle con la
+query. Nel progetto, questa componente non sostituisce HNSW: affianca la
+ricerca densa e permette di valorizzare nomi propri, sigle e tecnologie che
+potrebbero essere poco evidenti nella sola similarità semantica. La ricerca
+ibrida combina quindi due segnali, uno semantico e uno lessicale, tramite
+meccanismi di fusione o tramite il retriever ibrido esposto
+da Qdrant/Haystack~\cite{qdrantHybridQueries2026,haystackQdrantHybrid2026}.
 
 
 \subsection{Agentic RAG}
