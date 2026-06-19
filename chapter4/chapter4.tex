@@ -4,12 +4,12 @@
 
 Questo capitolo definisce il protocollo usato per valutare l'inferenza locale
 di modelli linguistici open-weight su Apple Silicon. Dopo la progettazione e
-l'implementazione del sistema RAG aziendale, l'analisi si concentra su un
-vincolo più specifico: capire quali modelli generativi possano essere eseguiti
+l'implementazione del sistema RAG aziendale, l'analisi si è concentrata su un
+vincolo più specifico: capire quali modelli generativi potessero essere eseguiti
 su un MacBook Pro con chip M1 Pro e 16 GB di memoria unificata, e quanto la
-quantizzazione MLX contribuisca a renderli utilizzabili.
+quantizzazione MLX contribuisse a renderli utilizzabili.
 
-La scelta di separare l'esperimento dal prototipo RAG è intenzionale. Un
+La scelta di separare l'esperimento dal prototipo RAG è stata intenzionale. Un
 sistema RAG enterprise usa il modello generativo come ultimo stadio di una
 pipeline più ampia, ma le sue prestazioni dipendono prima di tutto dalla
 fattibilità dell'inferenza locale: il modello deve essere convertibile,
@@ -19,7 +19,7 @@ risultati non sostituiscono una valutazione applicativa end-to-end del RAG, ma
 forniscono la base tecnica per capire quali famiglie e quali livelli di
 quantizzazione siano realistici nel perimetro hardware scelto.
 
-La domanda sperimentale può essere formulata cosi': quali compromessi introduce
+La domanda sperimentale è stata formulata nei seguenti termini: quali compromessi introduce
 la quantizzazione MLX su dimensione su disco, uso di memoria, latenza di
 caricamento, time-to-first-token, throughput di decodifica e qualità su piccoli
 benchmark, quando modelli tra 3B e 14B parametri vengono eseguiti localmente su
@@ -27,6 +27,8 @@ Apple Silicon consumer? Per rispondere serve un disegno controllato. Gli
 artefatti quantizzati devono derivare dagli stessi snapshot Hugging Face, il
 runtime deve rimanere costante, le impostazioni di generazione devono essere
 deterministiche e i fallimenti devono restare nell'analisi.
+
+\todo{Nei paragrafi precedenti ho cambiato i verbi al passato, perché stai comunque raccontando un esperimento a posteriori. Da verificare che ciò avvenga anche nel resto del testo (che non modificherò) quando parli di cose che hai fatto, mentre il tempo presente può essere utilizzato per considerazioni generali e sempre valide (che, in quanto tali, devono essere fondate e documentate con riferimenti)}
 
 \section{Motivazione e perimetro}
 \label{sec:experimental_motivation_scope}
@@ -165,6 +167,8 @@ processi.
     locale su Apple Silicon.}
   \label{fig:apple_silicon_soc}
 \end{figure}
+
+\todo{occhio che il diagramma sborda}
 
 \subsection{Memoria unificata}
 \label{subsec:apple_unified_memory}
