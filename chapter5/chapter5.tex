@@ -9,7 +9,7 @@ subset MMLU e subset GSM8K. Per ogni combinazione di modello, variante, fase e
 classe di prompt viene usato l'ultimo risultato disponibile; i file grezzi JSONL
 e CSV restano la base riproducibile dell'analisi.
 
-L'obiettivo non è costruire una graduatoria assoluta dei modelli. L'analisi
+L'obiettivo non è costruire una graduatoria assoluta dei modelli.\todo{e allora qual è l'obiettivo?} L'analisi
 misura quale compromesso produca la quantizzazione MLX su Apple Silicon con 16
 GB di memoria unificata. Per i modelli piccoli il confronto è tra FP16 e
 Q8/Q6/Q4. Per i modelli medi e grandi l'analisi riguarda soprattutto la
@@ -131,6 +131,8 @@ varianti MLX considerate.
   \end{tabular}
 \end{table}
 
+
+\todo{occhio che una label esce dal grafico}
 \begin{figure}[ht]
   \centering
   \begin{tikzpicture}
@@ -160,6 +162,8 @@ varianti MLX considerate.
   \label{fig:small_decode_throughput}
 \end{figure}
 
+
+\todo{occhio ai margini... vale anche per le altre tabelle}
 \begin{figure}[ht]
   \centering
   \begin{tikzpicture}
@@ -807,6 +811,7 @@ evidenti. Questa configurazione costa più dei piccoli Q4, ma può essere
 preferibile quando si vuole una maggiore capacità generativa senza uscire dal
 vincolo dei 16 GB.
 
+\todo{lo noto qui guardando il pdf: perché le lettere accentate a volte risultano come apostrofate? es. à -> a'  ...fa abbastanza schifo}
 Il terzo profilo è \emph{fattibilità di modelli grandi}. Gemma 3 12B Q4 e
 Qwen3 14B Q4 mostrano che l'esecuzione locale è possibile, ma non indicano
 automaticamente una scelta operativa migliore. Il decode intorno a 18 tok/s e
