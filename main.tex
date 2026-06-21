@@ -8,6 +8,7 @@
 \usepackage{enumitem}
 \usepackage{physics}
 \usepackage{hyperref}
+\usepackage{tablefootnote}
 \usepackage{cleveref}
 \usepackage{url}
 \usepackage{dirtytalk}
@@ -20,6 +21,7 @@
 \usepackage{multirow}
 \usepackage{makecell}
 \usepackage{array}
+\usepackage{tabularx}
 \usepackage{MnSymbol}%\sumint
 \usepackage{wrapfig}
 \usepackage{textpos}
@@ -30,6 +32,13 @@
 \usepackage[integrals]{wasysym}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
+\pgfplotsset{
+  ybar legend/.style={
+    /pgfplots/legend image code/.code={
+      \draw[##1] (0cm,-0.08cm) rectangle (0.18cm,0.08cm);
+    },
+  },
+}
 \usetikzlibrary{positioning}
 \addbibresource{bibliography/bibliography.bib}
 \usepackage[colorinlistoftodos]{todonotes}
@@ -37,14 +46,15 @@
 %%custom page style for report class
 \fancypagestyle{mystyle}{
 \pagestyle{fancy}
-\fancyhf{} % clear all headers      
+\fancyhf{} % clear all headers
 \fancyhead[R]{\rmfamily \small \nouppercase \rightmark}
-\fancyhead[L]{\rmfamily \small \nouppercase \leftmark}  
+\fancyhead[L]{\rmfamily \small \nouppercase \leftmark}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}}
 \newcommand{\alert}[1]{{\color{pinegreen} #1}}
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 \newcommand{\breakcode}[1]{\nolinkurl{#1}}
 
 
@@ -62,6 +72,7 @@
 \newcommand{\ra}{\right\rangle}
 \definecolor{pinegreen}{rgb}{0.0, 0.35, 0.25}
 \begin{document}
+\hypersetup{pageanchor=false}
 \pagenumbering{gobble}
 
 %%% TITLE PAGE %%%
@@ -97,25 +108,27 @@
 \LARGE{Anno Accademico \alert{\textbf{2025/2026}}}
 \end{flushright}
 %%%%%%%%%%%%%%%%%
-%%% ABSTRACT (Techincal)%%%%
+%%% ABSTRACT (Technical)%%%%
 \clearpage
+\input{dedication/dedication}
+\hypersetup{pageanchor=true}
 \pagenumbering{roman}
 \chapter*{Sommario}
 \addcontentsline{toc}{chapter}{Sommario}
 Questa tesi presenta la progettazione, l'implementazione e la valutazione di
 un sistema \emph{Retrieval-Augmented Generation} integrato in i3Guild, la
-piattaforma usata da Intré S.r.l. per gestire le Gilde aziendali. Il problema
+piattaforma usata da Intré S.r.l.\ per gestire le Gilde aziendali. Il problema
 affrontato riguarda la consultazione di un corpus interno eterogeneo, composto
 da descrizioni, obiettivi, risultati, partecipanti e metadati, che contiene
 conoscenza utile ma non sempre facilmente recuperabile tramite strumenti
 tradizionali.
 
-Il presente lavoro  studia come integrare componenti esistenti in un prototipo 
-enterprise on-premise, coerente con vincoli di riservatezza, risorse hardware 
-locali e manutenibilità. L'architettura proposta separa la sorgente dati, la 
-pipeline di ingestione, l'indice vettoriale, il microservizio RAG e l'integrazione 
+Il presente lavoro studia come integrare componenti esistenti in un prototipo
+enterprise on-premise, coerente con vincoli di riservatezza, risorse hardware
+locali e manutenibilità. L'architettura proposta separa la sorgente dati, la
+pipeline di ingestione, l'indice vettoriale, il microservizio RAG e l'integrazione
 applicativa. Il sistema usa PostgreSQL come sorgente autoritativa,
-una pipeline dedicata per normalizzare i contenuti e produrre embedding, 
+una pipeline dedicata per normalizzare i contenuti e produrre embedding,
 Qdrant per il retrieval denso, sparso e ibrido, Haystack per
 l'orchestrazione, FastAPI per esporre il servizio RAG, Ollama per l'inferenza
 locale e Next.js per l'integrazione con l'applicazione esistente.
@@ -124,7 +137,7 @@ La tesi descrive inoltre le scelte adottate per rendere il retrieval più
 aderente al dominio: query rewriting, filtri strutturati, deduplicazione,
 soglie di similarità, selezione controllata dei documenti e generazione in
 streaming. Un workflow agentico per la proposta di nuove Gilde è stato
-esplorato e testato, ma non adottato come nucleo della soluzione finale, poichè
+esplorato e testato, ma non adottato come nucleo della soluzione finale, poiché
 ha mostrato un costo computazionale e operativo superiore rispetto a un RAG più
 deterministico.
 
@@ -180,5 +193,5 @@ in un flusso applicativo aziendale.
 \printbibliography[heading=subbibliography, title={Sitografia}, type=online]
 
 \addcontentsline{toc}{chapter}{Ringraziamenti}
-% \include{thankyou/thankyou}
+\include{thankyou/thankyou}
 \end{document}

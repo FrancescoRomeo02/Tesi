@@ -65,7 +65,7 @@ di un risultato condivisibile. Le sue caratteristiche principali sono:
     una Gilda su qualsiasi argomento, tecnico o non tecnico (es. linguaggi
     di programmazione, ceramica, game development, intelligenza artificiale).
   \item \textbf{Ciclo temporale (Epoch)}: le Gilde si ricreano ogni quattro
-    mesi; ogni ciclo costituisce un'``epocà' distinta, con nuovi temi e nuovi
+    mesi; ogni ciclo costituisce un'``epoca'' distinta, con nuovi temi e nuovi
     gruppi. Questa scansione periodica evita che l'apprendimento rimanga legato
     a iniziative isolate e lo inserisce in una routine aziendale riconoscibile.
   \item \textbf{Output condivisibile}: al termine del periodo la Gilda produce
@@ -89,7 +89,7 @@ questo rappresenta sia il contesto applicativo di integrazione sia la
 principale sorgente dati del sistema RAG progettato in questa tesi.
 
 % -------------------------------------------------------------
-\section{Caso d'uso: Proposta di nuove Gilde Intré}
+\section{Caso d'uso: Proposta di nuove Gilde}
 \label{sec:use_case_intre}
 % -------------------------------------------------------------
 
@@ -232,10 +232,12 @@ o date, e perdere però la possibilità di rispondere a domande operative che
 richiedono vincoli strutturati. Una domanda come ``quali Gilde sull'intelligenza
 artificiale sono state proposte in una certa epoch?'' richiede entrambe le
 componenti: similarità semantica sul tema e filtro temporale sull'epoch.
+La Tabella~\ref{tab:guild_retrieval_roles} riassume questa separazione tra
+campi testuali, metadati e uso effettivo nella pipeline.
 
 \begin{table}[ht]
   \centering
-  \caption{Ruolo dei principali dati i3Guild nella pipeline RAG.}
+  \caption{Ruolo dei principali dati i3Guild nella pipeline RAG}
   \label{tab:guild_retrieval_roles}
   \small
   \begin{tabular}{L{3.2cm}L{4.8cm}L{5.3cm}}
@@ -282,12 +284,55 @@ una segmentazione per singolo campo, senza introdurre un carico eccessivo per
 il modello di embedding.
 
 % Segnaposto figura caso d'uso
+La Figura~\ref{fig:intre_usecase} colloca il caso d'uso nel perimetro
+applicativo, distinguendo attore, sistema i3Guild e componente RAG.
+
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=0.7\textwidth]{chapter2/images/intre_usecase.png}
+  \includegraphics[width=0.75\textwidth]{chapter2/images/intre_usecase.png}
   \caption{Diagramma del caso d'uso ``Intré'': attori, interazioni principali e
     confini del sistema.}
   \label{fig:intre_usecase}
+\end{figure}
+
+\subsection{Scenario applicativo}
+\label{subsec:application_scenario}
+
+Lo scenario operativo previsto per il prototipo si colloca nel flusso già
+presente in i3Guild. La Figura~\ref{fig:i3guild_guilds_list_screenshot} mostra
+la consultazione dell'archivio delle Gilde, mentre la
+Figura~\ref{fig:i3guild_guild_detail_screenshot} riporta il dettaglio di una
+singola Gilda. La Figura~\ref{fig:i3guild_rag_screenshot} mostra invece il
+punto in cui l'utente interroga l'assistente RAG in linguaggio naturale. La
+sequenza rende visibile sia la sorgente applicativa da cui viene costruito il
+corpus sia il punto in cui il prototipo espone il retrieval all'interno
+dell'interfaccia.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.95\textwidth]{chapter2/images/gilde.png}
+  \caption{Vista dell'archivio delle Gilde nell'interfaccia i3Guild. La
+    schermata mostra il punto di accesso al corpus applicativo usato dal
+    sistema RAG.}
+  \label{fig:i3guild_guilds_list_screenshot}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.95\textwidth]{chapter2/images/esempio_gilda.png}
+  \caption{Dettaglio di una Gilda in i3Guild. I campi descrittivi e i metadati
+    visualizzati nella pagina costituiscono parte delle informazioni trasformate
+    in documenti indicizzabili.}
+  \label{fig:i3guild_guild_detail_screenshot}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.95\textwidth]{chapter2/images/chat.png}
+  \caption{Esempio di interazione con l'assistente RAG integrato in i3Guild.
+    La schermata mostra la consultazione in linguaggio naturale del corpus e il
+    collegamento tra risposta generata e informazioni recuperate.}
+  \label{fig:i3guild_rag_screenshot}
 \end{figure}
 
 % -------------------------------------------------------------
@@ -360,7 +405,7 @@ gestisce il modello generativo, mentre FastEmbed/Haystack produce gli embedding
 senza dipendere da provider cloud.
 
 % -------------------------------------------------------------
-\section{Scelte tecnologiche: analisi comparativa}
+\section{Scelte tecnologiche e confronto}
 \label{sec:tech_choices}
 % -------------------------------------------------------------
 
@@ -403,13 +448,15 @@ rispetto a LangChain ($\approx 10\,\text{ms}$) su benchmark
 standardizzati~\cite{aimultiple2026benchmark}. La sua architettura
 pipeline-first favorisce la tracciabilità, i test e la sostituzione dei
 componenti in produzione~\cite{peliqan2025haystack}.
+La Tabella~\ref{tab:framework_comparison} sintetizza il confronto tra i tre
+framework considerati rispetto ai criteri più rilevanti per il prototipo.
 
 \begin{table}[ht]
   \centering
   \caption{Confronto sintetico dei framework RAG candidati.}
   \label{tab:framework_comparison}
   \small
-  \begin{tabular}{p{2.8cm}p{3cm}p{3cm}p{3cm}}
+  \begin{tabularx}{\textwidth}{L{2.8cm}YYY}
     \toprule
     \textbf{Criterio} & \textbf{LangChain} & \textbf{LlamaIndex} &
       \textbf{Haystack 2.x} \\
@@ -423,7 +470,7 @@ componenti in produzione~\cite{peliqan2025haystack}.
     Serializzazione YAML & No & Parziale & Sì \\
     Adatto per produzione RAG & Sì (con overhead) & Sì & Sì (preferito) \\
     \bottomrule
-  \end{tabular}
+  \end{tabularx}
 \end{table}
 
 \noindent Alla luce di questo confronto, Haystack 2.x risulta la soluzione più
@@ -445,26 +492,28 @@ abilita il retrieval. La scelta del database vettoriale incide su latenza,
 filtraggio per metadati, semplicità di deployment e capacità di manutenzione
 dell'indice. Sono stati quindi valutati quattro database vettoriali
 self-hostable.
+La Tabella~\ref{tab:vectordb_comparison} mostra il confronto usato per
+motivare la scelta di Qdrant.
 
 \begin{table}[ht]
   \centering
   \caption{Analisi comparativa dei database vettoriali candidati.}
   \label{tab:vectordb_comparison}
   \small
-  \begin{tabular}{p{2cm}p{1.5cm}p{1.8cm}p{2cm}p{2cm}p{2cm}}
+  \begin{tabularx}{\textwidth}{L{1.5cm}L{1.5cm}L{1.4cm}YYY}
     \toprule
     \textbf{Database} & \textbf{Impl.} & \textbf{Indice} &
       \textbf{Filtering} & \textbf{Dashboard} & \textbf{Deployment} \\
     \midrule
-    \textbf{Qdrant} & Rust & HNSW & Pre-filtering payload & Web UI integrata &
+    \textbf{Qdrant} & Rust & HNSW & Pre-filtering payload & Web UI &
       1 container \\
-    pgvector & C & IVFFlat / HNSW & SQL \texttt{WHERE} & No (via PgAdmin) &
+    pgvector & C & IVFFlat / HNSW & SQL \texttt{WHERE} & No &
       Estensione PG \\
-    Milvus & Go/C++ & HNSW, IVF & Attribute-based & Attu (separato) &
+    Milvus & Go/C++ & HNSW, IVF & Attribute-based & Attu &
       Multi-container \\
     Chroma & Python & HNSW (hnswlib) & Metadata base & No & 1 container \\
     \bottomrule
-  \end{tabular}
+  \end{tabularx}
 \end{table}
 
 Il confronto non si limita alle prestazioni pure: nel contesto i3Guild hanno
@@ -530,7 +579,7 @@ Gilde~\cite{haystackFastembedDocument2026,haystackFastembedSparse2026}.
       \textbf{Funzione} \\
     \midrule
     Embedding denso & Document/text embedder denso &
-      \makecell[l]{\texttt{sentence-}\\\texttt{transformers/}\\\texttt{paraphrase-}\\\texttt{multilingual-}\\\texttt{mpnet-base-v2}} &
+      \makecell[l]{\texttt{paraphrase-}\\\texttt{multilingual-}\\\texttt{mpnet-base-v2}} &
       Similarità semantica tra query e documenti. \\
     Embedding sparso & Document/text embedder sparso & \makecell[l]{\texttt{prithivida/}\\\texttt{Splade\_PP\_en\_v1}} &
       Matching lessicale pesato, utile per termini specifici. \\
@@ -622,12 +671,12 @@ Capitoli~\ref{chap:ottimizzazione} e~\ref{chap:evaluation}.
 \label{sec:architecture}
 % -------------------------------------------------------------
 
-Le scelte tecnologiche descritte convergono in una soluzione modulare e
-containerizzata. L'architettura separa responsabilità diverse -- ingestione e
-normalizzazione dei dati, generazione degli embedding, persistenza vettoriale,
-retrieval e inferenza LLM -- in modo da mantenere il sistema osservabile,
-sostituibile e coerente con lo stack i3Guild. La Figura~\ref{fig:architecture}
-riporta lo schema di alto livello dell'architettura.
+Le scelte tecnologiche descritte portano a un'architettura modulare e containerizzata. 
+Il sistema separa le principali fasi operative: ingestione e normalizzazione dei dati, 
+generazione degli embedding, persistenza vettoriale, retrieval e inferenza tramite LLM. 
+Questa separazione rende i componenti più facili da monitorare e sostituire, mantenendo 
+l'integrazione coerente con lo stack i3Guild. La Figura~\ref{fig:architecture} mostra lo 
+schema generale dell'architettura. 
 
 \begin{figure}[ht]
   \centering
@@ -782,9 +831,7 @@ vettoriale con i dati applicativi. Il job batch esegue le seguenti fasi:
 \end{enumerate}
 
 La struttura della pipeline Haystack è riportata in Appendice~\ref{app:B},
-Listato~\ref{lst:ingest_pipeline}. Nel capitolo principale è sufficiente
-evidenziare la sequenza logica Extract--Transform--Embed--Load, perché il
-dettaglio del codice non modifica la scelta progettuale.
+Listato~\ref{lst:ingest_pipeline}.
 
 Il container della pipeline mantiene comportamento batch: esegue ingestione,
 upsert su Qdrant e termina con codice 0 in caso di successo o 1 in caso di
@@ -822,8 +869,8 @@ stessi parametri, senza cambiare il modello dati persistente.
 \subsubsection{Query rewriting e Topic-First Search}
 \label{subsubsec:query_rewriting}
 
-Nel contesto i3Guild, molte query contengono parole ricorrenti come ``gildà',
-``fondarè' o ``consigli''. Questi termini descrivono l'interazione con il
+Nel contesto i3Guild, molte query contengono parole ricorrenti come ``gilda'',
+``fondare'' o ``consigli''. Questi termini descrivono l'interazione con il
 sistema, ma non il tema informativo cercato; se mantenuti nella query, possono
 dominare lo spazio degli embedding e produrre risultati generici. Il
 \emph{query rewriting}, discusso anche in framework come
@@ -833,33 +880,34 @@ rilevante prima del retrieval. L'approccio implementato tramite la funzione
 
 \begin{enumerate}
   \item Normalizzazione e rimozione della punteggiatura.
-  \item Filtraggio di un insieme di circa 80 \emph{domain stopwords}
-    (\texttt{DOMAIN\_STOPWORDS}): termini specifici del dominio i3Guild e
-    stopwords italiane generiche.
-  \item Estrazione del topic residuo; se diverso dalla query originale, la
-    ricerca viene eseguita sul topic pulito (\emph{topic-first strategy}).
+  \item Filtraggio di un insieme esplicito di \emph{domain stopwords}
+    (\texttt{DOMAIN\_STOPWORDS}), unito alle stopwords italiane generiche.
+  \item Estrazione dei token residui, preservando gli acronimi scritti in
+    maiuscolo quando hanno lunghezza compresa tra due e cinque caratteri.
 \end{enumerate}
 
-La Tabella~\ref{tab:query_rewriting} illustra l'effetto del rewriting su
-query campione.
+Il risultato non è una riscrittura semantica della domanda, ma una riduzione
+lessicale. Se la stringa estratta è non vuota e diversa dalla query originale
+normalizzata, il retrieval usa tale stringa come query di ricerca; altrimenti
+mantiene la query originale. La Tabella~\ref{tab:query_rewriting} riporta alcuni
+esempi coerenti con questo comportamento.
 
 \begin{table}[ht]
   \centering
   \caption{Effetto del query rewriting su esempi di query utente.}
   \label{tab:query_rewriting}
   \small
-  \begin{tabular}{p{5.5cm}p{2.5cm}p{4cm}}
+  \begin{tabular}{cc}
     \toprule
-    \textbf{Query originale} & \textbf{Topic estratto} &
-      \textbf{Risultato atteso} \\
+    \textbf{Query originale} & \textbf{Topic estratto}\\
     \midrule
-    ``vorrei fondare una gilda sulla musica, cosa mi consigli?'' &
-      \texttt{musica} &
-      Gilda a tema musicale \\
-    ``intelligenza artificialè' & \texttt{intelligenza artificiale} &
-      (nessun rewriting) \\
-    ``chi ha partecipato al progetto di design?'' & \texttt{design} &
-      Gilda con partecipanti nel settore design \\
+    ``vorrei fondare una gilda sulla musica'' &
+      \texttt{musica} \\
+    ``intelligenza artificiale'' & \texttt{intelligenza artificiale} \\
+    ``Partecipanti al progetto di design'' &
+      \texttt{partecipanti progetto design} \\
+    ``quali gilde si occupano di AI?'' &
+      \texttt{occupano ai}\\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -926,6 +974,10 @@ architetturale.
 
 \subsection{Variabili d'ambiente}
 \label{subsec:env_vars}
+
+La configurazione esterna del servizio è riassunta nella
+Tabella~\ref{tab:env_vars}; i gruppi indicati separano connessione, modello,
+embedding, retrieval e integrazione applicativa.
 
 \begin{table}[ht]
   \centering

@@ -24,6 +24,8 @@ RAG espone infine le API Python per retrieval e chat. La separazione riduce
 l'accoppiamento tra applicazione e componente RAG: i3Guild rimane la sorgente
 autoritativa dei dati, Qdrant conserva la knowledge base ibrida e Ollama viene
 usato solo per la generazione LLM~\cite{qdrant2023,ollama2023}.
+La Figura~\ref{fig:implementation_end_to_end} riassume questo flusso
+end-to-end prima della descrizione dei singoli componenti.
 
 \begin{figure}[ht]
   \centering
@@ -86,7 +88,8 @@ modelli FastEmbed e la dimensione del vettore denso. A questi si aggiungono
 opzioni operative per ricreare l'indice, controllare la dimensione dei batch e
 stabilire quando applicare il chunking con overlap. La generazione degli
 embedding usa i modelli riportati nella Tabella~\ref{tab:embedding_models} e
-rimane quindi separata da Ollama.
+rimane quindi separata da Ollama. La Tabella~\ref{tab:ingestion_configuration}
+riporta i parametri che rendono riproducibile questa fase.
 
 \begin{table}[ht]
   \centering
@@ -214,6 +217,8 @@ nel modulo delle impostazioni e usa
 \texttt{pydantic-settings}; i valori di default permettono lo sviluppo locale,
 mentre gli ambienti Docker possono sovrascriverli tramite variabili
 d'ambiente~\cite{fastapi2024,pydantic2024}.
+La Tabella~\ref{tab:rag_service_endpoints} riassume gli endpoint esposti e
+chiarisce quale responsabilità resta assegnata al microservizio Python.
 
 \begin{table}[ht]
   \centering
@@ -478,7 +483,18 @@ Questa interfaccia consente di riusare lo stesso microservizio in due modi
 distinti: chat RAG, con retrieval attivo, e generazione strutturata, in cui il
 prompt contiene già tutto il contesto necessario e il retrieval viene saltato.
 La distinzione riduce accoppiamento tra caso d'uso conversazionale e generazione
-di bozze.
+di bozze. La Figura~\ref{fig:i3guild_rag_runtime_screenshot} mostra il caso
+conversazionale nell'interfaccia i3Guild, evidenziando il collegamento tra
+domanda utente, risposta generata e fonti recuperate.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\textwidth]{chapter3/images/chat_dati.png}
+  \caption{Esempio dell'interfaccia RAG integrata in i3Guild durante una
+    richiesta conversazionale. La schermata documenta il collegamento tra client
+    Next.js, microservizio RAG e fonti restituite dal retrieval.}
+  \label{fig:i3guild_rag_runtime_screenshot}
+\end{figure}
 
 % -------------------------------------------------------------
 \section{Generazione della bozza di Gilda}

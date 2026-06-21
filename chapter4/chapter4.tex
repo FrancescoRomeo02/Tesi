@@ -4,12 +4,12 @@
 
 Questo capitolo definisce il protocollo usato per valutare l'inferenza locale
 di modelli linguistici open-weight su Apple Silicon. Dopo la progettazione e
-l'implementazione del sistema RAG aziendale, l'analisi si concentra su un
-vincolo più specifico: capire quali modelli generativi possano essere eseguiti
+l'implementazione del sistema RAG aziendale, l'analisi si è concentrata su un
+vincolo più specifico: capire quali modelli generativi potessero essere eseguiti
 su un MacBook Pro con chip M1 Pro e 16 GB di memoria unificata, e quanto la
-quantizzazione MLX contribuisca a renderli utilizzabili.
+quantizzazione MLX contribuisse a renderli utilizzabili.
 
-La scelta di separare l'esperimento dal prototipo RAG è intenzionale. Un
+La scelta di separare l'esperimento dal prototipo RAG è stata intenzionale. Un
 sistema RAG enterprise usa il modello generativo come ultimo stadio di una
 pipeline più ampia, ma le sue prestazioni dipendono prima di tutto dalla
 fattibilità dell'inferenza locale: il modello deve essere convertibile,
@@ -19,9 +19,10 @@ risultati non sostituiscono una valutazione applicativa end-to-end del RAG, ma
 forniscono la base tecnica per capire quali famiglie e quali livelli di
 quantizzazione siano realistici nel perimetro hardware scelto.
 
-La domanda sperimentale può essere formulata cosi': quali compromessi introduce
-la quantizzazione MLX su dimensione su disco, uso di memoria, latenza di
-caricamento, time-to-first-token, throughput di decodifica e qualità su piccoli
+La domanda sperimentale è stata formulata nei seguenti termini: quali
+compromessi introduce la quantizzazione MLX su dimensione su disco, uso di
+memoria, latenza di caricamento, time-to-first-token, throughput di decodifica e
+qualità su piccoli
 benchmark, quando modelli tra 3B e 14B parametri vengono eseguiti localmente su
 Apple Silicon consumer? Per rispondere serve un disegno controllato. Gli
 artefatti quantizzati devono derivare dagli stessi snapshot Hugging Face, il
@@ -139,22 +140,24 @@ altre vengono delegate a kernel Metal sulla GPU. L'architettura integrata rende
 più diretto questo passaggio rispetto a un sistema con memoria CPU e VRAM
 separate, ma non elimina limiti di bandwidth, capacità e concorrenza con altri
 processi.
+La Figura~\ref{fig:apple_silicon_soc} schematizza questi sottosistemi e il
+ruolo della memoria unificata nel percorso dell'inferenza.
 
 \begin{figure}[ht]
   \centering
   \begin{tikzpicture}[
     box/.style={draw, rounded corners=3pt, minimum width=2.4cm,
-      minimum height=0.8cm, align=center, font=\small},
+      minimum height=1cm, align=center, font=\small},
     chip/.style={draw, rounded corners=6pt, minimum width=11.8cm,
-      minimum height=5.2cm, thick},
+      minimum height=6cm, thick},
     arrow/.style={->, thick}
   ]
     \node[chip] at (0,0) {};
-    \node[font=\small\bfseries] at (0,2.25) {Apple M1 Pro come system-on-chip};
+    \node[font=\small\bfseries] at (0,2.5) {Apple M1 Pro come system-on-chip};
     \node[box] (cpu) at (-4,0.9) {CPU\\runtime Python};
     \node[box] (gpu) at (0,0.9) {GPU\\kernel Metal};
     \node[box] (ne) at (4,0.9) {Neural Engine\\non usato da MLX};
-    \node[box] (mem) at (0,-1.0) {Memoria unificata\\pesi, KV cache, buffer};
+    \node[box] (mem) at (0,-0.7) {Memoria unificata\\pesi, KV cache, buffer};
     \node[box] (io) at (0,-2.25) {Storage e I/O\\artefatti MLX};
     \draw[arrow] (cpu) -- (mem);
     \draw[arrow] (gpu) -- (mem);
@@ -245,6 +248,8 @@ quantizzate. La classe \emph{medium} serve a osservare la soglia in cui la
 quantizzazione diventa necessaria per restare entro i limiti di memoria. La
 classe \emph{large} verifica se modelli più grandi possano almeno essere
 eseguiti in varianti compresse.
+La Tabella~\ref{tab:model_matrix} esplicita i modelli inclusi e il ruolo
+sperimentale assegnato a ciascuna classe.
 
 \begin{table}[ht]
   \centering
@@ -256,21 +261,21 @@ eseguiti in varianti compresse.
     \textbf{Classe} & \textbf{Modello} & \textbf{Parametri} & \textbf{Ruolo sperimentale} \\
     \midrule
     Small & Gemma 3 4B Instruct & 4.0B
-      & Confronto completo FP16/Q8/Q6/Q4. \\
+      & Confronto completo. \\
     Small & Qwen3 4B Instruct & 4.0B
-      & Confronto completo FP16/Q8/Q6/Q4. \\
+      & Confronto completo. \\
     Small & Llama 3.2 3B Instruct & 3.0B
-      & Confronto completo FP16/Q8/Q6/Q4. \\
+      & Confronto completo. \\
     Small & Phi-3.5 mini Instruct & 3.8B
-      & Confronto completo FP16/Q8/Q6/Q4. \\
+      & Confronto completo. \\
     Medium & Qwen3 8B & 8.2B
-      & Fattibilità quantizzata; FP16 come controllo di fattibilità. \\
+      & Fattibilità quantizzata. \\
     Medium & Mistral 7B Instruct v0.3 & 7.3B
-      & Fattibilità quantizzata; FP16 come controllo di fattibilità. \\
+      & Fattibilità quantizzata. \\
     Large & Gemma 3 12B Instruct & 12.0B
-      & Valutazione del limite superiore su 16 GB. \\
+      & Valutazione del limite di 16 GB. \\
     Large & Qwen3 14B & 14.8B
-      & Valutazione del limite superiore su 16 GB. \\
+      & Valutazione del limite di 16 GB. \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -291,6 +296,8 @@ l'esperimento principale non vengono usati modelli pre-quantizzati di terze
 parti. In questo modo si evitano variabili non controllate, come versione del
 runtime, parametri di conversione, template del tokenizer, revisione del
 modello e differenze nella procedura di quantizzazione.
+La Figura~\ref{fig:artifact_chain} mostra la catena usata per produrre gli
+artefatti misurati.
 
 \begin{figure}[ht]
   \centering
@@ -313,6 +320,8 @@ aggressiva. Il gruppo small esegue il confronto completo contro FP16. Per
 medium e large, FP16 è trattato come controllo di fattibilità: eventuali
 fallimenti o omissioni per politica sperimentale vengono registrati e non
 interpretati come dati mancanti casuali.
+La Tabella~\ref{tab:mlx_variants} riassume il significato operativo delle
+varianti considerate.
 
 \begin{table}[ht]
   \centering
@@ -352,6 +361,9 @@ variabile sperimentale. La generazione usa impostazioni deterministiche:
 contesto 4096 token, massimo 256 token generati, temperatura 0, \texttt{top\_p}
 pari a 1, \texttt{top\_k} pari a 0 e seed fisso quando supportato. Ogni misura
 usa due generazioni di warm-up e tre run temporizzati.
+Le metriche raccolte sono riportate nella
+Tabella~\ref{tab:performance_metrics}, così da distinguere costo di
+caricamento, latenza iniziale, throughput e memoria.
 
 \begin{table}[ht]
   \centering
@@ -455,7 +467,7 @@ controllo e non come misura definitiva delle capacità dei modelli.
 La riproducibilità è gestita a livello di dati, comandi e risultati. I file
 di configurazione registrano modello sorgente, classe, licenza, directory
 Hugging Face, directory MLX, varianti richieste e parametri di generazione. I
-risultati sono salvati sia in JSONL sia in CSV, con run id e timestamp, cosi'
+risultati sono salvati sia in JSONL sia in CSV, con run id e timestamp, così
 da non sovrascrivere misure precedenti. Per ogni run vengono registrati anche
 versione macOS, versione MLX, versione \texttt{mlx-lm}, comando, hardware e
 metadati del modello quando disponibili.

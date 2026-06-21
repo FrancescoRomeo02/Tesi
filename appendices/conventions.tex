@@ -7,24 +7,27 @@ esplicito il significato di nomi, formati e parametri ricorrenti.
 
 \section{Repository e componenti}
 
+La Tabella~\ref{tab:repo_conventions} fissa i nomi dei repository usati nei
+capitoli principali.
+
 \begin{table}[ht]
   \centering
   \caption{Convenzioni di denominazione dei repository.}
   \label{tab:repo_conventions}
   \small
-  \begin{tabular}{p{4cm}p{9cm}}
+  \begin{tabularx}{\textwidth}{L{4.8cm}Y}
     \toprule
     \textbf{Nome} & \textbf{Significato} \\
     \midrule
     \texttt{i3guild}
       & Applicazione web principale, basata su Next.js, PostgreSQL e Keycloak. \\
-    \texttt{i3guild-embedding-pipeline}
+    \breakcode{i3guild-embedding-pipeline}
       & Job Python che estrae, normalizza e indicizza il corpus delle Gilde. \\
     \texttt{i3guild-rag}
       & Microservizio FastAPI che espone retrieval ibrido, chat RAG e
         generazione controllata. \\
     \bottomrule
-  \end{tabular}
+  \end{tabularx}
 \end{table}
 
 \section{Formato dei documenti indicizzati}
@@ -32,13 +35,15 @@ esplicito il significato di nomi, formati e parametri ricorrenti.
 I documenti salvati in Qdrant derivano dai record applicativi di i3Guild. Ogni
 documento contiene un testo normalizzato e un insieme di metadati usati per
 filtri, diagnostica e deduplicazione.
+La Tabella~\ref{tab:document_metadata_conventions} elenca i campi principali
+richiamati nella descrizione del payload Qdrant.
 
 \begin{table}[ht]
   \centering
   \caption{Metadati principali associati ai documenti indicizzati.}
   \label{tab:document_metadata_conventions}
   \small
-  \begin{tabular}{p{4cm}p{9cm}}
+  \begin{tabularx}{\textwidth}{L{4cm}Y}
     \toprule
     \textbf{Campo} & \textbf{Uso} \\
     \midrule
@@ -59,7 +64,7 @@ filtri, diagnostica e deduplicazione.
     \texttt{chunk\_count}
       & Numero totale di chunk generati per la stessa Gilda. \\
     \bottomrule
-  \end{tabular}
+  \end{tabularx}
 \end{table}
 
 \section{Eventi NDJSON}
@@ -67,13 +72,15 @@ filtri, diagnostica e deduplicazione.
 Gli endpoint streaming restituiscono una sequenza di righe JSON indipendenti.
 La scelta del formato NDJSON permette al frontend di elaborare subito i metadati
 RAG e poi aggiornare l'interfaccia man mano che arrivano i token.
+La Tabella~\ref{tab:ndjson_event_conventions} riassume gli eventi usati per
+questa comunicazione incrementale.
 
 \begin{table}[ht]
   \centering
   \caption{Tipi di evento usati dagli endpoint streaming.}
   \label{tab:ndjson_event_conventions}
   \small
-  \begin{tabular}{p{3.5cm}p{9.5cm}}
+  \begin{tabularx}{\textwidth}{L{3.5cm}Y}
     \toprule
     \textbf{Evento} & \textbf{Significato} \\
     \midrule
@@ -92,5 +99,5 @@ RAG e poi aggiornare l'interfaccia man mano che arrivano i token.
       & Comunica un errore gestibile senza interrompere il contratto dello
         stream. \\
     \bottomrule
-  \end{tabular}
+  \end{tabularx}
 \end{table}

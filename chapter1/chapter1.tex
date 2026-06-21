@@ -2,7 +2,7 @@
 % =============================================================
 % =============================================================
 % =============================================================
-\chapter{Fondamenti Tecnologici del Progetto RAG Aziendale}
+\chapter{Fondamenti del sistema RAG.}
 \label{chap:background}
 
 Il sistema sviluppato durante il progetto aziendale nasce da un'esigenza
@@ -116,7 +116,7 @@ strategie di mitigazione.
   \caption{Limiti strutturali degli LLM in contesti aziendali e relative strategie di mitigazione.}
   \label{tab:llm_limits}
   \small
-  \begin{tabular}{p{3cm}p{5.5cm}p{5.5cm}}
+  \begin{tabularx}{\textwidth}{L{3cm}YY}
     \toprule
     \textbf{Limitazione} & \textbf{Descrizione} & \textbf{Strategia di mitigazione} \\
     \midrule
@@ -133,12 +133,12 @@ strategie di mitigazione.
         recuperati e verificabili. \\
     \addlinespace
     Privacy dei dati
-      & Il fine-tuning su modelli cloud può esporre dati riservati a infrastrutture
-        di terze parti, con rischi di conformità normativa.
+      & L’impiego di LLM erogati da provider esterni può comportare l’esposizione 
+      di dati riservati durante inferenza, indicizzazione o fine-tuning.
       & Esecuzione on-premise con modelli open-weight: nessuna trasmissione
         di dati verso servizi esterni. \\
     \bottomrule
-  \end{tabular}
+  \end{tabularx}
 \end{table}
 
 Da questa analisi deriva la scelta di privilegiare il paradigma RAG, discusso
@@ -164,33 +164,32 @@ modelli considerati come riferimento tecnologico.
   \centering
   \caption{Panorama comparativo dei principali LLM rilevanti per il progetto
     (cutoff: 1 maggio 2026). \textsuperscript{†}~Esecuzione on-premise senza
-    dipendenze cloud; \textsuperscript{‡}~pesi scaricabili pubblicamente;
-    MoE~=~\textit{Mixture of Experts}.}
+    dipendenze cloud; \textsuperscript{‡}~pesi scaricabili pubblicamente;}
   \label{tab:llm_comparison}
   \small
-  \begin{tabular}{llllp{2.4cm}cc}
+  \begin{tabular}{llllp{2.4cm}c}
     \toprule
     \textbf{Modello} & \textbf{Sviluppatore} & \textbf{Licenza}
       & \textbf{Accesso} & \textbf{Architettura / Param. attivi}
-      & \textbf{Ctx} & \textbf{Multi-modale} \\
+      & \textbf{Ctx} \\
     \midrule
     GPT-5.x          & OpenAI        & Proprietaria  & API cloud
-      & Dense, n.d.          & 400k--1M  & $\checkmark$ \\
+      & Dense, n.d.          & 400k--1M   \\
     Claude 4.x       & Anthropic     & Proprietaria  & API cloud
-      & Dense, n.d.          & 200k      & $\checkmark$ \\
+      & Dense, n.d.          & 200k       \\
     Gemini 3.x       & Google DM     & Proprietaria  & API cloud
-      & Dense, n.d.          & fino a 1M & $\checkmark$ \\
+      & Dense, n.d.          & fino a 1M  \\
     \midrule
     Gemma 3 4B       & Google        & Gemma terms\textsuperscript{‡}
-      & Self-hosted\textsuperscript{†} & Dense, 4B & 128k & $\checkmark$ \\
+      & Self-hosted\textsuperscript{†} & Dense, 4B & 128k  \\
     Qwen3 4B/8B      & Alibaba Cloud & Apache 2.0\textsuperscript{‡}
-      & Self-hosted\textsuperscript{†} & Dense, 4--8B & 128k & -- \\
+      & Self-hosted\textsuperscript{†} & Dense, 4--8B & 128k  \\
     Llama 3.2 3B     & Meta AI       & Open-weight\textsuperscript{‡}
-      & Self-hosted\textsuperscript{†} & Dense, 3B & 128k & -- \\
+      & Self-hosted\textsuperscript{†} & Dense, 3B & 128k  \\
     Mistral 7B v0.3  & Mistral AI    & Apache 2.0\textsuperscript{‡}
-      & Self-hosted\textsuperscript{†} & Dense, 7B & 32k & -- \\
+      & Self-hosted\textsuperscript{†} & Dense, 7B & 32k  \\
     Phi-3.5 mini     & Microsoft     & MIT\textsuperscript{‡}
-      & Self-hosted\textsuperscript{†} & Dense, 3.8B & 128k & -- \\
+      & Self-hosted\textsuperscript{†} & Dense, 3.8B & 128k  \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -250,7 +249,9 @@ sintetizzate nella Tabella~\ref{tab:onpremise_motivations}.
     \midrule
     Sovranità del dato e conformità
       & L'esecuzione locale evita la trasmissione di dati verso infrastrutture
-        di terze parti, anche in presenza di garanzie contrattuali (ZDR, DPA).
+        di terze parti, anche in presenza di garanzie contrattuali
+        (ZDR\tablefootnote{Zero Data Retention: configurazione o impegno del provider a non conservare i dati inviati al servizio oltre il tempo necessario all'elaborazione della richiesta.},
+        DPA\tablefootnote{Data Processing Agreement: accordo contrattuale che disciplina ruoli, responsabilità e condizioni del trattamento dei dati personali da parte di un fornitore.}).
       & GDPR~\cite{regulation2016gdpr}; rischi del cloud nella gestione di dati sensibili. \\
     \addlinespace
     Costi operativi nel lungo periodo
@@ -284,11 +285,11 @@ Ollama.
 
 \paragraph{Qwen3 (Alibaba Cloud).}
 La generazione Qwen3~\cite{qwen2025qwen3} copre taglie diverse, dai modelli
-compatti fino a varianti più grandi e MoE. Le taglie 4B e 8B sono interessanti
-per l'esecuzione locale perché offrono un compromesso tra capacità generativa,
-finestra di contesto e requisiti di memoria. Nei test sperimentali dei
-Capitoli~\ref{chap:ottimizzazione} e~\ref{chap:evaluation}, Qwen3 è incluso
-proprio per valutare questo equilibrio.
+compatti fino a varianti più grandi e MoE (\texttt{Mixture of Experts.}). 
+Le taglie 4B e 8B sono interessanti per l'esecuzione locale perché offrono 
+un compromesso tra capacità generativa, finestra di contesto e requisiti di memoria. 
+Nei test sperimentali dei Capitoli~\ref{chap:ottimizzazione} e~\ref{chap:evaluation}, 
+Qwen3 è incluso proprio per valutare questo equilibrio.
 
 \paragraph{Llama 3.2, Mistral 7B e Phi-3.5 mini.}
 Accanto a Gemma e Qwen, il panorama locale comprende modelli compatti come
