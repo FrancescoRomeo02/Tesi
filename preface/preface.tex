@@ -1,102 +1,87 @@
 \chapter*{Introduzione}
 
 I Large Language Model hanno reso più accessibile l'interazione con grandi
-quantità di testo: possono sintetizzare documenti, formulare risposte in
-linguaggio naturale e assistere attività di scrittura o analisi. In ambito
-aziendale, però, queste capacità non bastano. Una risposta utile deve riferirsi
-a dati interni aggiornati, deve essere verificabile e deve rispettare vincoli di
-riservatezza, controllo dell'infrastruttura e manutenibilità. Un modello
+quantità di testo: possono sintetizzare documenti, formulare risposte naturali
+e assistere attività di scrittura o analisi. In ambito
+aziendale, però, queste capacità non bastano, una risposta utile deve riferirsi
+a dati interni aggiornati e deve essere verificabile. Un modello
 pre-addestrato, usato da solo, non conosce la documentazione privata di
-un'organizzazione e non possiede un meccanismo nativo per controllarla. Il
-problema emerge soprattutto quando il sistema deve rispondere su contenuti
-specifici dell'azienda, non su conoscenza generale.
+un'organizzazione e non possiede un meccanismo nativo per controllarla.
 
-Il paradigma \emph{Retrieval-Augmented Generation} (RAG) affronta questo
+Il paradigma \emph{Retrieval-Augmented Generation} (RAG) risolve questo
 problema combinando due componenti: un modulo di recupero, che seleziona
 documenti pertinenti da una base di conoscenza esterna, e un modello
 generativo, che produce la risposta a partire dalla domanda e dal contesto
-recuperato~\cite{lewis2020rag}. In questo modo la conoscenza usata dal sistema
-non risiede soltanto nei parametri del modello, ma anche in un indice
+recuperato~\cite{lewis2020retrieval}. In questo modo la conoscenza usata dal sistema
+non dipende soltanto nei parametri del modello, ma anche da un indice
 aggiornabile e ispezionabile. Per scenari enterprise, tale impostazione è
 interessante perché consente di integrare fonti interne, mantenere traccia dei
 documenti usati e separare il problema della generazione dal problema della
 gestione della conoscenza.
 
-Questa tesi nasce all'interno di Intré S.r.l., una software factory italiana
-che adotta pratiche strutturate di apprendimento organizzativo. Tra queste,
-le Gilde rappresentano cicli periodici di apprendimento di gruppo: le persone
-propongono temi, formano gruppi di lavoro, producono risultati e condividono
-l'esperienza con il resto dell'azienda. Nel tempo, la piattaforma interna
-i3Guild ha raccolto proposte, descrizioni, partecipanti, risultati e materiali
-collegati. Tale corpus costituisce una memoria organizzativa di valore, ma non
-sempre facile da interrogare: le informazioni sono distribuite tra database,
-metadati e contenuti testuali, e il recupero manuale richiede conoscenza
-pregressa del dominio.
+Questa tesi nasce all'interno di Intré S.r.l., una software factory italiana che adotta pratiche 
+di apprendimento organizzativo tra queste troviamo le Gilde, cicli periodici di apprendimento di gruppo: 
+le persone propongono temi, formano gruppi di lavoro, producono risultati e poi condividono l'esperienza con il 
+resto dell'azienda. Nel tempo, la piattaforma interna i3Guild ha raccolto proposte, descrizioni, partecipanti, 
+risultati e materiali collegati. Ne deriva un corpus che ha un chiaro valore come memoria organizzativa, ma che 
+non è sempre semplice da interrogare, perché le informazioni sono distribuite tra database, contenuti testuali, video e blog.
 
-L'obiettivo principale della tesi è progettare, implementare e valutare un
-sistema RAG integrato in i3Guild, capace di rendere interrogabile il corpus
-delle Gilde tramite linguaggio naturale. Il sistema deve rispettare tre vincoli
-di fondo. Il primo è la riservatezza: i dati aziendali devono restare entro un
-perimetro controllato, in coerenza con le esigenze di protezione del dato e con
-il quadro normativo europeo~\cite{gdpr2016}. Il secondo è la sostenibilità
-infrastrutturale: il prototipo deve poter funzionare con risorse realistiche,
-senza assumere la disponibilità di GPU server dedicate. Il terzo è la
-manutenibilità: la soluzione deve integrarsi con l'applicazione esistente e
-conservarne la separazione tra sorgente dati, indicizzazione, retrieval e
-generazione.
+L'obiettivo della tesi è progettare e implementare un sistema RAG integrato in i3Guild, capace di rendere 
+interrogabile il corpus delle Gilde tramite linguaggio naturale. Il sistema deve rispettare tre vincoli principali. 
+Il primo riguarda la riservatezza: i dati aziendali devono rimanere entro un perimetro controllato, in coerenza con 
+le esigenze di protezione del dato e con il quadro normativo europeo~\cite{gdpr2016}. Il secondo riguarda la sostenibilità 
+infrastrutturale: il prototipo deve poter funzionare con risorse realistiche, senza assumere la disponibilità di 
+server GPU dedicati. Il terzo riguarda la manutenibilità: la soluzione deve integrarsi con l'applicazione esistente 
+enza introdurre complessità difficili da gestire.
 
-Il lavoro si concentra sull'integrazione di componenti
-esistenti in un prototipo enterprise on-premise: PostgreSQL come sorgente
-autoritativa, una pipeline di ingestione per normalizzare i dati e produrre
-embedding, Qdrant come database vettoriale, Haystack come framework di
-orchestrazione, FastAPI come microservizio RAG, Ollama come server di inferenza
-locale e Next.js come livello applicativo di integrazione. La parte
-implementativa include inoltre query rewriting, filtri strutturati,
-deduplicazione, selezione dinamica dei documenti, streaming della risposta e
-generazione controllata di bozze di nuove Gilde.
+Il lavoro si concentra quindi sull'integrazione di componenti esistenti in un prototipo enterprise on-premise. 
+L'architettura adotta PostgreSQL come sorgente autoritativa, una pipeline di ingestione per normalizzare i dati 
+e produrre embedding, Qdrant come database vettoriale, Haystack come framework di orchestrazione, FastAPI come 
+microservizio RAG, Ollama come server di inferenza locale e Next.js come livello applicativo di integrazione. 
+La parte implementativa include anche una fase di query rewriting, la definizione di alcuni filtri strutturati, 
+la deduplicazione dei documenti recuperati e la loro selezione dinamica. Il sistema offre inoltre lo streaming 
+della risposta e la generazione automatica, a partire dalla chat con il modello, di bozze per la proposta di nuove Gilde.
 
 Durante lo sviluppo è stato esplorato anche un workflow agentico per guidare
 l'utente nella proposta di nuove Gilde. Tale workflow è stato implementato e
-testato, ma non adottato come nucleo della soluzione finale. La ragione è
-pratica: a parità di hardware locale, l'approccio agentico introduce più
-passaggi, maggiore costo computazionale e maggiore complessità operativa. Nel
-perimetro del prototipo, un RAG più classico e deterministico è risultato più
-stabile e più semplice da mantenere. La componente agentica rimane quindi
+testato, ma non è stato poi adottato come soluzione finale. La ragione è
+principalmente pratica: a parità di hardware locale, l'approccio agentico introduce più
+passaggi, maggiore costo computazionale e maggiore complessità operativa. La componente agentica rimane
 documentata come sperimentazione e possibile sviluppo futuro.
 
-La seconda parte del lavoro affronta un problema emerso dal prototipo: la
+La seconda parte del lavoro affronta un problema sorto durante la realizazione del RAG: la
 sostenibilità dell'inferenza locale. Un sistema RAG aziendale può essere
-correttamente progettato, ma la sua utilità pratica dipende anche dal modello
-generativo usato nella fase finale. Il modello deve essere
-caricabile, deve rientrare nella memoria disponibile, deve rispondere con una
+correttamente progettato ma la sua utilità pratica dipende anche dal modello
+generativo usato nella fase finale di generazione della risposta. Il modello deve essere
+caricabile, deve quindi rientrare nella memoria disponibile, deve rispondere con una
 latenza accettabile e deve mantenere un livello qualitativo compatibile con il
-caso d'uso. Per questo la tesi include un capitolo sperimentale dedicato
+caso d'uso. La tesi include per questo una sezione sperimentale dedicata
 all'inferenza locale quantizzata su Apple Silicon, usando MLX e modelli
-open-weight tra 3B e 14B parametri.
+open-weight tra i 3 e 14 miliardi di parametri.
 
-L'esperimento misura il compromesso introdotto dalla quantizzazione MLX su un
+L'esperimento misura il compromesso introdotto dalla quantizzazione su un
 MacBook Pro con chip M1 Pro e 16 GB di memoria unificata. Le varianti FP16,
 Q8, Q6 e Q4 vengono confrontate rispetto a dimensione su disco, memoria di
 picco, tempo di caricamento, time-to-first-token, throughput di decodifica e
 qualità su subset ridotti MMLU e GSM8K. I risultati mostrano che, per i
 modelli piccoli, Q4 riduce la dimensione di circa il 72\%, riduce il picco di
 memoria di circa 67--70\% e aumenta il throughput di decodifica di circa
-2.6--2.8 volte rispetto a FP16, senza mostrare un degrado macroscopico nei
-controlli automatici ridotti. Per i modelli medi e grandi, la quantizzazione è
-soprattutto una leva di fattibilità: rende eseguibili configurazioni che
-sarebbero meno realistiche nel vincolo dei 16 GB, ma richiede una valutazione
+2.6--2.8 volte rispetto a FP16, senza mostrare però un degrado nei
+controlli automatici realizzati. Per i modelli medi e grandi, la quantizzazione è
+soprattutto una leva di fattibilità: rende infatti eseguibili varianti di modelli che
+sarebbero inutilizzabili avendo a disposizione 16 GB di memoria unificata, ma richiede una valutazione
 attenta di latenza, formato dell'output e uso concorrente con gli altri servizi
 del sistema.
 
-La tesi è organizzata come segue. Il Capitolo~\ref{chap:background} introduce
+La tesi è organizzata come segue: Il Capitolo~\ref{chap:background} introduce
 i fondamenti tecnologici: Transformer, LLM, inferenza locale, RAG, embedding,
 database vettoriali, Agentic RAG e Haystack. Il
 Capitolo~\ref{chap:requirements_design} analizza il contesto aziendale di
-Intré, il modello delle Gilde, il caso d'uso, i requisiti e le scelte
+Intré, il modello delle Gilde, il caso d'uso specifico, i requisiti e le scelte
 architetturali. Il Capitolo~\ref{chap:implementazione} descrive
-l'implementazione del sistema: pipeline di ingestione, microservizio RAG,
-retrieval, generazione locale, workflow agentico sperimentale e integrazione
-Next.js. Il Capitolo~\ref{chap:ottimizzazione} definisce il protocollo
+l'implementazione del sistema: la pipeline di ingestione, il microservizio RAG,
+la fase di retrieval, la generazione locale, il workflow agentico sperimentale e l'integrazione
+col sistema attuale. Il Capitolo~\ref{chap:ottimizzazione} definisce il protocollo
 sperimentale per l'inferenza locale quantizzata su Apple Silicon. Il
-Capitolo~\ref{chap:evaluation} presenta e discute i risultati, collegandoli
+Capitolo~\ref{chap:evaluation} in fine, presenta e discute i risultati ottenuti nel capitolo precedente, collegandoli
 alle implicazioni operative per un sistema RAG locale.

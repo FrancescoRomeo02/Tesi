@@ -11,8 +11,7 @@
 \geometry{margin=2.4cm}
 \setstretch{1.08}
 
-\title{\textbf{Riassunto della tesi}\\
-\large Sviluppo di un sistema RAG aziendale e valutazione di LLM locali}
+\title{\textbf{Sviluppo di un sistema RAG aziendale e valutazione di LLM locali}}
 \author{Francesco Romeo}
 \date{Anno Accademico 2025/2026}
 
@@ -22,223 +21,220 @@
 
 \section*{Contesto e obiettivo del lavoro}
 
-La tesi affronta la progettazione, l'implementazione e la valutazione di un
-sistema di \textit{Retrieval-Augmented Generation} (RAG) integrato in i3Guild,
-la piattaforma usata da Intré S.r.l. per gestire le Gilde aziendali. Il punto
-di partenza è un problema concreto: nel corso degli anni i3Guild ha raccolto
-proposte, descrizioni, obiettivi, risultati, partecipanti e metadati relativi
-alle attività di apprendimento interno dell'azienda. Questo patrimonio
-informativo rappresenta una memoria organizzativa utile, ma non è sempre facile
-da consultare con strumenti tradizionali, perché le informazioni sono
-distribuite tra database relazionali, campi testuali, metadati e contenuti
-collegati.
+La tesi si basa su una realizzazione pratica che si è svolta all'interno dell'azienda Intré S.r.l., 
+vale a dire fare rendere più accessibili le informazioni generate nel corso del tempo dai gruppi di apprendimento aziendali. 
+La piattaforma aziendale utilizzata per l'implementazione di questi processi si chiama i3Guild. 
+Tali dati, nel loro insieme, formano una memoria di lavoro utile, ma non sempre di facile
+consultazione. Le informazioni sono distribuite tra database relazionali, note
+testuali, metadati e contenuti multimediali, come video, blog e pdf; 
+recuperarle richiede spesso familiarità con il dominio oppure una ricerca manuale poco efficiente.
 
-L'obiettivo del lavoro non è addestrare un nuovo modello linguistico. La tesi
-studia invece come integrare componenti esistenti in un prototipo enterprise
-on-premise, capace di rispondere a domande in linguaggio naturale sul corpus
-delle Gilde. La soluzione deve rispettare tre vincoli principali. Il primo è la
-riservatezza: i dati aziendali devono rimanere entro un perimetro controllato.
-Il secondo è la sostenibilità infrastrutturale: il sistema deve poter funzionare
-su risorse hardware realistiche, senza assumere la disponibilità di server GPU
-dedicati. Il terzo è la manutenibilità: l'integrazione deve inserirsi
-nell'applicazione esistente senza confondere sorgente dati, indicizzazione,
-retrieval e generazione.
+In questo progetto viene ideato, implementato e testato un sistema
+\textit{Retrieval-Augmented Generation} (RAG) integrato direttamente i3Guild: i
+l contributo del lavoro consiste dunque nell'integrare componenti esistenti in un prototipo 
+enterprise on-premise, adatto a rispondere a domande in linguaggio naturale sul 
+corpus delle gilde. La soluzione proposta dovrà soddisfare dei requisiti specifici: 
+la privacy dei dati dell'azienda deve essere garantita, il prototipo deve 
+funzionare su hardware locale, non dedicato, e l'architettura deve inserirsi nell'applicazione 
+esistente mantenendo separati database applicativo, indice vettoriale, retrieval e generazione.
 
-Il paradigma RAG è adatto a questo scenario perché separa la conoscenza usata
-dal sistema dai parametri del modello generativo. Un Large Language Model
-pre-addestrato può produrre testo coerente, ma non conosce i dati privati e
-aggiornati dell'organizzazione. In un sistema RAG, invece, la domanda
-dell'utente viene prima usata per recuperare documenti pertinenti da una base di
-conoscenza esterna; solo dopo questi documenti vengono inseriti nel prompt del
-modello, che genera una risposta fondata sul contesto recuperato. Questa
-impostazione riduce il rischio di risposte scollegate dal corpus e permette di
-aggiornare la conoscenza intervenendo sull'indice, non sui pesi del modello.
+La scelta del RAG dipende direttamete da un limite noto degli LLM . Un modello
+pre-addestrato è in grado di produrre testo coerente ma non dispone dei dati privati e
+aggiornati di un'organizzazione. Se non riceve fonti esplicite, può formulare
+risposte plausibili ma difficili da verificare. Nel sistema realizzato, invece,
+la domanda dell'utente attiva una fase di recupero: i documenti pertinenti
+vengono cercati nella base di conoscenza e inseriti nel prompt del modello
+generativo. La risposta dipende quindi sia dal modello sia dal contesto
+recuperato. In questo modo la conoscenza può essere aggiornata modificando il
+corpus o l'indice, senza intervenire sui pesi del modello garantendo in oltre che le 
+risposte fornite siano sempre verificabli.
+
+La decisione di utilizzare il RAG deriva dalla natura stessa degli LLM. 
+Un qualsiasi modello pretrained riesce ad elaborare dei testi 
+coerenti, tuttavia, esso non conosce i dati interni e aggiornati dell'aziendal
+sarà quindi in grado di creare delle risposte ragionevoli, tuttavia difficile da verificare. 
+Al contrario, nel caso del nostro sistema grazie al RAG la richiesta utente avvia il 
+processo di retrieval: i documenti necessari vengono individuati all'interno della 
+base di conoscenze e inseriti nel prompt del modello generativo. Questo significa 
+che la risposta sarà influenzata sia dal modello, sia dal contesto recuperato. 
+In questo modo per ottenere rispsote puntuali sarà sufficiente
+aggiornare la base di conoscenza mentre non viene toccato il modello.
 
 \section*{Fondamenti tecnici e requisiti}
 
-La prima parte della tesi introduce i fondamenti necessari per comprendere il
-prototipo. I Transformer costituiscono la base degli attuali modelli
-linguistici e dei modelli di embedding. Il meccanismo di self-attention consente
-di costruire rappresentazioni contestuali del testo, superando diversi limiti
-delle architetture ricorrenti. Tuttavia, gli LLM rimangono sistemi a conoscenza
-chiusa quando sono usati senza strumenti esterni: non hanno accesso nativo ai
-dati interni, possono generare informazioni plausibili ma errate e non offrono
-da soli un meccanismo di verifica sulle fonti aziendali.
+La prima parte della tesi descrive i concetti tecnici necessari per comprendere il
+prototipo realizzatp. I Transformer sono l'elemento fondamentale sia nei modelli linguistici generativi,
+sia nei modelli di embedding. Attraverso la self-attention, il modello mette in
+relazione i token di una sequenza e costruisce rappresentazioni contestuali del
+testo. Questo meccanismo permette di eliminare diversi limiti delle architetture ricorrenti;
+tuttavia non risolve da solo il problema della conoscenza aziendale. Un LLM non
+collegato a fonti esterne rimane un sistema a conoscenza limitata: non consulta i
+dati interni, non li aggiorna e non offre, da solo, un metodo affidabile per verificare le informazioni prodotte.
 
-Da questi limiti deriva la scelta del RAG. La tesi distingue due pipeline: una
-pipeline di ingestione, eseguita offline, e una pipeline di inferenza, attivata
-in tempo reale dalle richieste utente. La prima normalizza i contenuti,
-costruisce documenti adatti al retrieval, genera embedding densi e sparsi e li
-salva in un database vettoriale. La seconda riceve la query, produce le
-rappresentazioni della domanda, recupera i documenti più pertinenti e costruisce
-il prompt aumentato per il modello generativo. In questo modo il sistema può
-combinare similarità semantica, segnali lessicali e filtri basati sui metadati.
+I sistemi RAG riescono invece ad offire un metodo per verificare le informazioni prodotte
+grazie ad un'efficace separazione tra le operazioni di ingestione e inferenza. 
+La fase di ingestione permette di creare delle rappresentazioni idonee per la creazione 
+degli embedding sia densi che sparsi e, alla fine, salvare queste rappresentazioni su una base 
+dati vettoriale.
+La fase di inferenza avviene invece a richiesta utente. La richiesta 
+viene convertita allo stesso spazio usato nella fase di ingestione e con l'aiuto dell'indice di 
+retrieval vengono ottenuti i documenti più pertinenti alla query dell'utente, questi ultimi vengono 
+in fine aggiunti al prompt generativo.
 
-Il caso d'uso scelto riguarda il supporto alla proposta di nuove Gilde. Prima
-di proporre un nuovo tema, una persona può avere bisogno di sapere se argomenti
-simili siano già stati affrontati, quali risultati siano stati prodotti, chi
-abbia partecipato e in quale epoca siano nate iniziative affini. L'analisi del
-corpus mostra che la Gilda è l'unità informativa più adatta
-all'indicizzazione: contiene campi descrittivi, obiettivi, rischi, risultati
-attesi o raggiunti e collegamenti con partecipanti ed epoch. I metadati non
-vengono trattati come semplice testo, ma restano disponibili per filtrare e
-contestualizzare le risposte.
+Lo scenario d'uso studiato riguarda il sostenere una proposta per la formazione delle nuove gilde. 
+La persona che propone un determinato tema potrebbe avere bisogno di controllare se temi simili 
+siano stati discussi precedentemente, quali risultati sono stati ottenuti, chi ha preso parte e quando 
+si sono verificate delle proposte simili. Durante l'analisi del corpus si è stabilito che la Gilda è 
+l'entità più adatta all'indicizzazione: ogni Gilda include descrizioni, obiettivi, rischi, risultati 
+attesi o realizzati e collegamenti con partecipanti ed epoche. I metadati vengono tenuti a parte dagli 
+elementi indicizzati ed utilizzati come filtri.
 
-I requisiti del sistema riflettono questa struttura. Il prototipo deve
-recuperare informazioni dal corpus i3Guild, generare risposte in linguaggio
-naturale, indicare il contesto usato, supportare filtri strutturati e integrarsi
-con l'interfaccia Next.js esistente. Deve anche evitare dipendenze non
-necessarie da servizi esterni, perché il caso di studio richiede controllo sui
-dati e sull'infrastruttura. La scelta tecnologica cade quindi su PostgreSQL come
-sorgente autoritativa, Qdrant come database vettoriale, Haystack come framework
-di orchestrazione, FastAPI come microservizio RAG, Ollama per l'inferenza
-locale e Next.js per l'integrazione applicativa.
+I requisiti del sistema derivano direttamente dalle considerazioni espresse sopra. Il prototipo deve
+recuperare informazioni dal corpus di gilde, formulare risposte in linguaggio
+naturale, conservare traccia del contesto usato, supportare filtri strutturati
+e integrarsi con il frontend già presente. Deve anin oltreche ridurre la
+dipendenza da servizi esterni. La soluzione prevede di usare PostgreSQL come sorgente
+autoritativa, Qdrant come database vettoriale, Haystack come orchestratore della
+pipeline di retrieval, FastAPI per esporre il microservizio RAG, Ollama per
+l'inferenza locale e infine Next.js come livello applicativo.
 
 \section*{Progettazione e implementazione del sistema}
 
-L'architettura proposta separa in modo netto i componenti. PostgreSQL conserva i
-dati applicativi di i3Guild; una pipeline di embedding legge le informazioni
-rilevanti, normalizza i campi testuali e costruisce documenti Haystack; Qdrant
-memorizza embedding densi, rappresentazioni sparse e payload strutturati; il
-microservizio FastAPI espone retrieval, chat sincrona e chat in streaming;
-l'applicazione Next.js consuma il servizio tramite client dedicati. Questa
-suddivisione riduce l'accoppiamento: l'applicazione rimane la sorgente
-autoritativa, l'indice può essere ricostruito o aggiornato, e il modello
-generativo può essere sostituito senza riscrivere l'intero sistema.
+L'architettura che viene utilizzata rispecchia il flusso dei dati. PostgreSQL è 
+responsabile del salvataggio delle informazioni legate a i3Guild. La pipeline 
+di embedding legge le gilde, normalizza i campi di testo e crea i documenti in 
+Haystack. In Qdrant si salvano le rappresentazioni dense e sparse degli embedding oltre che il payload 
+strutturato. FastAPI mette a disposizione gli endpoint per recuperare ed utilizzare la chat, 
+sia in modifica sincrona che streaming e per il retrieval dei documenti. 
+L'applicazione Next.js utilizza il servizio attraverso gli specifici client.
+Grazie a questa separazione è possiibile operare su ogni componente in modo indipendete ad esempio
+aggiornando il corpus dei dati o cambaidno il modello di Ollama senza preoccuparsi che qualcosa 
+possa smettere di funzionare nel modo desiderato.
 
-La pipeline di ingestione è progettata come job batch. Prima controlla la
-configurazione, la connessione a PostgreSQL, la raggiungibilità di Qdrant e la
-coerenza dei parametri di embedding. Poi estrae le Gilde con le relative epoch e
-i partecipanti, pulisce i campi HTML con una normalizzazione testuale e compone
-un documento strutturato in sezioni riconoscibili. In condizioni ordinarie una
-Gilda viene indicizzata come documento consolidato, perché la dimensione media
-dei campi resta compatibile con la finestra del modello di embedding. Per gli
-outlier è prevista una soglia di sicurezza: se il testo supera il limite, viene
-suddiviso in chunk con sovrapposizione controllata. Gli identificativi dei
-documenti sono deterministici, così una reindicizzazione non duplica i punti in
-Qdrant ma sovrascrive quelli esistenti.
 
-Il retrieval non si limita a una ricerca vettoriale. La query dell'utente viene
-normalizzata e, quando possibile, riscritta per isolare il tema effettivo della
-domanda. Nel dominio i3Guild parole come "gilda", "fondare" o "consigli"
-possono essere poco informative: nella frase "vorrei fondare una gilda sulla
-musica", il topic utile per la ricerca è "musica". In parallelo, il sistema
-prova a riconoscere vincoli espressi in linguaggio naturale, come una specifica
-epoca, la modalità di partecipazione o la natura individuale o di gruppo della
-Gilda. Dopo il recupero, i risultati vengono deduplicati e selezionati con
-soglie dinamiche, evitando di passare al modello documenti troppo simili o poco
-pertinenti.
+Allo stage iniziale della pipeline d'ingestione, vi è la verifica della configurazione, 
+della connessione al database PostgreSQL, della raggiungibilità di Qdrant e della coerenza 
+dei parametri di embedding. Si passa poi all'estrazione delle informazioni relative alle gilde, 
+alla pulizia dei campi e alla formazione, per ogni gilda, di un documento strutturato in sezioni identificabili. 
+Come anticipato, per ogni gilda si procede all'indicizzazione del documento singolo, in 
+quanto la lunghezza dei campi testuale, per quai la totalità delle gilde, è in grado di rientrare nelle caratteristiche del 
+modello d'embedding adottato. Viene però fissato un valore soglia: ogni volta che i campi testuali superano 
+questo valore, questi verranno divisi in chunk sovrapposti. Gli ID dei documenti sono
+deterministici in questo modo una reindicizzazione sovrascrive i punti esistenti in
+Qdrant invece di duplicarli.
 
-La generazione usa Ollama come server locale. Il microservizio costruisce un
-prompt aumentato con istruzioni, domanda utente e contesto recuperato, poi
-invoca il modello e restituisce la risposta. Lo streaming NDJSON permette di
-separare eventi di retrieval, token generati, warning ed errori, migliorando la
-percezione di reattività nell'interfaccia. Il servizio include anche controlli
-operativi, come stime di memoria disponibile, gestione dei timeout, rate
-limiting e distinzione tra errori applicativi e dipendenze non raggiungibili.
+La ricerca non consiste solo in un confronto vettoriale: prima della ricerca, il sistema prova a isolare
+il tema della domanda. Nel dominio i3Guild parole come "gilda",
+"fondare" o "consigli" sono poco informative; in una frase come "vorrei
+fondare una gilda sulla musica", il termine utile per il retrieval è "musica" è stato qundi realizzato un sistema, 
+deterministico, per tentare di estrapolare il reale significato dietro ad ogni query inviata al sistema.
+In parallelo, il servizio riconosce alcuni vincoli strutturati espressi in
+linguaggio naturale, per esempio una specifica epoca, una modalità di partecipazione o la distinzione
+tra gilde individuali e di gruppo. Dopo il recupero, i risultati vengono
+deduplicati e selezionati con soglie dinamiche, in questo modo il modello non riceve
+mai documenti ridondanti o marginali.
 
-Durante lo sviluppo è stato implementato anche un workflow agentico per guidare
-la proposta di nuove Gilde. La tesi lo documenta come sperimentazione, non come
-nucleo della soluzione finale. La ragione è pratica: a parità di hardware
-locale, l'approccio agentico introduce più chiamate al modello, maggiore latenza
-e maggiore complessità di controllo. Nel perimetro del prototipo, un RAG più
-classico e deterministico risulta più stabile, più semplice da mantenere e più
-coerente con i vincoli disponibili. La componente agentica rimane quindi una
-possibile evoluzione, da valutare solo se produce un beneficio misurabile.
+La generazione è avviene tramite a Ollama, utilizzato come server locale. Il microservizio
+riceve un prompt con: istruzioni, domanda utente e documenti recuperati; poi
+invoca il modello e restituisce la risposta. Lo streaming NDJSON separa eventi
+di retrieval, token generati, warning ed errori. Il frontend può quindi
+distinguere le fasi della risposta e mostrare l'avanzamento in modo più
+reattivo. Sono stati introdotti anche controlli operativi, tra cui stima della
+memoria disponibile, gestione dei timeout, rate limiting e distinzione tra
+errori applicativi e dipendenze non raggiungibili.
+
+Durante lo sviluppo è stato sperimentato anche un workflow
+agent-based per il supporto alla proposta delle nuove gilde. In tesi viene presentato 
+come un cammino perseguito, ma non come parte centrale della soluzione finale. La motivazione 
+è pragmatica: sullo stesso hardward, una strategia agent-based comporta una maggiore 
+quantità di chiamate al modello e di conseguenza maggiori tempi di latenza che si 
+traducevano in un prototipo inutilizzabile. Nell'ambito del sistema sviluppato, 
+una RAG più tradizionale ha dimostrato di essere più stabile e facile da gestire.
+La componente agentica rimane quindi una possibilità futura, da riprendere solo 
+se porta un beneficio misurabile e avendo a disposizione hardward dedicato.
 
 \section*{Valutazione dell'inferenza locale}
 
-La seconda parte della tesi affronta la sostenibilità dell'inferenza locale.
-Un sistema RAG aziendale può essere architetturalmente corretto, ma la sua
-utilità dipende anche dal modello generativo usato nell'ultimo stadio della
-pipeline. Il modello deve rientrare nella memoria disponibile, caricarsi in
-tempi accettabili, iniziare a generare senza ritardi e mantenere una qualità
-sufficiente per il caso d'uso. Per questo viene definito un protocollo
-sperimentale dedicato ai modelli open-weight eseguiti localmente su Apple
-Silicon.
+La seconda parte della tesi si è concentrata sul'inferenza locale. Un sistema RAG può
+essere ben progettato, ma la sua utilità dipende anche dal modello generativo
+che produce la risposta finale. Il modello deve rientrare nella memoria
+disponibile, caricarsi in tempi accettabili, iniziare a generare senza ritardi
+e mantenere una qualità compatibile con il caso d'uso.
 
-L'esperimento usa un MacBook Pro con chip M1 Pro e 16 GB di memoria unificata.
-Il runtime scelto è MLX, perché è progettato per Apple Silicon e consente di
-convertire, quantizzare ed eseguire modelli linguistici in modo coerente con il
-backend Metal. La matrice include modelli tra 3B e 14B parametri, divisi in
-classi small, medium e large. Per i modelli piccoli vengono confrontate FP16,
-Q8, Q6 e Q4; per quelli medi e grandi l'attenzione si concentra soprattutto
-sulle varianti quantizzate, perché la quantizzazione diventa una condizione di
-fattibilità entro il vincolo dei 16 GB.
+Le misurazioni sono state effettuate su un MacBook Pro con chip M1 Pro e 16 GB 
+di memoria unificata. Per sfruttare al meglio l'hardware disponibile sono stati 
+utilizzati strumenti di inferenza progettati specificamente per Apple Silicon, così 
+da beneficiare dell'accelerazione offerta dal backend Metal. I modelli analizzati 
+coprono una gamma compresa tra 3 e 14 miliardi di parametri e sono stati suddivisi 
+in tre categorie: small, medium e large. Per i modelli di dimensioni ridotte è stato 
+confrontato il formato baseline FP16 con le versioni quantizzate Q8, Q6 e Q4; per i 
+modelli medi e grandi, invece, l'analisi si concentra principalmente sulle varianti 
+quantizzate, poiché la compressione della memoria diventa indispensabile per rispettare 
+il vincolo dei 16 GB di memoria unificata.
 
-Le metriche misurate sono dimensione su disco, memoria di picco, tempo di
-caricamento, time-to-first-token, throughput di decodifica e throughput
-end-to-end. A queste si aggiungono controlli automatici di qualità su subset
-ridotti MMLU e GSM8K. La scelta di subset piccoli non mira a costruire una
-classifica generale dei modelli; serve a individuare degradazioni macroscopiche,
-problemi di formato e incompatibilità con il parser. I fallimenti non vengono
-rimossi dall'analisi, perché in un sistema reale anche il formato dell'output è
-parte del comportamento osservabile.
+Le metriche utilizzate includono: Dimensione sul disco, Memory peak, Loading time, 
+Time to first token, Decode throughput e End-to-end throughput. A queste metriche si 
+associano i test di qualità automatici su sottoinsiemi piccoli di MMLU e GSM8K. 
+I subset non hanno lo scopo di produrre una classifica generale dei modelli; 
+vengono usati per rilevare degradazioni evidenti, per privilegaire una compelta 
+automazione del processo tali test accettano il rischio di problemi del formato e incompatibilità con il parser. 
 
-I risultati mostrano che, sui modelli piccoli, Q4 è il compromesso più
-interessante. Riduce la dimensione degli artefatti di circa il 72\%, riduce il
+Sui modelli di dimensioni ridotte, Q4 si rivela essere il compromesso ottimale nel setup
+misurato, esso riduce la dimensione degli artefatti di circa il 70\%, abbassa il
 picco di memoria di circa 67--70\% e aumenta il throughput di decodifica di
-circa 2.6--2.8 volte rispetto a FP16. Nei controlli automatici ridotti non
-emerge un degrado macroscopico. Q8 e Q6 sono varianti più conservative, ma nel
-setup misurato non offrono un vantaggio qualitativo sufficiente a compensare il
-maggiore uso di memoria.
+circa 2.6--2.8 volte rispetto a FP16. Nei controlli automatici non si
+osserva un degrado significativo. Q8 e Q6 restano opzioni più conservative, ma
+dai dati raccolti non mostrano un vantaggio qualitativo sufficiente a compensare
+il maggiore uso di memoria e gli svantaggi ad esso collegati, come ad esmepio una 
+minor finestra di contesto utilizzabile.
 
-Per i modelli medi e grandi la lettura cambia. Qwen3 8B e Mistral 7B diventano
-utilizzabili in Q4 con throughput intorno a 32--35 token al secondo e picchi di
-memoria inferiori a 5 GB. Gemma 3 12B e Qwen3 14B sono eseguibili in Q4, ma con
-throughput intorno a 18 token al secondo e time-to-first-token superiore al
-secondo. Queste configurazioni dimostrano la fattibilità tecnica, ma non sono
-automaticamente preferibili in un'applicazione interattiva. Il margine residuo
-di memoria deve infatti essere condiviso con Qdrant, FastAPI, Next.js, sistema
-operativo e altri processi.
+Per i modelli medi e grandi, la quantizzazione ha soprattutto una funzione di
+fattibilità: rende eseguibili configurazioni poco pratiche sul target hardware utilizzato.
+Qwen3 8B e Mistral 7B diventano utilizzabili in Q4 con throughput intorno a
+32--35 token al secondo e picchi di circa 5 GB. Gemma 3 12B e Qwen3 14B sono
+eseguibili in Q4, ma il throughput scende intorno a 18 token al secondo e il
+time-to-first-token supera il secondo. Queste configurazioni dimostrano che
+l'esecuzione locale è possibile; non indicano, però, che siano sempre la scelta
+migliore per un'applicazione interattiva. In un sistema completo, memoria e
+risorse devono essere condivise tra molti altri processi.
 
 \section*{Risultati, limiti e sviluppi futuri}
 
-La tesi conferma che un sistema RAG locale per un contesto aziendale è
-realizzabile, ma richiede controllo simultaneo di più livelli. Non basta
-scegliere un modello linguistico: occorre curare il corpus, progettare l'indice,
-definire la logica di retrieval, controllare prompt e formato della risposta,
-verificare la sostenibilità dell'inferenza e integrare il tutto con
-l'applicazione esistente. Il contributo principale del lavoro è quindi un
-prototipo integrato e valutato in condizioni realistiche, più che una singola
-innovazione algoritmica.
+Il primo risultato raggiunto è la conversione dei dati dell'i3Guild in una 
+knowledge base interrogabile tramite linguaggio naturale, 
+senza necessità di spostare i dati al di fuori dal perimetro aziendale. 
+La seconda conclusione ha invece un carattere più sperimentale: l'uso dei modelli 
+locali su hardware consumer, così come prevedibile, è realizzabile, ma richiede delle 
+scelte ponderate per quanto riguarda la dimensione del modello, quantizzazione, memoria e latenza. Il punto
+centrale non è quindi il singolo componente utilizzato, ma la catena completa degli stessi.
 
-Dal punto di vista architetturale, il prototipo mostra che i3Guild può essere
-trasformato in una knowledge base interrogabile mantenendo PostgreSQL come
-sorgente autoritativa e separando l'indice vettoriale dal database applicativo.
-Dal punto di vista del retrieval, l'uso congiunto di embedding densi, segnali
-sparsi, filtri strutturati, deduplicazione e selezione dinamica consente di
-costruire un contesto più aderente al dominio rispetto a una ricerca puramente
-semantica. Dal punto di vista sperimentale, la quantizzazione MLX rende
-praticabili diversi modelli open-weight su hardware consumer Apple, con un
-profilo particolarmente favorevole per i modelli piccoli in Q4.
+Tuttavia, ci sono alcune limitazioni importanti. Il prototipo RAG non dispone ancora di una ground
+truth costruita insieme agli stakeholder aziendali; per questo motivo non esistono informazioni
+sistematiche di groundedness, completezza, utilità e allucinazioni sul corpus
+reale delle gilde. È importante notare anche che la sperimentazione dell'inferenza locale 
+è stata eseguita su un singolo dispositivo e con un insieme di test di qualità ridotti. 
+I risultati sono utili per il caso d'uso specifico preso in considerazione, ma non bisogna 
+estenderli automaticamente ad altri setup hardware/runtime.
 
-Restano alcuni limiti. Il primo riguarda la valutazione applicativa del RAG: il
-prototipo è stato implementato, ma manca una ground truth estesa costruita con
-stakeholder aziendali per misurare groundedness, completezza, utilità e
-allucinazioni sul corpus reale. Il secondo riguarda i dati: le Gilde sono
-eterogenee per granularità, stile e completezza dei campi. Il terzo riguarda
-l'esperimento MLX, eseguito su una sola macchina e con subset di qualità
-ridotti; i risultati non possono essere generalizzati direttamente ad altri
-hardware o runtime.
+Le prospettive per lo sviluppo futuro dovrebbero in un primo momento concentrarsi sulle valutazioni. 
+Si dovrebbe pertanto costruire un set di domande applicative sul domain i3Guild, insieme alle 
+risposte prevedibili e ai documenti di riferimento che siano stati validati da persone interne 
+alla stessa azienda. In base a ciò, si potranno valutare le versioni diverse della pipeline 
+e stabilire il ruolo specifico di ciascun elemento della stessa.
 
-Gli sviluppi futuri seguono da questi limiti. La priorità è costruire un dataset
-di domande realistiche sul dominio i3Guild, con risposte attese e documenti di
-riferimento validati da persone interne all'azienda. Su questa base si potranno
-confrontare versioni diverse della pipeline e misurare il contributo effettivo
-di query rewriting, filtri, soglie e deduplicazione. Un secondo sviluppo
-riguarda l'indicizzazione incrementale, che potrebbe sostituire la
-reindicizzazione completa quando il corpus crescerà. Un terzo riguarda la
-qualità del contesto recuperato, migliorabile con glossari aziendali, sinonimi
-controllati, tag più espliciti e, in prospettiva, reranker.
+I test sui modelli locali aprono un ulteriore punto di miglioramento, le misure raccolte
+isolano il modello generativo e chiariscono il ruolo della quantizzazione, ma
+non descrivono, da sole, il comportamento del sistema RAG completo. Una verifica
+successiva dovrebbe eseguire i modelli candidati dentro il flusso reale all'interno del contesto reale. 
+Solo una prova di questo tipo può confermare se i profili emersi nei benchmark di quantizzazione restano validi
+nel prototipo integrato nel sistema reale.
 
-La componente agentica potrà essere ripresa solo dopo il consolidamento del RAG
-di base. Un agente potrebbe aiutare nella proposta di nuove Gilde, nella
-raccolta di requisiti o nel collegamento con iniziative passate, ma la sua
-adozione dovrebbe dipendere da criteri misurabili: riduzione del lavoro per
-l'utente, qualità superiore delle bozze, controllo dei costi computazionali e
-robustezza del formato prodotto. Nel perimetro attuale, la direzione più utile
-non è aumentare la complessità dell'orchestrazione, ma rafforzare il legame tra
-corpus, retrieval, valutazione e vincoli reali dell'infrastruttura locale.
+La componente agentica potrà essere ripresa dopo aver consolidato il RAG di
+base. Un agente potrebbe aiutare nella proposta di nuove gilde, nella raccolta
+di requisiti o nel collegamento con iniziative passate, la sua adozione dovrebbe
+dipendere però da criteri verificabili: minore carico per l'utente, bozze
+di qualità migliore e costi computazionali sostenibili. In assenza di
+questi dati, aumentare la complessità dell'orchestrazione rischia di
+peggiorare un sistema che, nella forma classica realizzata risulta essere utilizzabile.
 
 \end{document}

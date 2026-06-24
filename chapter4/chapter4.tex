@@ -2,7 +2,7 @@
 \chapter{Disegno sperimentale per l'inferenza locale quantizzata}
 \label{chap:ottimizzazione}
 
-Questo capitolo definisce il protocollo usato per valutare l'inferenza locale
+Questo capitolo descrive il protocollo usato per valutare l'inferenza locale
 di modelli linguistici open-weight su Apple Silicon. Dopo la progettazione e
 l'implementazione del sistema RAG aziendale, l'analisi si è concentrata su un
 vincolo più specifico: capire quali modelli generativi potessero essere eseguiti
@@ -14,30 +14,29 @@ sistema RAG enterprise usa il modello generativo come ultimo stadio di una
 pipeline più ampia, ma le sue prestazioni dipendono prima di tutto dalla
 fattibilità dell'inferenza locale: il modello deve essere convertibile,
 caricabile, stabile in generazione e compatibile con la memoria disponibile. Il
-presente capitolo misura quindi il comportamento del modello isolato. I
-risultati non sostituiscono una valutazione applicativa end-to-end del RAG, ma
-forniscono la base tecnica per capire quali famiglie e quali livelli di
-quantizzazione siano realistici nel perimetro hardware scelto.
+presente capitolo misura quindi il comportamento del modello isolato; i risultati
+non sostituiscono una valutazione applicativa end-to-end del RAG, ma forniscono
+la base tecnica per capire quali famiglie e quali livelli di quantizzazione siano
+realistici nel perimetro hardware scelto.
 
 La domanda sperimentale è stata formulata nei seguenti termini: quali
 compromessi introduce la quantizzazione MLX su dimensione su disco, uso di
 memoria, latenza di caricamento, time-to-first-token, throughput di decodifica e
 qualità su piccoli
 benchmark, quando modelli tra 3B e 14B parametri vengono eseguiti localmente su
-Apple Silicon consumer? Per rispondere serve un disegno controllato. Gli
-artefatti quantizzati devono derivare dagli stessi snapshot Hugging Face, il
-runtime deve rimanere costante, le impostazioni di generazione devono essere
-deterministiche e i fallimenti devono restare nell'analisi.
+Apple Silicon consumer? Per rispondere a questa domanda serve un disegno
+controllato: gli artefatti quantizzati devono derivare dagli stessi snapshot
+Hugging Face, il runtime deve rimanere costante, le impostazioni di generazione
+devono essere deterministiche e i fallimenti devono restare nell'analisi.
 
 \section{Motivazione e perimetro}
 \label{sec:experimental_motivation_scope}
 
 L'inferenza locale è rilevante per scenari aziendali in cui i dati non possono
 essere inviati liberamente a servizi cloud oppure in cui si vuole mantenere un
-prototipo riproducibile senza dipendenze da API esterne. Questa motivazione,
-tuttavia, non implica automaticamente che un modello locale sia utilizzabile.
-Su hardware consumer il vincolo più stretto è la memoria: oltre ai pesi del
-modello, devono coesistere sistema operativo, runtime Python, librerie MLX,
+prototipo riproducibile senza dipendenze da API esterne.
+Su hardware consumer il vincolo più stretto è spesso la memoria: oltre ai pesi del
+modello, devono coesistere sistema operativo, runtime, librerie,
 tokenizer, KV cache, prompt, buffer intermedi e altri processi applicativi.
 
 Il lavoro si concentra sull'esecuzione MLX locale. RAG, GGUF, llama.cpp e
@@ -67,8 +66,8 @@ con questi lavori è metodologico: aiuta a scegliere misure come memoria, TTFT,
 throughput e stabilità del runtime, ma non viene usato per confrontare
 direttamente valori numerici ottenuti su hardware e modelli diversi.
 
-La quantizzazione è solo una delle tecniche disponibili per comprimere modelli
-linguistici. Le survey recenti distinguono quantizzazione, pruning,
+La quantizzazione è solo una delle tecniche disponibili per la compressione dei modelli
+linguistici. Studi recenti distinguono quantizzazione, pruning,
 distillazione e architetture compatte come famiglie diverse di intervento
 ~\cite{wang2024modelcompression}. Questa tesi isola la quantizzazione
 post-training dei pesi per una ragione pratica: si applica ad artefatti già
@@ -101,7 +100,7 @@ grezzo delle GPU discrete e capacità di memoria/efficienza energetica di Apple
 Silicon
 ~\cite{javat2026silicon}.
 
-Nel complesso, questi riferimenti portano a tre scelte di disegno. Le metriche
+Nel complesso, questi riferimenti portano a tre scelte. Le metriche
 prestazionali vengono separate, perché memoria, latenza iniziale e throughput di
 decodifica non descrivono lo stesso fenomeno. La quantizzazione viene valutata
 per variante, senza assumere che meno bit significhino sempre più velocità. Il
@@ -133,13 +132,13 @@ architetture, comunicano attraverso bus e copie esplicite di memoria.
 
 Per questa tesi non conta la presenza di acceleratori in senso generico, ma il
 modo in cui CPU e GPU condividono il carico dell'inferenza. Un LLM locale legge
-ripetutamente i pesi, esegue operazioni matriciali, gestisce il tokenizer,
-alloca la KV cache, esegue il prefill del prompt e poi procede con la
-decodifica autoregressiva. Alcune parti restano sul runtime Python e sulla CPU,
-altre vengono delegate a kernel Metal sulla GPU. L'architettura integrata rende
-più diretto questo passaggio rispetto a un sistema con memoria CPU e VRAM
-separate, ma non elimina limiti di bandwidth, capacità e concorrenza con altri
-processi.
+ripetutamente i pesi, esegue calcoli matriciali, gestisce il tokenizer,
+alloca la KV cache, esegue il prefill del prompt ed esegue la
+decodifica autoregressiva. Alcune processi restano sul runtime Python e sulla CPU,
+altie vengono delegate a kernel Metal sulla GPU. L'architettura integrata rende
+più diretto questo passaggio rispetto ad una situazione dove la memoria di lavoro è su CPU e VRAM
+separatamente, ma i vincoli su bandwidth e concorrenza persistono.
+
 La Figura~\ref{fig:apple_silicon_soc} schematizza questi sottosistemi e il
 ruolo della memoria unificata nel percorso dell'inferenza.
 
@@ -182,17 +181,17 @@ supporta una bandwidth di memoria fino a 200 GB/s~\cite{apple2021m1prospecs}.
 Questa impostazione ha due conseguenze per i modelli locali. Da un lato, non
 esiste una VRAM fissa separata dalla RAM di sistema: un modello che supererebbe
 la memoria video di una GPU consumer può diventare eseguibile su una macchina
-Apple se rientra nel budget complessivo della memoria unificata. Dall'altro,
-quei 16 GB non sono dedicati al modello. Devono ospitare sistema operativo,
-applicazioni aperte, processo Python, runtime MLX, tokenizer, pesi, cache e
-buffer temporanei. Per questo il capitolo misura sia la dimensione su disco
-degli artefatti sia il picco di memoria durante la generazione.
+Apple se rientra nel budget complessivo della memoria unificata. Dall'altro, i
+16 GB disponibili non sono dedicati al modello, ma devono ospitare sistema
+operativo, applicazioni aperte, processo Python, runtime MLX, tokenizer, pesi,
+cache e buffer temporanei. Per questo il capitolo misura sia la dimensione su
+disco degli artefatti sia il picco di memoria durante la generazione.
 
 \subsection{GPU, Metal e runtime MLX}
 \label{subsec:apple_gpu_metal_mlx}
 
-La GPU Apple è esposta agli sviluppatori attraverso Metal, l'API grafica e
-compute di basso livello. MLX si colloca sopra questo strato: fornisce un
+La GPU Apple è esposta agli sviluppatori attraverso Metal.
+MLX si colloca sopra questo strato: fornisce un
 framework di array ottimizzato per Apple Silicon e per la memoria unificata
 ~\cite{apple2026mlx}. Il pacchetto \texttt{mlx-lm} usa MLX per caricare modelli
 linguistici, applicare template di chat, generare testo e produrre artefatti
@@ -232,20 +231,20 @@ Alla luce di queste caratteristiche, l'esperimento usa MLX tramite il pacchetto
 \texttt{mlx-lm}. La valutazione riguarda un runtime Apple-native, non un
 backend generico adattato successivamente a Metal.
 
-I runtime alternativi non sono ignorati; restano fuori dal confronto principale.
-MLC-LLM è interessante per compilazione e deployment ottimizzato
-~\cite{mlc2025llm}; llama.cpp e Ollama sono maturi e diffusi per esecuzione
-locale; PyTorch MPS è utile in ambito di sviluppo. Tuttavia, includerli nella
-matrice avrebbe reso difficile attribuire le differenze osservate alla sola
-quantizzazione. Per questo il confronto è interno a MLX.
+I runtime alternativi non sono ignorati, ma restano fuori dal confronto
+principale. MLC-LLM è interessante per compilazione e deployment ottimizzato
+~\cite{mlc2025llm}, llama.cpp e Ollama sono maturi e diffusi per esecuzione
+locale, mentre PyTorch MPS è utile in ambito di sviluppo; includerli nella
+matrice, tuttavia, avrebbe reso difficile attribuire le differenze osservate alla
+sola quantizzazione, è per questo motivo che il confronto è unicamente interno a MLX.
 
 \section{Matrice dei modelli}
 \label{sec:experimental_model_matrix}
 
 La matrice sperimentale include otto modelli open-weight, divisi in tre classi.
 La classe \emph{small} permette il confronto completo tra FP16 e varianti
-quantizzate. La classe \emph{medium} serve a osservare la soglia in cui la
-quantizzazione diventa necessaria per restare entro i limiti di memoria. La
+quantizzate; la classe \emph{medium} serve a osservare la soglia in cui la
+quantizzazione diventa necessaria per restare entro i limiti di memoria; la
 classe \emph{large} verifica se modelli più grandi possano almeno essere
 eseguiti in varianti compresse.
 La Tabella~\ref{tab:model_matrix} esplicita i modelli inclusi e il ruolo
@@ -280,22 +279,22 @@ sperimentale assegnato a ciascuna classe.
   \end{tabular}
 \end{table}
 
-La selezione non mira a decretare il miglior modello in assoluto. Serve a
-osservare famiglie, dimensioni e soglie di fattibilità diverse. I modelli
-piccoli sono il gruppo controllato; medi e grandi mostrano cosa accade quando
-il vincolo di memoria diventa dominante.
+La selezione non mira a decretare il miglior modello in assoluto, ma a osservare
+famiglie, dimensioni e soglie di fattibilità diverse. I modelli piccoli
+costituiscono il gruppo controllato, mentre quelli medi e grandi mostrano cosa
+accade quando il vincolo di memoria diventa dominante.
 
 \section{Artefatti e politica di quantizzazione}
 \label{sec:experimental_artifact_policy}
 
-Tutti gli artefatti quantizzati usati nell'esperimento sono generati
-localmente. La catena rimane sempre la stessa: download dello snapshot originale
-da Hugging Face, conversione locale in modello MLX FP16, quantizzazione locale
-con \texttt{mlx\_lm.convert}, benchmark sugli artefatti prodotti. Per
+Tutti gli artefatti quantizzati usati nell'esperimento sono generati localmente,
+seguendo sempre la stessa catena: download dello snapshot originale da Hugging
+Face, conversione locale in modello MLX FP16, quantizzazione locale con
+\texttt{mlx\_lm.convert} e benchmark sugli artefatti prodotti. Per
 l'esperimento principale non vengono usati modelli pre-quantizzati di terze
-parti. In questo modo si evitano variabili non controllate, come versione del
-runtime, parametri di conversione, template del tokenizer, revisione del
-modello e differenze nella procedura di quantizzazione.
+parti, così da evitare variabili non controllate come versione del runtime,
+parametri di conversione, template del tokenizer, revisione del modello e
+differenze nella procedura di quantizzazione.
 La Figura~\ref{fig:artifact_chain} mostra la catena usata per produrre gli
 artefatti misurati.
 
@@ -314,12 +313,12 @@ artefatti misurati.
   \label{fig:artifact_chain}
 \end{figure}
 
-Le varianti sperimentali sono FP16, Q8, Q6 e Q4. Q8 rappresenta una
-compressione leggera, Q6 una compressione intermedia e Q4 una compressione
-aggressiva. Il gruppo small esegue il confronto completo contro FP16. Per
-medium e large, FP16 è trattato come controllo di fattibilità: eventuali
-fallimenti o omissioni per politica sperimentale vengono registrati e non
-interpretati come dati mancanti casuali.
+Le varianti sperimentali sono FP16, Q8, Q6 e Q4: Q8 rappresenta una compressione
+leggera, Q6 una compressione intermedia e Q4 una compressione aggressiva. Il
+gruppo small esegue il confronto completo contro FP16, mentre per medium e
+large FP16 è trattato come controllo di fattibilità; eventuali fallimenti o
+omissioni per politica sperimentale vengono registrati e non interpretati come
+dati mancanti casuali.
 La Tabella~\ref{tab:mlx_variants} riassume il significato operativo delle
 varianti considerate.
 
@@ -347,12 +346,12 @@ varianti considerate.
 \section{Benchmark prestazionale}
 \label{sec:experimental_performance_benchmark}
 
-Il benchmark prestazionale misura due fasi. La prima è il \emph{cold load},
-cioè il caricamento del modello e l'inizializzazione del runtime. La seconda
-è la \emph{warm generation}, cioè la generazione dopo warm-up, quando il
-modello è già caricato. Separare queste fasi è necessario per un sistema
-interattivo: un modello può caricarsi lentamente ma generare in modo stabile,
-o viceversa.
+Il benchmark prestazionale misura due fasi: il \emph{cold load}, cioè il
+caricamento del modello e l'inizializzazione del runtime, e la
+\emph{warm generation}, cioè la generazione dopo warm-up, quando il modello è
+già caricato. Separare queste fasi è necessario per un sistema interattivo,
+perché un modello può caricarsi lentamente ma generare in modo stabile, o
+viceversa.
 
 I prompt di performance sono in inglese e divisi in classi \emph{short},
 \emph{medium} e \emph{long}. La lingua inglese è mantenuta per coerenza con la
@@ -426,13 +425,13 @@ osservate, come TTFT, throughput e memoria di picco. Nel Capitolo
 ~\ref{chap:evaluation} la stabilità viene discussa usando il coefficiente di
 variazione dei run di decodifica.
 
-Un'ulteriore scelta riguarda la lunghezza dei prompt. Il file di benchmark
+Un'ulteriore scelta riguarda la lunghezza dei prompt: il file di benchmark
 assegna a ogni prompt una classe nominale, ma il numero effettivo di token
 dipende dal tokenizer del modello e dal template di chat applicato. Le classi
 \emph{short}, \emph{medium} e \emph{long} non vanno quindi lette come soglie
-assolute, ma come carichi relativi crescenti. Questa distinzione è rilevante
-per l'uso RAG: il contesto recuperato può aumentare il prefill anche quando il
-numero di token generati resta fisso.
+assolute, ma come carichi relativi crescenti. Questa distinzione è rilevante per
+l'uso RAG, perché il contesto recuperato può aumentare il prefill anche quando
+il numero di token generati resta fisso.
 
 \section{Benchmark di qualità}
 \label{sec:experimental_quality_benchmark}
@@ -440,17 +439,17 @@ numero di token generati resta fisso.
 La qualità viene valutata come controllo secondario, non come benchmark
 esaustivo delle capacità dei modelli. Vengono usati due subset ridotti: 16
 domande stile MMLU e 16 problemi aritmetici stile GSM8K. La dimensione ridotta
-rende la valutazione eseguibile su M1 Pro con 16 GB, ma richiede cautela: una
-sola risposta cambia il punteggio di 6,25 punti percentuali. I risultati
-servono quindi a individuare segnali macroscopici di degrado o comportamenti
-anomali, non a produrre classifiche generali.
+dei test rende la valutazione eseguibile su M1 Pro con 16 GB in tempi accettabili, 
+ma richiede cautela nelle trarre le conclusioni, in quanto una sola risposta cambia 
+il punteggio di 6,25 punti percentuali. I risultati servono quindi a individuare segnali macroscopici 
+di degrado o comportamenti anomali, non a produrre classifiche generali.
 
-Lo scoring è automatico. Per MMLU viene estratta la risposta a scelta multipla
-prevista; per GSM8K viene estratto il numero finale. Ogni variante viene
+Lo scoring è automatico: per MMLU viene estratta la risposta a scelta multipla
+prevista, mentre per GSM8K viene estratto il numero finale. Ogni variante viene
 valutata sugli stessi esempi, con le stesse impostazioni di generazione usate
-nel benchmark prestazionale. Per i modelli piccoli è possibile calcolare il
-delta rispetto alla baseline FP16. Per medium e large, dove FP16 non è parte
-del confronto completo, l'analisi è descrittiva.
+nel benchmark prestazionale. Per i modelli piccoli è possibile calcolare il delta
+rispetto alla baseline FP16; per medium e large, dove FP16 non è parte del
+confronto completo, l'analisi rimane descrittiva.
 
 Il parser è volutamente semplice. MMLU accetta una lettera tra A e D; GSM8K
 usa l'ultimo numero riconosciuto nella risposta. Questa scelta rende il
@@ -472,44 +471,43 @@ da non sovrascrivere misure precedenti. Per ogni run vengono registrati anche
 versione macOS, versione MLX, versione \texttt{mlx-lm}, comando, hardware e
 metadati del modello quando disponibili.
 
-Risultati grezzi e aggregati vengono salvati separatamente. Le tabelle del
-Capitolo~\ref{chap:evaluation} usano l'ultimo risultato disponibile per
-modello, variante, fase e classe di prompt, mentre i file grezzi rimangono
-disponibili per controlli successivi. In questo modo l'analisi può essere
-aggiornata senza perdere tracciabilità.
+Risultati grezzi e aggregati vengono salvati separatamente: le tabelle del
+Capitolo~\ref{chap:evaluation} usano l'ultimo risultato disponibile per modello,
+variante, fase e classe di prompt, mentre i file grezzi rimangono disponibili
+per controlli successivi. In questo modo l'analisi può essere aggiornata senza
+perdere tracciabilità.
 
 \section{Gestione degli artefatti e dei fallimenti}
 \label{sec:experimental_failure_policy}
 
-Il repository sperimentale è pensato per lavorare anche con spazio disco
-limitato. Lo script conservativo processa un modello alla volta: scarica lo
-snapshot Hugging Face, produce l'artefatto MLX FP16, genera le varianti
-quantizzate, esegue i benchmark e conserva i risultati prima di rimuovere gli
+Il progetto è pensato per lavorare anche con spazio disco limitato. 
+Lo conservativo processa un modello alla volta scaricandone lo
+snapshot Hugging Face, producendo l'artefatto MLX FP16, generando le varianti
+quantizzate, eseguendo i benchmark e conservando i risultati prima di rimuovere gli
 artefatti pesanti quando non servono più. Questa politica non riduce la
 riproducibilità, perché i metadati essenziali restano nei file TSV e nei
 risultati JSONL/CSV: identificativo del modello sorgente, variante, dimensione,
 hash quando disponibile, versione runtime, comando e timestamp.
 
-I fallimenti non vengono filtrati. Un modello può non essere disponibile per
+I fallimenti non vengono filtrati, un modello può non essere disponibile per
 licenza, non convertirsi correttamente, non caricare, esaurire memoria oppure
 produrre output non parsabile. In tutti questi casi il risultato viene
-registrato con uno \texttt{status} esplicito. La scelta conta in una
-valutazione di fattibilità: su hardware con 16 GB, sapere che una
-configurazione non è utilizzabile è informazione sperimentale tanto quanto
-misurare il throughput di una configurazione riuscita.
+registrato con uno \texttt{status} esplicito. La scelta conta in una valutazione
+di fattibilità, perché su hardware con 16 GB sapere che una configurazione non è
+utilizzabile è informazione sperimentale tanto quanto misurare il throughput di
+una configurazione riuscita.
 
 \section{Ipotesi sperimentali}
 \label{sec:experimental_hypotheses}
 
-Le ipotesi iniziali sono quattro. La prima è che Q8, Q6 e Q4 riducano in modo
-quasi proporzionale la dimensione dei pesi, ma non producano necessariamente
-riduzioni proporzionali della latenza. La seconda è che Q4 sia la variante più
-vantaggiosa per memoria e throughput sui modelli piccoli, pur richiedendo una
-verifica qualitativa. La terza è che i modelli medium e large diventino
-praticabili solo nelle varianti quantizzate, perché il margine dei 16 GB è
-troppo stretto per FP16. La quarta è che i subset MMLU e GSM8K possano
-evidenziare degradazioni evidenti, ma non siano abbastanza ampi da misurare
-differenze sottili di qualità.
+Le ipotesi iniziali sono quattro. Q8, Q6 e Q4 dovrebbero ridurre in modo quasi
+proporzionale la dimensione dei pesi, senza produrre necessariamente riduzioni
+proporzionali della latenza; Q4 dovrebbe essere la variante più vantaggiosa per
+memoria e throughput sui modelli piccoli, pur richiedendo una verifica
+qualitativa; i modelli medium e large dovrebbero diventare praticabili solo
+nelle varianti quantizzate, perché il margine dei 16 GB è troppo stretto per
+FP16; infine, i subset MMLU e GSM8K dovrebbero evidenziare degradazioni
+evidenti, ma non differenze sottili di qualità.
 
 Queste ipotesi derivano dalla letteratura, ma devono essere verificate sul
 setup locale. I risultati di altri studi usano spesso M1 Max, M2 Ultra, M3
@@ -519,11 +517,11 @@ di un MacBook Pro M1 Pro con 16 GB di memoria unificata.
 \section{Minacce alla validità}
 \label{sec:experimental_validity}
 
-Il primo limite è l'hardware singolo. Tutte le misure derivano da una sola
-macchina, quindi non possono essere generalizzate direttamente a Mac con più
-memoria, più bandwidth o generazioni diverse di GPU. Il secondo limite è il
-runtime singolo: MLX viene scelto per coerenza con Apple Silicon, ma i risultati
-non dimostrano superiorità rispetto a MLC-LLM, llama.cpp o Ollama.
+Il primo limite è l'hardware singolo: tutte le misure derivano da una sola
+macchina e non possono essere generalizzate direttamente a Mac con più memoria,
+più bandwidth o generazioni diverse di GPU. Il secondo limite è il runtime
+singolo: MLX viene scelto per coerenza con Apple Silicon, ma i risultati non
+dimostrano superiorità rispetto a MLC-LLM, llama.cpp o Ollama.
 
 Il terzo limite riguarda i benchmark di qualità. MMLU e GSM8K sono usati in
 subset ridotti; ciò rende possibile l'esecuzione locale ma amplifica il peso
@@ -549,8 +547,8 @@ ridurre il problema a una sola metrica. Memoria e dimensione dell'artefatto
 stabiliscono la fattibilità, TTFT e throughput descrivono la reattività, MMLU e
 GSM8K forniscono un segnale minimo sulla robustezza dell'output.
 
-Il disegno non pretende di misurare l'intero sistema RAG in produzione. Serve
+Il disegno non pretende di misurare l'intero sistema RAG in produzione; serve
 piuttosto a capire quali configurazioni siano realistiche prima di inserirle in
 un ambiente con Qdrant, FastAPI, Next.js e Ollama concorrenti sulla stessa
 macchina. Il capitolo successivo applica questo protocollo e discute i
-compromessi osservati.
+risultati ottenuti.

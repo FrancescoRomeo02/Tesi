@@ -2,7 +2,7 @@
 \chapter{Implementazione del Sistema RAG}
 \label{chap:implementazione}
 
-Il capitolo descrive l'implementazione del sistema RAG integrato in i3Guild.
+Questo capitolo descrive l'implementazione del sistema RAG integrato in i3Guild.
 L'obiettivo non è ripetere le scelte architetturali già motivate nel
 Capitolo~\ref{chap:requirements_design}, ma mostrare come tali scelte siano
 state tradotte in componenti eseguibili: una pipeline di ingestione per
@@ -17,7 +17,7 @@ RAG più classico.
 La realizzazione è distribuita su tre repository applicativi, ciascuno
 associato a una responsabilità precisa. Il repository principale i3Guild
 contiene l'applicazione web Next.js e il database
-PostgreSQL~\cite{postgresql2024}; la pipeline di embedding gestisce
+PostgreSQL; la pipeline di embedding gestisce
 l'estrazione dei dati, la normalizzazione testuale, la generazione di embedding
 densi e sparsi con FastEmbed/Haystack e l'upsert su Qdrant; il microservizio
 RAG espone infine le API Python per retrieval e chat. La separazione riduce
@@ -46,7 +46,7 @@ queste informazioni e produce documenti Haystack~\cite{haystack2023}; Qdrant
 memorizza vettori densi, rappresentazioni sparse e metadati; il microservizio
 RAG interroga l'indice ibrido e, quando richiesto, invoca Ollama per generare la
 risposta. L'applicazione Next.js consuma il servizio tramite un client HTTP
-dedicato~\cite{nextjs2024}.
+dedicato.
 
 L'applicazione web contiene il client TypeScript che dialoga con il
 microservizio RAG e gestisce lo streaming verso l'interfaccia. La pipeline di
@@ -62,7 +62,7 @@ richieste interattive competano nello stesso processo. La pipeline di embedding
 può essere eseguita manualmente, schedulata o avviata in un container dedicato;
 il servizio RAG rimane invece ottimizzato per rispondere a richieste HTTP a
 bassa latenza. La containerizzazione completa questa separazione, isolando
-dipendenze e servizi di supporto~\cite{docker2024}.
+dipendenze e servizi di supporto.
 
 % -------------------------------------------------------------
 \section{Pipeline di ingestione}
@@ -76,7 +76,7 @@ Qdrant~\cite{haystack2023,qdrant2023}. In
 caso di errore in una dipendenza essenziale, ad esempio PostgreSQL o Qdrant non
 raggiungibile, il processo termina con codice diverso da zero. Questo comportamento
 è utile in ambiente Docker o CI, perché rende immediatamente visibile il fallimento
-dell'indicizzazione~\cite{docker2024}.
+dell'indicizzazione.
 
 \subsection{Configurazione e controlli preliminari}
 \label{subsec:implementation_ingestion_config}
@@ -161,50 +161,56 @@ testuale per le domande dell'utente.
 \subsection{Normalizzazione e costruzione dei documenti}
 \label{subsec:implementation_document_building}
 
-Ogni riga estratta viene trasformata in uno o più documenti Haystack. Il
-processo di costruzione compone un testo articolato in sezioni riconoscibili,
-dedicate a sommario, obiettivi, rischi, risultati raggiunti e partecipanti. I
-campi HTML vengono normalizzati con BeautifulSoup~\cite{beautifulsoup2024}: il
-codice rimuove i tag, conserva il contenuto testuale e compatta gli spazi. In
-questa fase non interessa ottenere una resa editoriale del documento, ma una
-rappresentazione pulita e stabile, adatta al retrieval. Uno schema semplificato
-della costruzione del documento è riportato in Appendice~\ref{app:B},
+Ogni riga estratta da PostgreSQL viene convertita in uno o più documenti
+Haystack. La costruzione del testo segue una struttura fissa: sommario,
+obiettivi, rischi, risultati raggiunti e partecipanti. Il retriever riceve così
+documenti omogenei, anche quando i campi originali della Gilda hanno lunghezze
+e formati diversi.
+
+I campi HTML vengono normalizzati con BeautifulSoup,
+che rimuove i tag, conserva il testo utile e compatta gli spazi. L'obiettivo non
+è produrre una versione leggibile per l'utente finale, ma un testo stabile per
+embedding e ricerca. Uno schema semplificato della costruzione del documento è
+riportato in Appendice~\ref{app:B},
 Listato~\ref{lst:create_document_simplified}.
 
-La strategia descritta nel Capitolo~\ref{chap:requirements_design} prevedeva un
-documento consolidato per Gilda. L'implementazione mantiene questa impostazione
-come caso normale, ma introduce una soglia di sicurezza:
-\texttt{INGEST\_MAX\_DOCUMENT\_CHARS}. Se il testo supera il limite, il
-documento viene diviso in chunk con sovrapposizione controllata. Gli outlier non
-impediscono così l'ingestione e i chunk successivi mantengono il riferimento
-alla Gilda tramite l'intestazione. La granularità dei chunk condiziona qualità
-del retrieval e quantità di contesto disponibile per il modello
+Il progetto discusso nel Capitolo~\ref{chap:requirements_design} prevedeva un
+documento consolidato per ciascuna Gilda. L'implementazione mantiene questa
+scelta come comportamento ordinario, ma aggiunge una soglia di sicurezza:
+\texttt{INGEST\_MAX\_DOCUMENT\_CHARS}. Quando il testo supera il limite, la
+pipeline lo suddivide in chunk con una sovrapposizione controllata. In questo
+modo una Gilda molto lunga non blocca l'ingestione e ogni chunk conserva il
+collegamento alla Gilda di origine tramite l'intestazione. La granularità dei
+chunk resta una scelta rilevante, perché incide sia sulla qualità del retrieval
+sia sulla quantità di contesto fornita al modello
 generativo~\cite{chen2023benchmarking}.
 
 Gli identificativi dei documenti sono deterministici:
-\texttt{guild-\{guild\_id\}-chunk-\{index\}}. La scelta rende idempotente la
-reindicizzazione: rieseguire la pipeline sulla stessa Gilda produce gli stessi
-ID e permette a Qdrant di sovrascrivere i punti esistenti invece di duplicarli.
-I metadati associati includono \texttt{guild\_id}, \texttt{guild\_name},
-\texttt{epoch\_id}, \texttt{is\_individual}, \texttt{participation\_mode},
-\texttt{participants}, \texttt{chunk\_index} e \texttt{chunk\_count}.
+\texttt{guild-\{guild\_id\}-chunk-\{index\}}. Rieseguire la pipeline sulla
+stessa Gilda produce quindi gli stessi ID, consentendo a Qdrant di sovrascrivere
+i punti già presenti invece di crearne copie duplicate. I metadati associati
+includono \breakcode{guild_id}, \breakcode{guild_name},
+\breakcode{epoch_id}, \breakcode{is_individual},
+\breakcode{participation_mode}, \breakcode{participants},
+\breakcode{chunk_index} e \breakcode{chunk_count}.
 
 \subsection{Embedding e scrittura in Qdrant}
 \label{subsec:implementation_embedding_write}
 
-La fase finale costruisce una pipeline Haystack composta da un embedder denso,
-un embedder sparso e un writer. I due embedder arricchiscono gli stessi
-documenti con rappresentazioni complementari: la prima orientata alla similarità
-semantica, la seconda al matching lessicale. Il writer persiste poi entrambi i
-segnali nel document store Qdrant. La configurazione essenziale della pipeline è
-riportata in Appendice~\ref{app:B}, Listato~\ref{lst:embedding_pipeline_impl}.
+La fase finale usa una pipeline Haystack con tre componenti: un embedder denso,
+un embedder sparso e un writer. Gli stessi documenti vengono quindi descritti
+con due segnali complementari: l'embedding denso cattura la similarità semantica,
+mentre quello sparso mantiene un collegamento più diretto con i termini presenti
+nel testo. Il writer salva entrambe le rappresentazioni nel document store
+Qdrant. La configurazione essenziale della pipeline è riportata in
+Appendice~\ref{app:B},
+Listato~\ref{lst:embedding_pipeline_impl}.
 
-La pipeline viene eseguita in batch applicativi, con una dimensione configurabile
-tramite variabile d'ambiente. L'elaborazione a batch riduce il picco di memoria
-dello sparse embedder e mantiene il comportamento atteso del container: il job
-parte, scrive su Qdrant e termina. La normalizzazione dei campi avviene prima
-della costruzione dei documenti, rendendo esplicito quali testi entrano nella
-knowledge base.
+La pipeline lavora per batch, con una dimensione controllata da variabile
+d'ambiente. Questa scelta limita il picco di memoria dello sparse embedder e
+mantiene il container come job batch: avvio, indicizzazione su Qdrant e
+terminazione. La normalizzazione dei campi avviene prima della costruzione dei
+documenti, così è chiaro quali testi entrano nella knowledge base.
 
 % -------------------------------------------------------------
 \section{Microservizio RAG}
@@ -212,13 +218,11 @@ knowledge base.
 % -------------------------------------------------------------
 
 Il microservizio RAG è implementato con FastAPI ed espone endpoint per
-retrieval, chat sincrona e chat in streaming. La configurazione è centralizzata
-nel modulo delle impostazioni e usa
-\texttt{pydantic-settings}; i valori di default permettono lo sviluppo locale,
-mentre gli ambienti Docker possono sovrascriverli tramite variabili
-d'ambiente~\cite{fastapi2024,pydantic2024}.
-La Tabella~\ref{tab:rag_service_endpoints} riassume gli endpoint esposti e
-chiarisce quale responsabilità resta assegnata al microservizio Python.
+retrieval e chat sincrona o in streaming. La configurazione è disponibile
+nel modulo delle impostazioni e usa \texttt{pydantic-settings}; i 
+valori di default permettono lo sviluppo locale mentre gli ambienti Docker 
+possono sovrascriverli tramite variabili d'ambiente. La Tabella~\ref{tab:rag_service_endpoints} 
+riassume gli endpoint esposti e chiarisce quale responsabilità resta assegnata al microservizio Python.
 
 \begin{table}[ht]
   \centering
@@ -248,7 +252,10 @@ chiarisce quale responsabilità resta assegnata al microservizio Python.
 \subsection{Avvio, middleware e gestione errori}
 \label{subsec:implementation_fastapi}
 
-L'applicazione FastAPI registra CORS,
+L'applicazione FastAPI registra CORS\footnote{Cross-Origin Resource Sharing:
+meccanismo dei browser che consente a un'applicazione web di effettuare
+richieste HTTP verso un'origine diversa da quella della pagina, quando il server
+lo autorizza tramite header dedicati.},
 rate limiting e handler globale delle eccezioni. Il rate limiter usa
 \texttt{slowapi} con limite predefinito di 100 richieste al minuto per IP sugli
 endpoint principali. La gestione degli errori distingue i fallimenti dovuti a
@@ -290,9 +297,9 @@ alimentano il retriever ibrido Qdrant~\cite{haystack2023,qdrant2023}. Il
 listato della pipeline è riportato in Appendice~\ref{app:B},
 Listato~\ref{lst:query_pipeline_impl}.
 
-La pipeline è inizializzata in modo lazy e protetta da un lock. Alla prima
+La pipeline è inizializzata in modo lazy e protetta da un lock: alla prima
 richiesta viene creato l'oggetto Haystack e vengono predisposti gli indici sui
-payload Qdrant per i campi usati più spesso nei filtri:
+payload Qdrant per i campi usati più spesso nei filtri, cioè
 \texttt{epoch\_id}, \texttt{is\_individual}, \texttt{participation\_mode},
 \texttt{participants} e \texttt{guild\_name}. Le chiamate successive riusano la
 stessa pipeline in memoria. La ricerca vettoriale su Qdrant usa indici
@@ -337,12 +344,12 @@ retrieval e filtri. Si tratta di una cache locale al processo, sufficiente per
 lo scenario prototipale; in un deployment multi replica andrebbe sostituita con
 una cache condivisa o disabilitata per evitare differenze tra istanze.
 
-Dopo il recupero da Qdrant, il servizio rimuove duplicati su tre livelli. Prima
-controlla l'ID del documento, poi usa una fingerprint testuale normalizzata e
-infine confronta i testi tramite similarità fuzzy. La soglia fuzzy è
-configurabile con \texttt{rag\_dedup\_fuzzy\_threshold}. Questa parte è stata
-aggiunta perché il corpus può contenere documenti equivalenti provenienti da
-sorgenti diverse o chunk molto simili generati dalla sovrapposizione.
+Dopo il recupero da Qdrant, il servizio rimuove duplicati su tre livelli:
+controlla l'ID del documento, usa una fingerprint testuale normalizzata e infine
+confronta i testi tramite similarità fuzzy, con soglia configurabile tramite
+\texttt{rag\_dedup\_fuzzy\_threshold}. Questa parte è stata aggiunta perché il
+corpus può contenere documenti equivalenti provenienti da sorgenti diverse o
+chunk molto simili generati dalla sovrapposizione.
 
 \subsection{Selezione dinamica dei documenti}
 \label{subsec:implementation_dynamic_filtering}
@@ -368,18 +375,18 @@ recuperate~\cite{shuster2021retrieval}.
 \label{sec:implementation_generation}
 % -------------------------------------------------------------
 
-Il servizio di generazione gestisce le chiamate al modello di chat. Espone sia
-risposte complete sia risposte in streaming, usando in entrambi i casi
+Il servizio di generazione gestisce le chiamate al modello di Ollama utilizzato per la chat. 
+Espone sia risposte complete sia risposte in streaming, usando in entrambi i casi
 l'endpoint \texttt{/api/chat} di Ollama~\cite{ollama2023}.
 
 \subsection{Risoluzione del modello}
 \label{subsec:implementation_model_resolution}
 
 Il modello configurato in \texttt{OLLAMA\_LLM\_MODEL} viene confrontato con la
-lista dei modelli installati ottenuta da \texttt{/api/tags}. Il codice accetta
+lista dei modelli installati ottenuta da \texttt{/api/tags}; il codice accetta
 sia corrispondenze esatte sia varianti con tag, ad esempio \texttt{:latest}. Se
-la configurazione è ambigua o il modello non è installato, il servizio restituisce
-un errore esplicito. Questa verifica evita fallimenti meno leggibili durante la
+la configurazione è ambigua o il modello non è installato, il servizio
+restituisce un errore esplicito, evitando fallimenti meno leggibili durante la
 generazione.
 
 La lista dei modelli disponibili viene mantenuta in cache per pochi secondi,
@@ -390,16 +397,14 @@ processo e ha solo funzione di riduzione dell'overhead.
 \label{subsec:implementation_augmented_prompt}
 
 Prima di inviare la richiesta a Ollama, il servizio costruisce la lista dei
-messaggi. Il system prompt, se presente, viene aggiunto per primo. La cronologia
-conversazionale viene limitata agli ultimi
-\texttt{max\_history\_messages}, in modo da controllare la dimensione del
-contesto. Se il retrieval ha restituito documenti, il testo viene aggiunto al
-messaggio utente dentro una sezione esplicita:
-\texttt{--- CONTESTO RAG ---}. L'aumento del prompt con documenti recuperati è
+messaggi aggiungendo per primo il system prompt, se presente, e limitando la
+cronologia conversazionale agli ultimi \texttt{max\_history\_messages} per
+controllare la dimensione del contesto. Se il retrieval ha restituito documenti,
+il testo viene aggiunto al messaggio utente dentro una sezione esplicita:
+\texttt{--- CONTESTO RAG ---}. L'arricchimento del prompt con i documenti recuperati è
 il meccanismo con cui RAG rende disponibili al modello informazioni esterne
-senza modificare i pesi~\cite{lewis2020retrieval}. Il formato del messaggio
-aumentato è riportato in Appendice~\ref{app:B},
-Listato~\ref{lst:augmented_prompt}.
+senza doverne modificare i pesi~\cite{lewis2020retrieval}. Il formato del messaggio
+arricchito è riportato in Appendice~\ref{app:B}, Listato~\ref{lst:augmented_prompt}.
 
 Ogni documento viene troncato a \texttt{rag\_max\_chars\_per\_doc} caratteri.
 Il troncamento è intenzionale: una singola Gilda molto lunga non deve consumare
@@ -408,17 +413,17 @@ tutta la finestra di contesto né impedire al modello di vedere altre fonti.
 \subsection{Streaming NDJSON}
 \label{subsec:implementation_streaming}
 
-Per la chat interattiva il servizio espone \texttt{POST /chat/stream}. Prima
-invia un evento \texttt{rag} con i metadati del retrieval, poi inoltra gli eventi
-generati da Ollama. La risposta HTTP usa il media type
-\texttt{application/x-ndjson}. NDJSON significa \emph{Newline Delimited JSON}:
-la risposta non è un singolo array JSON, ma una sequenza di oggetti JSON
-separati da newline. Ogni riga è quindi completa e parsabile in modo
-indipendente. Questa proprietà è utile nello streaming, perché il frontend può
-processare subito un evento \texttt{rag}, un token, un warning o un errore senza
-attendere la chiusura dell'intera risposta. Il formato è anche più robusto di un
-JSON parziale: se una generazione viene interrotta, gli eventi già ricevuti
-restano validi. Un esempio di sequenza NDJSON è riportato in
+Per la chat interattiva il servizio espone \texttt{POST /chat/stream}: invia
+prima un evento \texttt{rag} con i metadati del retrieval e poi inoltra gli
+eventi generati da Ollama. La risposta HTTP usa il media type
+\texttt{application/x-ndjson}, cioè \emph{Newline Delimited JSON}; non viene
+restituito un singolo array JSON, ma una sequenza di oggetti separati da newline,
+ciascuno completo e parsabile in modo indipendente. Questa proprietà è utile
+nello streaming, perché il frontend può processare subito un evento
+\texttt{rag}, un token, un warning o un errore senza attendere la chiusura
+dell'intera risposta. Il formato è anche più robusto di un JSON parziale: se una
+generazione viene interrotta, gli eventi già ricevuti restano validi. Un esempio
+di sequenza NDJSON è riportato in
 Appendice~\ref{app:B}, Listato~\ref{lst:ndjson_standard}.
 
 % -------------------------------------------------------------
@@ -452,7 +457,7 @@ dedicato. Il client centralizza l'URL del servizio, legge
 \texttt{I3GUILD\_RAG\_URL} o \texttt{RAG\_API\_URL}, serializza le richieste e
 normalizza gli errori. Le chiamate HTTP dirette al servizio RAG rimangono così
 concentrate in un unico punto, invece di essere replicate in più componenti
-React o route API~\cite{nextjs2024}.
+React o route API.
 
 \subsection{Client di retrieval}
 \label{subsec:implementation_nextjs_retrieval}
@@ -514,7 +519,7 @@ partecipazione, numero minimo e massimo di partecipanti, indicazione di Gilda
 individuale e avatar. La route Next.js \texttt{/api/guild/draft} recupera la
 conversazione, costruisce un prompt istruttivo, chiama il microservizio RAG con
 \texttt{use\_rag=false} e \texttt{json\_mode=true}, quindi prova a estrarre un
-JSON compatibile con lo schema. La validazione è quindi parte del contratto
+JSON compatibile con lo schema. La validazione è parte del contratto
 applicativo: una risposta testuale plausibile, ma non riconducibile allo schema
 atteso, non viene trattata come bozza valida.
 
@@ -527,9 +532,9 @@ valutazione applicativa, tale tasso può essere espresso come rapporto tra bozze
 non valide e numero totale di richieste di generazione.
 
 La route restituisce una risposta NDJSON in streaming. Durante l'elaborazione
-invia eventi di stato periodici e conclude con un evento \texttt{draft} oppure
+invia eventi di stato periodicil la comuncazione si conclude con un evento \texttt{draft} oppure
 con un evento \texttt{error}. Gli eventi intermedi mantengono viva la
-connessione anche quando l'operazione LLM è lenta, evitando che un gateway con
+connessione anche quando l'operazione LLM è lenta evitando che un gateway con
 timeout aggressivo interrompa la richiesta prima che il frontend riceva un esito
 interpretabile.
 
@@ -539,8 +544,8 @@ interpretabile.
 \label{sec:implementation_operations}
 % -------------------------------------------------------------
 
-L'implementazione include alcune scelte operative che non cambiano la logica RAG
-ma ne migliorano l'affidabilità durante l'uso locale.
+L'implementazione realizzata include alcune scelte operative che non cambiano la logica RAG
+ma ne migliorano l'affidabilità.
 
 \subsection{Timeout e dipendenze lente}
 \label{subsec:implementation_timeouts}
@@ -630,6 +635,6 @@ il modello sia disponibile in locale; occorre capire se entra nella memoria
 disponibile, quanto costa caricarlo, quanto tempo impiega a produrre il primo
 token e quale throughput mantiene con prompt di lunghezza diversa. Da questa
 esigenza nasce la seconda parte della tesi. I Capitoli~\ref{chap:ottimizzazione}
-e~\ref{chap:evaluation} isolano questo tema dal caso aziendale e lo studiano in
+e~\ref{chap:evaluation} isolano questo tema dal caso aziendale e lo analizzano in
 modo sistematico su Apple Silicon, usando MLX, più modelli e più livelli di
 quantizzazione.

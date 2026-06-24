@@ -6,9 +6,9 @@
 Il capitolo traduce il quadro teorico introdotto in precedenza in un problema
 progettuale concreto. L'obiettivo non è costruire un sistema RAG generico, ma
 integrare un assistente nel contesto operativo di Intré, rispettando i vincoli
-organizzativi, infrastrutturali e di riservatezza già presenti. Per questo la
-trattazione parte dal modello aziendale delle Gilde, identifica il caso d'uso e
-il corpus informativo disponibile, formalizza i requisiti e motiva infine le
+organizzativi, infrastrutturali e di riservatezza già presenti. L'analisi
+parte quindi dal modello aziendale delle Gilde, identifica il caso d'uso e
+il corpus disponibile, formalizza i requisiti e motiva le
 scelte tecnologiche che portano alla proposta architetturale.
 
 % -------------------------------------------------------------
@@ -16,11 +16,11 @@ scelte tecnologiche che portano alla proposta architetturale.
 \label{sec:intre_context}
 % -------------------------------------------------------------
 Intré S.r.l.\footnote{\url{https://www.intre.it}} è una software factory
-italiana con sede a Monza. L'azienda sviluppa prodotti digitali per settori
-eterogenei, tra cui energia, assicurazioni, automotive ed entertainment, e
-organizza il lavoro in team Scrum cross-funzionali. La dimensione aziendale,
-pari a circa settanta persone, consente di mantenere processi interni
-formalizzati senza rinunciare a una circolazione diretta della conoscenza tra i
+italiana con sede a Monza che sviluppa prodotti digitali per settori eterogenei,
+tra cui energia, assicurazioni, automotive ed entertainment, organizzando il
+lavoro in team Scrum cross-funzionali. La dimensione aziendale, pari a circa
+settanta persone, consente di mantenere processi interni formalizzati senza
+rinunciare a una circolazione diretta della conoscenza tra i
 team~\cite{intre_learning_organization}.
 
 Il payoff \emph{Learn / Code / Deploy Value} esplicita l'ordine con cui Intré
@@ -101,7 +101,7 @@ tra database e contenuti editoriali. Il sistema proposto mira a renderle
 consultabili tramite query in linguaggio naturale, generando risposte
 contestualizzate e ancorate a fonti interne. A tale scopo viene adottato il
 paradigma \emph{Retrieval-Augmented Generation} (RAG), introdotto da Lewis et
-al.~\cite{lewis2020rag} per estendere la memoria non parametrica dei Large
+al.~\cite{lewis2020retrieval} per estendere la memoria non parametrica dei Large
 Language Model (LLM) tramite recupero dinamico di documenti da un corpus
 esterno.
 
@@ -125,7 +125,7 @@ Gli obiettivi del caso d'uso derivano direttamente dalla natura del corpus e dal
 contesto aziendale in cui il sistema deve essere inserito. Il sistema deve
 fornire risposte affidabili e tracciabili sui contenuti presenti nei repository
 aziendali, riducendo il rischio di allucinazioni tipico della generazione
-puramente parametrica~\cite{lewis2020rag}, e deve rendere più rapido il recupero
+puramente parametrica~\cite{lewis2020retrieval}, e deve rendere più rapido il recupero
 di informazioni utili per attività operative e decisionali interne a Intré.
 Questi obiettivi devono essere raggiunti senza spostare i dati fuori
 dall'infrastruttura aziendale, in coerenza con i requisiti di sovranità del dato
@@ -272,7 +272,7 @@ della Gilda Y?'' richiedono il raccordo tra retrieval, metadati e campi
 specifici. Il corpus, quindi, non è una semplice collezione di testi: è un
 insieme di documenti con struttura interna, relazioni e vincoli temporali.
 
-Da questa lettura deriva la scelta di costruire documenti consolidati con
+Da questa analisi deriva la scelta di costruire documenti consolidati con
 etichette di campo esplicite, ad esempio \texttt{[SOMMARIO]},
 \texttt{[OBIETTIVI]}, \texttt{[RISCHI]} e
 \texttt{[RISULTATI RAGGIUNTI]}. Le etichette mantengono riconoscibile la
@@ -424,30 +424,26 @@ considerati tre framework open-source: \textbf{LangChain},
 \textbf{LlamaIndex} e \textbf{Haystack~2.x}.
 
 \paragraph{LangChain} offre l'ecosistema più ampio di integrazioni e una forte
-vocazione verso workflow agentici e \textit{multi-step reasoning}. Nel 2024
-l'introduzione di \textbf{LangGraph}~\cite{langchain2024langgraph} ha ampliato
-questa impostazione, permettendo di modellare applicazioni multi-agente come
-grafi di stato. Tale flessibilità è utile in scenari complessi, ma nel progetto
+vocazione verso workflow agentici e \textit{multi-step reasoning}. LangGraph ha
+ampliato questa impostazione, permettendo di modellare applicazioni multi-agente
+come grafi di stato. Tale flessibilità è utile in scenari complessi, ma nel progetto
 in esame introduce un costo non trascurabile in termini di curva di
 apprendimento, stabilità delle API e manutenzione, anche alla luce dei
-\textit{breaking changes} frequenti riportati in letteratura~\cite{tonic2024rag}.
+\textit{breaking changes} frequenti.
 
 \paragraph{LlamaIndex} è orientato alla gestione dei dati e al retrieval
 avanzato. Offre numerosi data connector e strutture di indicizzazione
 specializzate, risultando particolarmente adatto a pipeline di
-question-answering documentale~\cite{athenic2025framework}. Rispetto al caso
+question-answering documentale. Rispetto al caso
 considerato, tuttavia, l'obiettivo principale non è solo indicizzare sorgenti
 eterogenee, ma integrare una pipeline osservabile e facilmente testabile nello
 stack applicativo esistente.
 
 \paragraph{Haystack 2.x} (deepset) adotta un modello a componenti tipizzati
 con input/output espliciti, organizzati in pipeline dichiarative serializzabili
-in YAML. Studi comparativi evidenziano che Haystack offre il minore overhead
-di orchestrazione ($\approx 5.9\,\text{ms}$) e il minore consumo di token
-rispetto a LangChain ($\approx 10\,\text{ms}$) su benchmark
-standardizzati~\cite{aimultiple2026benchmark}. La sua architettura
-pipeline-first favorisce la tracciabilità, i test e la sostituzione dei
-componenti in produzione~\cite{peliqan2025haystack}.
+in YAML. La sua politica pipeline-first favorisce la tracciabilità, i test e
+la sostituzione dei componenti in produzione, aspetti più rilevanti per il
+prototipo rispetto alla disponibilità di astrazioni agentiche avanzate.
 La Tabella~\ref{tab:framework_comparison} sintetizza il confronto tra i tre
 framework considerati rispetto ai criteri più rilevanti per il prototipo.
 
@@ -462,8 +458,8 @@ framework considerati rispetto ai criteri più rilevanti per il prototipo.
       \textbf{Haystack 2.x} \\
     \midrule
     Filosofia & Agente/imperativa & Data-first & Pipeline dichiarativa \\
-    Overhead orchestrazione & $\approx 10\,\text{ms}$ &
-      $\approx 6\,\text{ms}$ & $\approx 5.9\,\text{ms}$ \\
+    Orientamento operativo & Workflow agentici e catene applicative &
+      Indicizzazione e gestione dati & Pipeline RAG dichiarative \\
     Integrazione Qdrant & Nativa & Nativa & Nativa \\
     Integrazione Ollama & Sì & Sì & Sì \\
     Testabilità pipeline & Media & Media & Alta \\
@@ -478,10 +474,9 @@ coerente con il progetto. L'architettura a componenti tipizzati, la
 documentazione rigorosa, le integrazioni native con Qdrant
 (\texttt{QdrantDocumentStore}), FastEmbed per embedding densi e sparsi e Ollama
 per la generazione permettono di costruire una pipeline osservabile senza
-introdurre un framework agentico più complesso del necessario. Il minore
-overhead di orchestrazione e la possibilità di serializzare le pipeline
-rafforzano questa scelta in un sistema RAG orientato alla produzione e vincolato
-all'esecuzione on-premise~\cite{tonic2024rag}.
+introdurre un framework agentico più complesso del necessario. La possibilità di
+serializzare le pipeline rafforza questa scelta in un sistema RAG orientato alla
+produzione e vincolato all'esecuzione on-premise.
 
 \subsection{Database vettoriale}
 \label{subsec:vectordb_choice}
@@ -490,7 +485,7 @@ La ricerca di similarità approssimata (\emph{Approximate Nearest Neighbor},
 ANN) su vettori ad alta dimensionalità è il componente infrastrutturale che
 abilita il retrieval. La scelta del database vettoriale incide su latenza,
 filtraggio per metadati, semplicità di deployment e capacità di manutenzione
-dell'indice. Sono stati quindi valutati quattro database vettoriali
+dell'indice; per questo sono stati valutati quattro database vettoriali
 self-hostable.
 La Tabella~\ref{tab:vectordb_comparison} mostra il confronto usato per
 motivare la scelta di Qdrant.
@@ -526,14 +521,10 @@ seguenti:
     i3Guild utilizza già PostgreSQL. Tuttavia, la letteratura segnala che le
     prestazioni di pgvector degradano significativamente oltre le centinaia di
     migliaia di vettori, con ritardi fino a 15 volte superiori rispetto a
-    Qdrant in termini di throughput su dataset
-    grandi~\cite{nirantk2024pgvector}. Benchmark più recenti mostrano un divario
-    più contenuto (Qdrant: $\approx 41$ QPS a 99\% recall su 50M vettori;
-    pgvectorscale: $\approx 471$ QPS), ma evidenziano che Qdrant ottiene
-    latenze tail significativamente migliori (39\% migliore a p95, 48\%
-    migliore a p99)~\cite{tigerdata2025benchmark}. Assenza di dashboard
-    integrata e di payload filtering flessibile completano le ragioni per la
-    non-selezione.
+    Qdrant in termini di throughput su dataset grandi. In questo progetto hanno
+    pesato soprattutto l'assenza di una dashboard integrata e di un payload
+    filtering flessibile, che avrebbero reso meno diretta la gestione dei
+    metadati delle Gilde.
   \item \textbf{Milvus} è stato escluso per l'elevata complessità di deploy:
     richiede componenti aggiuntivi (\texttt{etcd}, \texttt{MinIO}), aumentando
     il carico operativo incompatibile con i vincoli del progetto.
@@ -547,7 +538,7 @@ seguenti:
     contestuali come ``gilda dell'epoca X'': il filtering riduce lo spazio di
     ricerca prima del calcolo ANN, mantenendo il top-$K$ accurato. Offre Web
     UI integrata su porta 6333, client TypeScript ufficiale compatibile con
-    Next.js, e deploy in singolo container Docker~\cite{qdrant2024bench}.
+    Next.js e deploy in singolo container Docker.
 \end{itemize}
 
 \noindent Per le ragioni discusse, e in particolare per il bilanciamento tra
@@ -565,8 +556,7 @@ dall'inferenza generativa: Ollama serve il modello di chat, mentre FastEmbed,
 tramite Haystack, produce le rappresentazioni usate per l'indicizzazione. La
 pipeline genera sia embedding densi sia embedding sparsi, così il retrieval può
 combinare similarità semantica e corrispondenza lessicale su nomi propri,
-tecnologie e termini ricorrenti nelle
-Gilde~\cite{haystackFastembedDocument2026,haystackFastembedSparse2026}.
+tecnologie e termini ricorrenti nelle Gilde.
 
 \begin{table}[ht]
   \centering
@@ -598,8 +588,8 @@ similarità densa, aspetto rilevante in un corpus dove nomi propri, tecnologie e
 termini ricorrenti hanno spesso valore informativo letterale. Ingestione e query
 seguono quindi lo stesso schema operativo: in scrittura vengono generati
 embedding densi e sparsi dei documenti; in lettura la query viene trasformata
-nelle due rappresentazioni corrispondenti e inviata al retriever ibrido
-Qdrant~\cite{haystackQdrantHybrid2026}. Il valore
+nelle due rappresentazioni corrispondenti e inviata al retriever ibrido Qdrant.
+Il valore
 \texttt{EMBEDDING\_DIMENSIONS=768} rimane il riferimento per la componente
 densa.
 
@@ -671,12 +661,13 @@ Capitoli~\ref{chap:ottimizzazione} e~\ref{chap:evaluation}.
 \label{sec:architecture}
 % -------------------------------------------------------------
 
-Le scelte tecnologiche descritte portano a un'architettura modulare e containerizzata. 
-Il sistema separa le principali fasi operative: ingestione e normalizzazione dei dati, 
-generazione degli embedding, persistenza vettoriale, retrieval e inferenza tramite LLM. 
-Questa separazione rende i componenti più facili da monitorare e sostituire, mantenendo 
-l'integrazione coerente con lo stack i3Guild. La Figura~\ref{fig:architecture} mostra lo 
-schema generale dell'architettura. 
+Le scelte tecnologiche descritte portano a un'architettura modulare e
+containerizzata, in cui ingestione e normalizzazione dei dati, generazione degli
+embedding, persistenza vettoriale, retrieval e inferenza tramite LLM restano
+fasi operative distinte. Questa separazione rende i componenti più facili da
+monitorare e sostituire, mantenendo l'integrazione coerente con lo stack
+i3Guild. La Figura~\ref{fig:architecture} mostra lo schema generale
+dell'architettura.
 
 \begin{figure}[ht]
   \centering
@@ -771,7 +762,7 @@ similarità vettoriale densa e componente sparsa nello stesso store.
 \end{table}
 
 Ogni punto nella collection porta un payload JSON con i campi elencati nella
-Tabella~\ref{tab:qdrant_payload}. I campi marcati come indicizzati abilitano il
+Tabella~\ref{tab:qdrant_payload}, in particolare i campi marcati come indicizzati abilitano il
 pre-filtering, caratteristica distintiva di Qdrant che applica i filtri sul
 payload \emph{prima} della ricerca vettoriale, garantendo che il calcolo del
 top-$K$ sia effettuato solo sul sottoinsieme filtrato.
@@ -887,10 +878,10 @@ rilevante prima del retrieval. L'approccio implementato tramite la funzione
 \end{enumerate}
 
 Il risultato non è una riscrittura semantica della domanda, ma una riduzione
-lessicale. Se la stringa estratta è non vuota e diversa dalla query originale
-normalizzata, il retrieval usa tale stringa come query di ricerca; altrimenti
+lessicale. Se la stringa estratta non è vuota ed è diversa dalla query originale
+normalizzata, il retrieval la usa come query di ricerca, altrimenti
 mantiene la query originale. La Tabella~\ref{tab:query_rewriting} riporta alcuni
-esempi coerenti con questo comportamento.
+esempi.
 
 \begin{table}[ht]
   \centering
@@ -968,36 +959,6 @@ architetturale.
       produce embedding densi e sparsi e aggiorna Qdrant. \\
     PostgreSQL & Sorgente autoritativa & Rimane il database applicativo
       principale, senza duplicare la logica di dominio. \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\subsection{Variabili d'ambiente}
-\label{subsec:env_vars}
-
-La configurazione esterna del servizio è riassunta nella
-Tabella~\ref{tab:env_vars}; i gruppi indicati separano connessione, modello,
-embedding, retrieval e integrazione applicativa.
-
-\begin{table}[ht]
-  \centering
-  \caption{Configurazione esterna della componente RAG.}
-  \label{tab:env_vars}
-  \small
-  \begin{tabular}{L{4.3cm}L{8.3cm}}
-    \toprule
-    \textbf{Gruppo di variabili} & \textbf{Ruolo} \\
-    \midrule
-    Connessione Qdrant & Endpoint del database vettoriale e nome della
-      collection principale. \\
-    Modello LLM & Endpoint Ollama e modello di chat configurabile, con
-      \texttt{gemma3:4b} come scelta adottata nel prototipo. \\
-    Embedding & Modelli FastEmbed denso e sparso, dimensione del vettore denso
-      e directory di cache locale. \\
-    Retrieval & Parametri di soglia, numero massimo di documenti, cache
-      in-process e opzioni di query rewriting. \\
-    Integrazione applicativa & Endpoint interno del servizio RAG usato da
-      Next.js e timeout delle chiamate di generazione. \\
     \bottomrule
   \end{tabular}
 \end{table}

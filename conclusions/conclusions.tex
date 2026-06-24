@@ -1,44 +1,31 @@
 \chapter*{Conclusioni e Sviluppi Futuri}
 
-Questa tesi ha affrontato la progettazione, l'implementazione e la valutazione
-di un sistema RAG aziendale integrato in i3Guild. Il punto di partenza è stato
-un problema concreto: trasformare il corpus delle Gilde di Intré in una base di
-conoscenza interrogabile tramite linguaggio naturale, mantenendo i dati entro un
-perimetro controllato e usando risorse hardware realistiche. Il lavoro non ha
-proposto un nuovo modello linguistico, ma ha studiato come combinare componenti
-esistenti in un prototipo on-premise coerente con vincoli di privacy,
-manutenibilità e sostenibilità operativa.
+Questa tesi ha affrontato la progettazione, l'implementazione e la valutazione di un sistema RAG aziendale integrato in i3Guild. 
+Il lavoro parte da un problema concreto: rendere interrogabile in linguaggio naturale il corpus delle Gilde di Intré, mantenendo 
+i dati entro il perimetro aziendale e usando risorse hardware limitate.
 
-Il primo risultato è architetturale. La tesi ha mostrato che il corpus i3Guild
-può essere trasformato in una knowledge base RAG attraverso una pipeline
-separata dall'applicazione principale: PostgreSQL rimane la sorgente
-autoritativa, la pipeline di ingestione normalizza i dati e produce documenti,
-Qdrant conserva rappresentazioni dense, sparse e metadati, il microservizio
-FastAPI espone retrieval e generazione, mentre Next.js integra il servizio nel
-flusso applicativo. Questa separazione consente di mantenere chiari i confini
-tra dati applicativi, indice vettoriale e generazione LLM. Inoltre, rende
-possibile aggiornare o sostituire singoli componenti senza riscrivere l'intero
-sistema.
+Il primo risultato riguarda l'architettura del sistema. La tesi dimostra che il corpus di i3Guild può essere trasformato in 
+una knowledge base RAG ben strutturata. PostgreSQL resta la sorgente autoritativa; la pipeline di ingestione normalizza i dati 
+e genera i documenti; Qdrant conserva rappresentazioni dense, sparse e metadati; il microservizio FastAPI espone retrieval e 
+generazione; Next.js integra il servizio nel flusso applicativo. Questa separazione consente di aggiornare o sostituire i singoli componenti senza dover riscrivere l'intera soluzione.
 
-Il secondo risultato riguarda la logica di retrieval. Nel caso delle Gilde, una
-ricerca puramente vettoriale non è sufficiente a sfruttare tutti i segnali del
-dominio. Il prototipo integra query rewriting, filtri strutturati,
-deduplicazione, cache e selezione dinamica dei documenti. Queste scelte
-riduccono il rumore del contesto passato al modello e rendono la risposta più
-aderente al corpus recuperato. La generazione aumentata da retrieval non viene
+Il secondo risultato riguarda il retrieval. Nel contesto delle Gilde, la sola ricerca vettoriale non basta 
+a sfruttare tutti i segnali disponibili nel dominio. Per questo il prototipo integra query rewriting, filtri 
+strutturati, deduplicazione, cache e selezione dinamica dei documenti. Queste scelte riducono il rumore nel contesto 
+inviato al modello e aiutano a produrre risposte più aderenti ai contenuti effettivamente interessanti per gli utenti. 
+La generazione aumentata attraverso la fase di retrieval non viene
 quindi trattata come una semplice concatenazione di documenti e prompt, ma come
 una pipeline in cui normalizzazione, ranking, soglie e metadati influenzano
 direttamente la qualità dell'output.
 
-Il terzo risultato riguarda la scelta tra approccio RAG classico e componente
-agentica. Durante il progetto è stato implementato un workflow agentico per
+Il terzo risultato riguarda la scelta tra approccio RAG classico e
+agentico. Durante il progetto è stato implementato un workflow agentico per
 guidare la proposta di nuove Gilde. L'esperimento ha chiarito che tale approccio
 può essere utile per organizzare passaggi complessi, ma nel perimetro hardware
 disponibile introduce più chiamate al modello, maggiore latenza e maggiore
 complessità di controllo. La soluzione finale privilegia quindi un RAG più
 deterministico, con retrieval e generazione separati e con una generazione
-strutturata delle bozze gestita in modo controllato. La componente agentica
-rimane una linea di sviluppo, non il nucleo del sistema realizzato.
+strutturata delle bozze gestita in modo controllato.
 
 Il quarto risultato è sperimentale. La valutazione dell'inferenza locale su
 Apple Silicon ha permesso di misurare il ruolo della quantizzazione MLX nel
@@ -47,29 +34,32 @@ memoria unificata. Nei modelli piccoli, la variante Q4 è risultata il miglior
 compromesso osservato: riduce la dimensione degli artefatti di circa il 72\%,
 riduce il picco di memoria di circa 67--70\%, aumenta il throughput di
 decodifica di circa 2.6--2.8 volte rispetto a FP16 e non mostra un degrado
-macroscopico sui subset automatici MMLU e GSM8K. Nei modelli medi e grandi, la
+macroscopico sui subset automatici MMLU e GSM8K. Nei modelli di medie e grandi dimensioni, la
 quantizzazione opera soprattutto come leva di fattibilità: consente di
-eseguire modelli tra 7B e 14B parametri, ma con un costo maggiore in latenza,
+eseguire modelli tra i 7 e 14 miliardi di parametri, ma con un costo maggiore in latenza,
 TTFT e margine operativo.
 
 Nel complesso, i risultati confermano l'ipotesi di fondo della tesi: un sistema
 RAG locale per un caso d'uso aziendale è possibile, ma richiede controllo
-simultaneo di più livelli. Non basta scegliere un modello linguistico; occorre
-curare il corpus, progettare l'indice, definire la pipeline di retrieval,
+simultaneo di più aspetti. Non è dunque sufficiente scegliere un LLM; occorre
+curare il corpus, progettare accuratamente l'indice, definire la pipeline di retrieval,
 stabilire formati di output compatibili con l'applicazione e verificare che
-l'inferenza sia sostenibile sulla macchina scelta. La parte sperimentale mostra
+l'inferenza sia sostenibile sulla macchina di esecuzione del servizio. La parte sperimentale mostra
 anche che le metriche non sono intercambiabili: throughput, TTFT, memoria,
 dimensione su disco e qualità automatica raccontano aspetti diversi dello
-stesso problema.
+stesso problema hanno dunque un impatto differente ed una rilevanza che cambia a seconda dell'aspetto in analisi,
+ad esempio il TTFT ha un impatto diretto sulla percezione che l'utente finale ha del sistema, mentre lo spazio occupato
+sul disco è un aspetto che interessa di più i sistemisti aziendali che devono garantire un certo livello di performace per tutti 
+i microservizi offerti.
 
 \section*{Limiti}
 
-Il lavoro presenta alcuni limiti. Il primo riguarda la valutazione applicativa
-del RAG. Il prototipo è stato progettato e implementato, ma manca ancora una
-ground truth estesa, costruita con stakeholder aziendali, per misurare in modo
-sistematico groundedness, completezza, utilità della risposta e presenza di
-allucinazioni sul corpus reale delle Gilde. Le metriche automatiche usate nella
-parte MLX sono utili per controllare segnali di qualità generale, ma non
+Il lavoro presenta alcune limitazioni. La prima riguarda la valutazione
+del RAG: il prototipo è stato progettato e implementato, ma manca ancora una
+ground truth estesa, costruita con gli stakeholder aziendali, una sua realizzazione 
+sarebbe essenziale per misurare in modo puntuale groundedness, completezza, utilità della risposta e presenza di
+allucinazioni. Le metriche automatiche usate nella
+parte di valutazione dell'inferenza locale sono utili per controllare segnali di qualità a livello generale, ma non
 sostituiscono una valutazione end-to-end del caso d'uso i3Guild.
 
 Il secondo limite riguarda il corpus. I dati delle Gilde sono eterogenei:
@@ -77,34 +67,32 @@ descrizioni, risultati, metadati, partecipanti, epoch e contenuti editoriali non
 sempre hanno la stessa granularità o lo stesso livello di dettaglio. La
 normalizzazione testuale riduce parte del problema, ma non elimina la necessità
 di un glossario aziendale, di convenzioni più stabili e di una validazione
-umana dei contenuti più rilevanti.
+umana dei contenuti più rilevanti, restano in oltre al di fuori del database vettoriale tutti i documenti non prettamente testuali
+quali video, pagine web, progetti hardware e software.
 
 Il terzo limite riguarda l'inferenza locale. Gli esperimenti sono stati eseguiti
-su una sola macchina, un MacBook Pro M1 Pro con 16 GB di memoria unificata, e
-usano MLX come runtime principale. I risultati non vanno generalizzati
-direttamente ad altri Mac, a GPU NVIDIA, a runtime diversi o a regimi di
-contesto molto lunghi. Inoltre, i subset MMLU e GSM8K sono volutamente ridotti:
+su un solo hardware, un MacBook Pro M1 Pro con 16 GB di memoria unificata, e
+usano il solo MLX come runtime principale, inoltre, i subset MMLU e GSM8K sono volutamente ridotti:
 servono a individuare degradazioni macroscopiche e problemi di formato, non a
-stabilire classifiche generali dei modelli.
+stabilire classifiche generali dei modelli, già ampiamente disponibili online.
 
 \section*{Sviluppi futuri}
 
 Uno sviluppo prioritario riguarda la valutazione del sistema RAG sul dominio
 i3Guild. Il passo successivo consiste nella costruzione di un dataset di domande
 reali o realistiche, associate a risposte attese e documenti di riferimento.
-Tale dataset dovrebbe essere validato con persone interne all'azienda, in modo
+Tale dataset dovrebbe essere validato e realizzato con persone interne all'azienda, in modo
 da distinguere errori di retrieval, errori di generazione, incompletezza del
 corpus e ambiguità della domanda. Su questa base sarebbe possibile confrontare
 versioni diverse della pipeline e misurare il contributo effettivo di query
-rewriting, filtri, soglie dinamiche e deduplicazione.
+rewriting, filtri, soglie dinamiche, deduplicazione e modello utilizzato.
 
-Un secondo sviluppo riguarda l'evoluzione della base di conoscenza. La strategia
-attuale di full re-index periodico è semplice e adatta al prototipo, ma può
+Un secondo sviluppo riguarda la metodologia di aggiornamento della base di conoscenza, la strategia
+attuale di full re-index è concettualmente semplice e di facile implementazione ma può
 essere sostituita da una sincronizzazione incrementale basata sui campi di
 aggiornamento del database o da un meccanismo event-driven collegato alle
-operazioni CRUD di i3Guild. Questa evoluzione ridurrebbe il costo di
-indicizzazione e renderebbe più tempestiva la disponibilità dei nuovi
-contenuti nel sistema RAG.
+operazioni CRUD di i3Guild, tali apporcci a discapito della complessità ridurrebbero
+il carico di lavoro da svolegere ad ogni nuova epoca.
 
 Un terzo sviluppo riguarda la qualità del contesto recuperato. L'introduzione
 di un glossario aziendale, di sinonimi controllati, di tag più espliciti e di
@@ -128,13 +116,10 @@ di base. Un agente potrebbe supportare la proposta di nuove Gilde, guidare la
 raccolta di requisiti, suggerire collegamenti con iniziative passate o produrre
 bozze strutturate più complete. Tuttavia, l'adozione di un workflow agentico
 dovrebbe essere subordinata a criteri misurabili: riduzione del carico per
-l'utente, qualità superiore delle bozze, controllo dei costi computazionali e
-robustezza del formato prodotto. In assenza di questi criteri, la maggiore
-complessità rischierebbe di peggiorare un sistema che, nella forma RAG
-classica, risulta già più controllabile e adatto al contesto aziendale.
+l'utente, qualità superiore delle bozze realizzate, controllo dei costi computazionali e
+robustezza del formato prodotto. In assenza di questi dati, la maggiore
+complessità implementativa e le maggiori esigenze computazionali rischierebbero di peggiorare un sistema che, 
+nella sua forma attuale, risulta già utilizzabile dagli utenti finali.
 
 Il lavoro svolto lascia quindi un prototipo funzionante e un quadro sperimentale
-per valutarne la sostenibilità. La direzione più utile non è aumentare la
-complessità del modello o dell'orchestrazione senza una misura del beneficio,
-ma rafforzare il legame tra corpus, retrieval, valutazione e vincoli reali
-dell'infrastruttura locale.
+per valutarne la sostenibilità.

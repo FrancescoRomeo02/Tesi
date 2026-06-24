@@ -2,9 +2,8 @@
 \chapter{Valutazione sperimentale e analisi dei risultati}
 \label{chap:evaluation}
 
-Questo capitolo analizza i risultati ottenuti con il protocollo definito nel
-Capitolo~\ref{chap:ottimizzazione}. I benchmark sono stati eseguiti sulla
-repository sperimentale e includono tre famiglie di misure: performance MLX,
+Questo capitolo analizza i risultati ottenuti nel
+Capitolo~\ref{chap:ottimizzazione}. I benchmark, come anticipato, includono tre famiglie di misure: performance MLX,
 subset MMLU e subset GSM8K. Per ogni combinazione di modello, variante, fase e
 classe di prompt è stato usato l'ultimo risultato disponibile; i file grezzi
 JSONL e CSV restano la base riproducibile dell'analisi.
@@ -202,12 +201,12 @@ di memoria.
   \label{fig:small_peak_memory}
 \end{figure}
 
-Il TTFT è risultato meno lineare. Le varianti quantizzate hanno avuto spesso un TTFT
-leggermente superiore a FP16, soprattutto Q8 e Q6, pur offrendo un decode molto
-più rapido. Il tempo al primo token non dipende quindi dallo stesso fattore che
-domina il throughput di decodifica: prefill, inizializzazione dei buffer e
-gestione del prompt possono pesare in modo diverso dal ciclo autoregressivo. In
-applicazioni interattive, le due metriche vanno lette insieme.
+Il TTFT è risultato meno lineare: le varianti quantizzate hanno avuto spesso un
+TTFT leggermente superiore a FP16, soprattutto Q8 e Q6, pur offrendo un decode
+molto più rapido. Il tempo al primo token non dipende quindi dallo stesso
+fattore che domina il throughput di decodifica, perché prefill, inizializzazione
+dei buffer e gestione del prompt possono pesare in modo diverso dal ciclo
+autoregressivo. In applicazioni interattive, le due metriche vanno lette insieme.
 
 \section{Risultati sui modelli medi e grandi}
 \label{sec:evaluation_medium_large_models}
@@ -445,7 +444,7 @@ dovrebbe distinguere errore reale, errore di formato e fallimento di estrazione.
 
 L'ispezione dei file JSONL chiarisce il problema. Nei casi Qwen3 8B e Qwen3
 14B, le risposte MMLU spesso iniziavano con testo di ragionamento e non con una
-lettera isolata. Il parser ha cercato una risposta nel formato richiesto, ma ha
+lettera isolata. Il parser ha cercato una risposta nel formato richiesto e ha
 assegnato \texttt{None} quando la generazione non lo rispettava. In un'applicazione reale
 l'utente potrebbe leggere comunque una spiegazione utile, ma una pipeline
 automatica non avrebbe un valore strutturato affidabile da usare. Il risultato
@@ -493,12 +492,12 @@ che distinguano errore di formato da errore semantico.
 \section{Qualità su GSM8K ridotto}
 \label{sec:evaluation_gsm8k}
 
-Il subset GSM8K misura un segnale elementare di ragionamento aritmetico. Anche
-qui la dimensione del dataset richiede cautela. I modelli piccoli hanno
-mantenuto risultati molto alti: Gemma 3 4B è passata da 15/16 in FP16 a 16/16
-nelle varianti quantizzate, Qwen3 4B e Phi-3.5 mini hanno ottenuto 16/16 in
-tutte le varianti, mentre Llama 3.2 3B è passata da 13/16 in FP16 e Q8 a 15/16
-in Q6 e Q4.
+Il subset GSM8K misura un segnale elementare di ragionamento aritmetico e, anche
+in questo caso, la dimensione del dataset richiede cautela. I modelli piccoli
+hanno mantenuto risultati molto alti: Gemma 3 4B è passata da 15/16 in FP16 a
+16/16 nelle varianti quantizzate, Qwen3 4B e Phi-3.5 mini hanno ottenuto 16/16
+in tutte le varianti, mentre Llama 3.2 3B è passata da 13/16 in FP16 e Q8 a
+15/16 in Q6 e Q4.
 La Tabella~\ref{tab:gsm8k_accuracy} mostra il quadro completo dei risultati
 GSM8K per modello e variante.
 
@@ -506,8 +505,10 @@ GSM8K per modello e variante.
   \centering
   \caption{Accuratezza su GSM8K ridotto.}
   \label{tab:gsm8k_accuracy}
-  \scriptsize
-  \begin{tabular}{L{2.6cm}rrrr}
+  \small
+  \renewcommand{\arraystretch}{1.15}
+  \setlength{\tabcolsep}{8pt}
+  \begin{tabular}{L{3.0cm}rrrr}
     \toprule
     \textbf{Modello} & \textbf{FP16} & \textbf{Q8} & \textbf{Q6} & \textbf{Q4} \\
     \midrule
@@ -539,7 +540,8 @@ non conforme a \texttt{Final answer: <number>}, il punteggio automatico poteva
 risultare errato. Per questo i valori bassi di Qwen3 8B e Qwen3 14B sono stati
 trattati come fallimento del sistema di valutazione nel suo insieme: modello,
 prompt e parser. In una pipeline RAG aziendale il problema sarebbe analogo alla
-generazione di citazioni o metadati in formato non parseabile.
+generazione di citazioni o metadati in formato non parseabile e quindi, di fatto, 
+non utilizzabili.
 
 Mistral 7B v0.3 e Gemma 3 12B sono invece rimasti stabili: Mistral ha raggiunto
 16/16 in Q4, mentre Gemma 3 12B è passata da 16/16 in Q6 a 15/16 in Q4. Per
@@ -570,7 +572,7 @@ risultato finale nel formato atteso, il parser ha estratto \texttt{2}.
 \end{center}
 
 Questi casi mostrano che la catena di ragionamento non è sufficiente se il
-risultato finale non è isolato in modo stabile. Per una valutazione successiva
+risultato finale non è isolabile. Per una valutazione successiva
 sarebbe preferibile imporre una riga conclusiva univoca, ad esempio
 \texttt{Final answer: <number>}, e verificare separatamente due condizioni:
 correttezza del ragionamento e conformità del formato. In un sistema RAG, la
@@ -581,10 +583,10 @@ una forma non interpretabile dal frontend.
 \section{Qualità per GiB e trade-off pratico}
 \label{sec:evaluation_quality_per_gib}
 
-La qualità per GiB è una metrica derivata utile in un contesto memory-bound:
-rapporta l'accuratezza alla dimensione dell'artefatto. Non sostituisce
+La qualità per GiB è una metrica utile in un contesto memory-bound in quanto mette 
+in relazione l'accuratezza alla dimensione dell'artefatto. Non sostituisce
 l'accuratezza assoluta, perché un modello piccolo ma scorretto non diventa
-utile solo perché leggero. Quando l'accuratezza resta stabile, però, la
+utile solo perché leggero, quando l'accuratezza resta stabile, però, la
 metrica mostra quanto la quantizzazione migliori l'efficienza rispetto alla
 memoria.
 
@@ -705,15 +707,14 @@ crescere della taglia del modello.
 \label{sec:evaluation_metric_interpretation}
 
 Le metriche raccolte non hanno tutte lo stesso peso decisionale. In un sistema
-RAG locale, alcune misure sono vincoli duri, altre descrivono l'esperienza
-utente, altre ancora servono come controllo qualitativo. La dimensione
-dell'artefatto e il picco di memoria sono vincoli duri: se il modello non
-lascia spazio agli altri servizi, la configurazione non è utilizzabile anche
-quando l'accuratezza è buona. TTFT, decode ed end-to-end throughput descrivono
-invece la reattività percepita. Un modello con decode elevato ma TTFT alto può
-risultare fluido dopo l'avvio dello streaming, ma l'utente percepisce comunque
-un ritardo iniziale. MMLU e GSM8K misurano solo segnali ridotti di qualità
-generale e non sostituiscono una valutazione RAG sul corpus aziendale.
+RAG locale, la dimensione dell'artefatto e il picco di memoria sono vincoli
+duri: se il modello non lascia spazio agli altri servizi, la configurazione non
+è utilizzabile anche quando l'accuratezza è buona. TTFT, decode ed end-to-end
+throughput descrivono invece la reattività percepita; un modello con decode
+elevato ma TTFT alto può risultare fluido dopo l'avvio dello streaming, ma
+l'utente percepisce comunque un ritardo iniziale. MMLU e GSM8K restano controlli
+ridotti di qualità generale e non sostituiscono una valutazione RAG sul corpus
+aziendale.
 La Tabella~\ref{tab:metric_decision_roles} riassume il ruolo decisionale di
 ciascuna metrica.
 
@@ -755,13 +756,12 @@ allucinazioni, il vantaggio prestazionale di Q4 andrebbe rivalutato.
 \label{sec:evaluation_output_errors}
 
 I risultati di qualità non vanno letti come proprietà isolate del modello. Nel
-benchmark automatico il punteggio dipende da prompt, modello e parser. Se uno
-di questi elementi non è coerente con gli altri, il sistema può fallire anche
-quando la risposta contiene parte dell'informazione corretta. Il caso di Qwen3
-8B e Qwen3 14B è il caso più chiaro: nei file grezzi MMLU diverse risposte non
-sono lettere isolate, ma testi ragionativi. Il parser, progettato per estrarre
-una risposta strutturata, assegna valore nullo quando il formato non è
-riconoscibile.
+benchmark automatico il punteggio dipende da prompt, modello e parser; se uno di
+questi elementi non è coerente con gli altri, il sistema può fallire anche quando
+la risposta contiene parte dell'informazione corretta. Il caso di Qwen3 8B e
+Qwen3 14B è il più chiaro: nei file grezzi MMLU diverse risposte non sono
+lettere isolate, ma testi ragionativi, e il parser assegna valore nullo quando
+non riconosce il formato atteso.
 La Tabella~\ref{tab:output_error_types} sintetizza le principali classi di
 errore e le mitigazioni applicabili.
 
@@ -811,17 +811,17 @@ formato richiesto dall'applicazione.
 
 I risultati portano a tre letture principali. La prima riguarda i modelli
 piccoli: nel setup locale, Q4 è il compromesso migliore tra memoria e
-prestazioni. Riduce la dimensione di circa il 72\%, riduce il picco di memoria
-di circa 67--70\%, aumenta il decode di circa 2.6--2.8x e non mostra un degrado
-macroscopico nei subset MMLU/GSM8K. Q8 e Q6 sono configurazioni più
+prestazioni, perché riduce la dimensione di circa il 72\%, riduce il picco di
+memoria di circa 67--70\%, aumenta il decode di circa 2.6--2.8x e non mostra un
+degrado macroscopico nei subset MMLU/GSM8K. Q8 e Q6 sono configurazioni più
 conservative, ma nei dati raccolti non offrono un vantaggio qualitativo
 misurabile sufficiente a compensare il footprint maggiore.
 
-La seconda riguarda i modelli medi e grandi. In questo caso la quantizzazione
-serve soprattutto a rendere il modello eseguibile. Qwen3 8B e Mistral 7B
-diventano utilizzabili con throughput Q4 intorno a 32--35 tok/s e picco
-inferiore a 5 GB. Gemma 3 12B e Qwen3 14B rimangono eseguibili in Q4 con circa
-18 tok/s, ma con TTFT superiore al secondo e maggiore pressione sulla memoria.
+La seconda riguarda i modelli medi e grandi, per i quali la quantizzazione serve
+soprattutto a rendere il modello eseguibile nelle condizioni descritte in precedeza.
+Qwen3 8B e Mistral 7B diventano utilizzabili con throughput Q4 intorno a 32--35 tok/s 
+e picco inferiore a 5 GB, mentre Gemma 3 12B e Qwen3 14B rimangono eseguibili in 
+Q4 con circa 18 tok/s, ma con TTFT superiore al secondo e maggiore pressione sulla memoria. 
 In un'applicazione locale interattiva, questi modelli richiedono una valutazione
 caso per caso: sono possibili, ma non necessariamente preferibili ai modelli
 piccoli Q4.
@@ -967,6 +967,6 @@ candidati realistici; non garantiscono che la stessa latenza rimanga invariata
 durante l'uso end-to-end del sistema completo.
 
 Questi limiti non cambiano la lettura complessiva. Nel perimetro misurato, la
-quantizzazione MLX rende praticabili più classi di modelli su Apple Silicon
-consumer e, sui modelli piccoli, migliora efficienza e throughput senza perdita
-qualitativa osservabile nei controlli automatici ridotti.
+quantizzazione MLX consente una maggiore flessibilità di scelta tra molte 
+classi di modelli su Apple Silicon consumer e, su modelli piccoli, aumenta efficienza e 
+throughput senza perdita di qualità osservabile nei controlli automatici realizzati.

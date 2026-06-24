@@ -26,7 +26,7 @@
 \usepackage{wrapfig}
 \usepackage{textpos}
 \usepackage{listings}
-\usepackage[defernumbers=true]{biblatex} 
+\usepackage[defernumbers=true,sorting=none]{biblatex}
 \usepackage{booktabs}
 \usepackage[italian]{babel}
 \usepackage[integrals]{wasysym}
@@ -110,7 +110,9 @@
 %%%%%%%%%%%%%%%%%
 %%% ABSTRACT (Technical)%%%%
 \clearpage
-\input{dedication/dedication}
+
+%\input{dedication/dedication}
+
 \hypersetup{pageanchor=true}
 \pagenumbering{roman}
 \chapter*{Sommario}
@@ -118,45 +120,43 @@
 Questa tesi presenta la progettazione, l'implementazione e la valutazione di
 un sistema \emph{Retrieval-Augmented Generation} integrato in i3Guild, la
 piattaforma usata da Intré S.r.l.\ per gestire le Gilde aziendali. Il problema
-affrontato riguarda la consultazione di un corpus interno eterogeneo, composto
-da descrizioni, obiettivi, risultati, partecipanti e metadati, che contiene
+affrontato riguarda la consultazione di un corpus interno, composto
+da descrizioni, obiettivi, risultati, partecipanti e metadati delle gilde. tale corpus contiene
 conoscenza utile ma non sempre facilmente recuperabile tramite strumenti
 tradizionali.
 
-Il presente lavoro studia come integrare componenti esistenti in un prototipo
-enterprise on-premise, coerente con vincoli di riservatezza, risorse hardware
-locali e manutenibilità. L'architettura proposta separa la sorgente dati, la
-pipeline di ingestione, l'indice vettoriale, il microservizio RAG e l'integrazione
-applicativa. Il sistema usa PostgreSQL come sorgente autoritativa,
-una pipeline dedicata per normalizzare i contenuti e produrre embedding,
-Qdrant per il retrieval denso, sparso e ibrido, Haystack per
-l'orchestrazione, FastAPI per esporre il servizio RAG, Ollama per l'inferenza
-locale e Next.js per l'integrazione con l'applicazione esistente.
+Questo lavoro analizza lo sviluppo di un prototipo enterprise on-premise, 
+progettato per rispettare tre vincoli: riservatezza dei dati, 
+uso di risorse hardware locali e manutenibilità. L'architettura separa 
+in modo netto la sorgente dati, la pipeline di ingestione, l'indice vettoriale derivato, 
+il microservizio RAG e il livello di integrazione applicativa. In questa configurazione, 
+PostgreSQL resta la sorgente autoritativa; una pipeline dedicata normalizza i contenuti 
+e genera gli embedding; Qdrant gestisce il retrieval denso, sparso e ibrido; Haystack 
+coordina l'orchestrazione; FastAPI espone il servizio RAG; Ollama supporta l'inferenza 
+locale; Next.js collega il sistema all'applicazione esistente.
 
-La tesi descrive inoltre le scelte adottate per rendere il retrieval più
-aderente al dominio: query rewriting, filtri strutturati, deduplicazione,
-soglie di similarità, selezione controllata dei documenti e generazione in
-streaming. Un workflow agentico per la proposta di nuove Gilde è stato
-esplorato e testato, ma non adottato come nucleo della soluzione finale, poiché
-ha mostrato un costo computazionale e operativo superiore rispetto a un RAG più
-deterministico.
+La tesi analizza in oltre le scelte intraprese per rendere il retrieval più
+pertinente al dominio specifico, grazie a; query rewriting, filtri strutturati, deduplicazione
+e soglie di similarità. È stato in oltre esplorato e testato un workflow agentico 
+per la proposta di nuove Gilde, ma non è stato adottato come nucleo della soluzione finale poiché
+ha mostrato un costo computazionale superiore rispetto a un RAG più deterministico.
 
 La seconda parte del lavoro valuta la sostenibilità dell'inferenza locale su
-Apple Silicon. L'esperimento confronta modelli open-weight tra 3B e 14B
+Apple Silicon. I test effettuati confrontano modelli open-weight tra 3B e 14B
 parametri in diverse varianti di quantizzazione MLX, misurando dimensione su
-disco, memoria di picco, tempo di caricamento, time-to-first-token, throughput
-di decodifica e qualità su subset ridotti MMLU e GSM8K. I risultati indicano
-che, sui modelli piccoli, la quantizzazione Q4 offre il compromesso più
-interessante tra memoria, velocità e qualità osservata; sui modelli medi e
+disco, memoria di picco raggiunta, tempo di caricamento impiegato, time-to-first-token, throughput
+di decodifica e qualità, analizzata su subset ridotti MMLU e GSM8K. I risultati indicano
+che, sui modelli piccoli, la quantizzazione Q4 offre il compromesso migliorare
+tra memoria occupata, velocità di risposta e qualità osservata della stessa; sui modelli medi e
 grandi, invece, la quantizzazione è soprattutto una condizione di fattibilità
-entro il vincolo dei 16 GB di memoria unificata.
+entro il vincolo dei 16 GB di memoria unificata disponibili.
 
-Nel complesso, il lavoro mostra che un sistema RAG locale per un contesto
-aziendale è praticabile, ma richiede controllo simultaneo di corpus, indice,
-retrieval, prompt, modello generativo e risorse hardware. Il contributo
-principale della tesi è quindi un prototipo integrato e valutato in condizioni
-realistiche, insieme a un'analisi dei compromessi necessari per usare LLM locali
-in un flusso applicativo aziendale.
+Nel complesso, il lavoro mostra che un sistema RAG interamente locale per un contesto aziendale 
+con hardware limitato è una soluzione praticabile, ma solo a fronte di un controllo attento di più aspetti: 
+corpus, indice, retrieval, prompt e modello generativo. 
+Il contributo principale della tesi consiste quindi nello sviluppo di un prototipo 
+realizzato in condizioni realistiche, accompagnato da un'analisi dei compromessi 
+necessari per integrare LLM locali in un flusso applicativo aziendale con hardware limitato.
 \clearpage
 %%% PUBLICATIONS %%%
 

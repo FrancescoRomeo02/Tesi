@@ -50,8 +50,8 @@ rappresentazioni contestuali più ricche.
 \label{subsec:attention}
 
 Il nucleo computazionale del Transformer è il meccanismo di \textit{attention}
-scalato. Data una sequenza di token rappresentati come vettori di dimensione
-$d_{\text{model}}$, si calcolano tre proiezioni lineari per ogni elemento:
+scalato: data una sequenza di token rappresentati come vettori di dimensione
+$d_{\text{model}}$, si calcolano tre proiezioni lineari per ogni elemento, cioè
 la query $\mathbf{Q}$, la chiave $\mathbf{K}$ e il valore $\mathbf{V}$. Il
 punteggio di attenzione~\cite{vaswani2017attention} è definito come:
 
@@ -210,11 +210,11 @@ retrieval e generazione entro un ambiente controllato.
 
 \paragraph{GPT-5.x e OpenAI o-series.}
 La famiglia GPT-5.x~\cite{openaiModels2026} rappresenta un riferimento recente
-per pianificazione complessa, sviluppo software e integrazione multimodale. La
-serie "o" rimane orientata a compiti che richiedono ragionamento deliberato,
-con miglioramenti osservati in ambiti scientifici e logico-matematici
-~\cite{openai2024o1}. L'erogazione avviene tramite API cloud proprietarie o
-servizi enterprise collegati.
+per pianificazione complessa, sviluppo software e integrazione multimodale,
+mentre la serie "o" resta più orientata a compiti che richiedono ragionamento
+deliberato, in particolare in ambiti scientifici e logico-matematici
+~\cite{openai2024o1}. In entrambi i casi l'erogazione avviene tramite API cloud
+proprietarie o servizi enterprise collegati.
 
 \paragraph{Claude 4.x (Anthropic).}
 I modelli Claude adottano approcci come la \textit{Constitutional AI}~\cite{bai2022constitutional}, un protocollo di addestramento guidato da principi
@@ -225,8 +225,8 @@ adatte a scenari regolati~\cite{anthropicModels2026}.
 
 \paragraph{Gemini (Google DeepMind).}
 La famiglia Gemini~\cite{googleGeminiModels2026} è caratterizzata da
-multimodalità nativa e da finestre di contesto molto estese. Anche in questo
-caso l'accesso è fornito tramite servizi cloud.
+multimodalità nativa e da finestre di contesto molto estese; come per gli altri
+modelli proprietari considerati, l'accesso è fornito tramite servizi cloud.
 
 \subsection{Motivazioni per l'adozione di modelli locali}
 \label{subsec:onpremise_motivations}
@@ -252,7 +252,7 @@ sintetizzate nella Tabella~\ref{tab:onpremise_motivations}.
         di terze parti, anche in presenza di garanzie contrattuali
         (ZDR\tablefootnote{Zero Data Retention: configurazione o impegno del provider a non conservare i dati inviati al servizio oltre il tempo necessario all'elaborazione della richiesta.},
         DPA\tablefootnote{Data Processing Agreement: accordo contrattuale che disciplina ruoli, responsabilità e condizioni del trattamento dei dati personali da parte di un fornitore.}).
-      & GDPR~\cite{regulation2016gdpr}; rischi del cloud nella gestione di dati sensibili. \\
+      & GDPR~\cite{gdpr2016}; rischi del cloud nella gestione di dati sensibili. \\
     \addlinespace
     Costi operativi nel lungo periodo
       & Il pricing a consumo dei provider cloud può risultare più oneroso rispetto
@@ -285,11 +285,12 @@ Ollama.
 
 \paragraph{Qwen3 (Alibaba Cloud).}
 La generazione Qwen3~\cite{qwen2025qwen3} copre taglie diverse, dai modelli
-compatti fino a varianti più grandi e MoE (\texttt{Mixture of Experts.}). 
-Le taglie 4B e 8B sono interessanti per l'esecuzione locale perché offrono 
-un compromesso tra capacità generativa, finestra di contesto e requisiti di memoria. 
-Nei test sperimentali dei Capitoli~\ref{chap:ottimizzazione} e~\ref{chap:evaluation}, 
-Qwen3 è incluso proprio per valutare questo equilibrio.
+compatti fino a varianti più grandi e MoE (\texttt{Mixture of Experts.}). Le
+taglie 4B e 8B sono particolarmente utili per l'esecuzione locale, perché
+permettono di osservare il compromesso tra capacità generativa, finestra di
+contesto e requisiti di memoria. Nei test sperimentali dei
+Capitoli~\ref{chap:ottimizzazione} e~\ref{chap:evaluation}, Qwen3 è incluso
+proprio per valutare questo equilibrio.
 
 \paragraph{Llama 3.2, Mistral 7B e Phi-3.5 mini.}
 Accanto a Gemma e Qwen, il panorama locale comprende modelli compatti come
@@ -597,7 +598,7 @@ complessità effettiva dipende dalla struttura del grafo e dai parametri scelti,
 ma nella pratica rende possibile l'Approximate Nearest Neighbor su collezioni
 molto più ampie di quelle gestibili con ricerca esatta. Qdrant usa HNSW per la
 componente vettoriale densa e lo combina con indici di payload per applicare
-filtri strutturati prima o durante il retrieval~\cite{qdrantIndexing2026}.
+filtri strutturati prima o durante il retrieval.
 
 La ricerca sparsa segue una logica diversa. Un vettore sparso contiene solo gli
 indici dei termini o delle feature presenti e i relativi pesi; per questo può
@@ -607,8 +608,7 @@ query. Nel progetto, questa componente non sostituisce HNSW: affianca la
 ricerca densa e permette di valorizzare nomi propri, sigle e tecnologie che
 potrebbero essere poco evidenti nella sola similarità semantica. La ricerca
 ibrida combina quindi due segnali, uno semantico e uno lessicale, tramite
-meccanismi di fusione o tramite il retriever ibrido esposto
-da Qdrant/Haystack~\cite{qdrantHybridQueries2026,haystackQdrantHybrid2026}.
+meccanismi di fusione o tramite il retriever ibrido esposto da Qdrant/Haystack.
 
 
 \subsection{Agentic RAG}
@@ -655,10 +655,11 @@ aggiornabile tramite pipeline di ingestione.
 
 \subsubsection{Fine-tuning con adattatori: LoRA}
 
-Il fine-tuning completo di un LLM richiede risorse computazionali elevate.
-Hu et al.~\cite{hu2022lora} hanno proposto \textit{Low-Rank Adaptation} (LoRA),
-che vincola gli aggiornamenti dei pesi a matrici di rango basso. Dato un layer
-lineare con matrice $\mathbf{W}_0 \in \mathbb{R}^{m \times n}$, LoRA introduce:
+Il fine-tuning completo di un LLM richiede risorse computazionali elevate; per
+ridurre questo costo, Hu et al.~\cite{hu2022lora} hanno proposto
+\textit{Low-Rank Adaptation} (LoRA), che vincola gli aggiornamenti dei pesi a
+matrici di rango basso. Dato un layer lineare con matrice
+$\mathbf{W}_0 \in \mathbb{R}^{m \times n}$, LoRA introduce:
 
 \begin{equation}
   \mathbf{W} = \mathbf{W}_0 + \Delta\mathbf{W} = \mathbf{W}_0 + \mathbf{B}\mathbf{A}
@@ -703,9 +704,9 @@ varianti.
 \subsubsection{DoRA: Weight-Decomposed Low-Rank Adaptation}
 
 Nel 2024 Liu et al.\ hanno introdotto \textbf{DoRA}
-(\textit{Weight-Decomposed Low-Rank Adaptation})~\cite{liu2024dora}. Il metodo
-parte dall'osservazione che LoRA approssima bene l'aggiornamento direzionale dei
-pesi, ma cattura con minore efficacia le variazioni di magnitudine osservate nel
+(\textit{Weight-Decomposed Low-Rank Adaptation})~\cite{liu2024dora}, partendo
+dall'osservazione che LoRA approssima bene l'aggiornamento direzionale dei pesi
+ma cattura con minore efficacia le variazioni di magnitudine osservate nel
 fine-tuning completo. DoRA separa quindi il tensore dei pesi in una componente
 di magnitudine e una componente direzionale: la prima viene aggiornata
 direttamente, mentre la seconda sfrutta l'approssimazione a rango basso di LoRA.
