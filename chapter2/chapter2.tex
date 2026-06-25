@@ -7,7 +7,7 @@ Il capitolo traduce il quadro teorico introdotto in precedenza in un problema
 progettuale concreto. L'obiettivo non è costruire un sistema RAG generico, ma
 integrare un assistente nel contesto operativo di Intré, rispettando i vincoli
 organizzativi, infrastrutturali e di riservatezza già presenti. L'analisi
-parte quindi dal modello aziendale delle Gilde, identifica il caso d'uso e
+parte quindi dal modello aziendale delle gilde, identifica il caso d'uso e
 il corpus disponibile, formalizza i requisiti e motiva le
 scelte tecnologiche che portano alla proposta architetturale.
 
@@ -37,7 +37,7 @@ dipendenze, non come una somma di attività isolate.
 
 Nel caso di Intré questa prospettiva non rimane un principio astratto. Il
 modello aziendale prevede un insieme di pratiche dedicate all'apprendimento
-continuo: Gilde, Camp, Community, Skill Matrix, certificazioni, Academy,
+continuo: gilde, Camp, Community, Skill Matrix, certificazioni, Academy,
 Community of Practice per speaker, obiettivi di apprendimento, formazione in
 aula e corsi di lingua~\cite{intre_learning_organization}. Tali pratiche
 rendono l'apprendimento una responsabilità distribuita, sostenuta da tempo,
@@ -46,17 +46,16 @@ competenze maturate in ambiti come cloud-native, cybersecurity e intelligenza
 artificiale rendono inoltre particolarmente rilevante il tema della gestione
 sicura della conoscenza interna.
 
-\subsection{Il modello delle Gilde}
+\subsection{Il modello delle gilde}
 \label{subsec:guild_model}
-Le \textbf{Gilde} (\emph{gilde}) sono uno degli strumenti principali con cui
-Intré rende operativa la propria idea di apprendimento organizzativo. Sono cicli
+Le \textbf{gilde} (\emph{gilde}) sono una delle strategie principali con cui
+Intré rende operativa la propria idea di apprendimento organizzativo e continuo. Sono cicli
 rapidi di apprendimento di gruppo, della durata di quattro mesi, costruiti a
 partire da temi proposti direttamente dalle persone
 dell'azienda~\cite{intre_learning_organization,intre_gilde}. Una Gilda nasce quando una
-proposta raccoglie un numero minimo di partecipanti; il gruppo lavora in
-autogestione e dedica al tema scelto una quota stabile del proprio tempo
-lavorativo. L'esito non è un esame o una valutazione formale, ma un risultato
-di apprendimento da presentare al Camp successivo. Il modello combina quindi
+proposta raccoglie un numero minimo di partecipanti, indcativamente almeno 4; il gruppo lavora in
+autogestione e dedica al tema scelto una quota fissa del proprio tempo
+lavorativo. Il riusltato raggiunto dalla gilda sarà poi presentato al Camp successivo. Il modello combina quindi
 autonomia nella scelta dei temi, durata definita, lavoro di gruppo e produzione
 di un risultato condivisibile. Le sue caratteristiche principali sono:
 
@@ -64,7 +63,7 @@ di un risultato condivisibile. Le sue caratteristiche principali sono:
   \item \textbf{Formazione spontanea}: ogni persona può proporre o aderire a
     una Gilda su qualsiasi argomento, tecnico o non tecnico (es. linguaggi
     di programmazione, ceramica, game development, intelligenza artificiale).
-  \item \textbf{Ciclo temporale (Epoch)}: le Gilde si ricreano ogni quattro
+  \item \textbf{Ciclo temporale (Epoch)}: le gilde si ricreano ogni quattro
     mesi; ogni ciclo costituisce un'``epoca'' distinta, con nuovi temi e nuovi
     gruppi. Questa scansione periodica evita che l'apprendimento rimanga legato
     a iniziative isolate e lo inserisce in una routine aziendale riconoscibile.
@@ -74,26 +73,26 @@ di un risultato condivisibile. Le sue caratteristiche principali sono:
     trasforma l'esperienza del gruppo in conoscenza disponibile anche per il
     resto dell'organizzazione.
   \item \textbf{Ampiezza tematica}: dall'archivio pubblico del sito aziendale
-    emergono Gilde su temi come \emph{Angular}, \emph{F\#}, \emph{IA agentiva},
+    emergono gilde su temi come \emph{Angular}, \emph{F\#}, \emph{IA agentiva},
     \emph{game development} con Phaser, ceramica, selezione fotografica con AI,
     e molti altri~\cite{intre_gilde}.
 \end{itemize}
 
-Il ciclo di vita delle Gilde è gestito tramite \textbf{i3Guild}, una
+Il ciclo di vita delle gilde è gestito tramite \textbf{i3Guild}, una
 piattaforma web interna sviluppata con Next.js, PostgreSQL e Keycloak. Questa
 applicazione conserva nel tempo proposte, descrizioni, partecipanti e risultati
-delle Gilde. Di conseguenza, i3Guild non è soltanto uno strumento
+delle gilde. Di conseguenza, i3Guild non è soltanto uno strumento
 amministrativo: è una memoria organizzativa parziale, nella quale si depositano
 interessi, competenze, esperimenti e risultati prodotti nel tempo. Proprio per
 questo rappresenta sia il contesto applicativo di integrazione sia la
 principale sorgente dati del sistema RAG progettato in questa tesi.
 
 % -------------------------------------------------------------
-\section{Caso d'uso: Proposta di nuove Gilde}
+\section{Caso d'uso: Proposta di nuove gilde}
 \label{sec:use_case_intre}
 % -------------------------------------------------------------
 
-Il caso d'uso individuato riguarda il supporto alla proposta di nuove Gilde.
+Il caso d'uso individuato riguarda il supporto alla proposta di nuove gilde.
 Quando una persona vuole avviare una nuova iniziativa, può essere utile
 conoscere esperienze precedenti, temi già affrontati, risultati ottenuti e
 partecipanti coinvolti. Oggi queste informazioni esistono, ma sono distribuite
@@ -107,7 +106,7 @@ esterno.
 
 \subsection{Motivazione del caso d'uso}
 
-Il corpus delle Gilde archiviate in i3Guild, insieme ai relativi blog post,
+Il corpus delle gilde archiviate in i3Guild, insieme ai relativi blog post,
 costituisce una base di conoscenza aziendale di valore: raccoglie descrizioni di
 progetti, obiettivi, rischi, risultati raggiunti e annotazioni dei partecipanti,
 accumulate in oltre trenta epoch a partire dal 2016~\cite{intre_gilde}. Tuttavia
@@ -141,7 +140,7 @@ quali informazioni debbano alimentare l'indice. I dati di ingresso al sistema
 RAG comprendono tre categorie:
 
 \begin{itemize}
-  \item \textbf{Documenti delle Gilde}: specifiche di progetto, obiettivi,
+  \item \textbf{Documenti delle gilde}: specifiche di progetto, obiettivi,
     rischi, risultati attesi e raggiunti, annotati con metadati strutturati
     (epoche, partecipanti, modalità di partecipazione).
   \item \textbf{Blog post}: post pubblicati dai partecipanti alle gilde che ne 
@@ -152,9 +151,9 @@ RAG comprendono tre categorie:
 
 Dall'analisi del corpus i3Guild, estratto il 15/02/2026, emergono le
 statistiche riportate nelle Tabelle~\ref{tab:entity_stats}
-e~\ref{tab:field_stats}. Questi valori non hanno solo funzione descrittiva:
-determinano la granularità dell'indicizzazione, la strategia di chunking e la
-scelta del modello di embedding.
+e~\ref{tab:field_stats}. Questi valori non hanno solo funzione descrittiva ma sono necessari 
+per determinare la granularità dell'indicizzazione, la strategia di chunking e la
+scelta del modello di embedding più adeguato.
 
 \begin{table}[ht]
   \centering
@@ -209,7 +208,7 @@ casi una Gilda può essere trattata come documento consolidato, senza frammentar
 aggressivamente i campi testuali e senza perdere il contesto semantico che lega
 obiettivi, rischi e risultati.
 
-\subsection{Struttura informativa delle Gilde e implicazioni per il retrieval}
+\subsection{Struttura informativa delle gilde e implicazioni per il retrieval}
 \label{subsec:guild_information_structure}
 
 L'analisi dello schema dati i3Guild conferma che la Gilda è l'unità informativa
@@ -218,18 +217,18 @@ descrittivi, campi progettuali e metadati organizzativi: nome, sommario,
 obiettivi, opportunità, risultati attesi, rischi, risorse, budget, modalità di
 partecipazione, riferimento all'epoch e descrizione dei risultati raggiunti. Le
 tabelle collegate hanno un ruolo diverso. \texttt{Epoch} fornisce il contesto
-temporale; \texttt{GuildUserRelation} collega partecipanti, Gilde ed epoch;
+temporale; \texttt{GuildUserRelation} collega partecipanti, gilde ed epoch;
 \texttt{GuildAchievedResult} contiene allegati binari, dei quali in questa fase
 può essere indicizzato solo il nome del file, salvo introdurre una pipeline
 dedicata di estrazione testuale.
 
-Questa distinzione separa contenuto da metadato. I campi testuali della Gilda
-alimentano embedding e ricerca semantica; epoch, partecipanti, modalità di
+Questa distinzione separa in modo netto contenuto da metadato. I campi testuali della Gilda
+alimentano l'embedding e la ricerca semantica; epoch, partecipanti, modalità di
 partecipazione e identificativi restano nel payload strutturato e servono per
-filtrare o contestualizzare la risposta. La separazione evita due problemi:
+filtrare o contestualizzare la risposta ottenuta. La separazione evita due problemi:
 inserire nel testo indicizzato informazioni poco semantiche, come identificativi
 o date, e perdere però la possibilità di rispondere a domande operative che
-richiedono vincoli strutturati. Una domanda come ``quali Gilde sull'intelligenza
+richiedono vincoli strutturati. Una domanda come ``quali gilde sull'intelligenza
 artificiale sono state proposte in una certa epoch?'' richiede entrambe le
 componenti: similarità semantica sul tema e filtro temporale sull'epoch.
 La Tabella~\ref{tab:guild_retrieval_roles} riassume questa separazione tra
@@ -248,7 +247,7 @@ campi testuali, metadati e uso effettivo nella pipeline.
     \texttt{Guild} & Nome, sommario, obiettivi, opportunità, outcome, rischi,
       risorse, budget, risultati raggiunti &
       Documento principale da incorporare e recuperare semanticamente. \\
-    \texttt{Epoch} & Inizio e fine del ciclo di Gilde &
+    \texttt{Epoch} & Inizio e fine del ciclo di gilde &
       Filtro temporale e contesto della risposta. \\
     \texttt{GuildUserRelation} & Partecipante, Gilda, epoch, data di adesione &
       Payload per domande su partecipazione e composizione dei gruppi. \\
@@ -263,9 +262,9 @@ campi testuali, metadati e uso effettivo nella pipeline.
 Gli esempi presenti nella documentazione interna del progetto chiariscono il
 tipo di interrogazioni attese. Una query esplorativa come ``vorrei fondare una
 gilda sulla musicà' deve essere ridotta ai termini informativi principali e
-recuperare Gilde tematicamente vicine, ad esempio \emph{The Rolling Updates} o
+recuperare gilde tematicamente vicine, ad esempio \emph{The Rolling Updates} o
 \emph{Visual note for piano}, quando presenti nel corpus indicizzato. Domande
-come ``quali Gilde si occupano di AI?'' privilegiano invece il recupero
+come ``quali gilde si occupano di AI?'' privilegiano invece il recupero
 semantico su \texttt{summary}, \texttt{goals} e \texttt{achievedResultsDescription};
 domande come ``chi ha partecipato alla Gilda X?'' o ``quali erano i rischi
 della Gilda Y?'' richiedono il raccordo tra retrieval, metadati e campi
@@ -300,7 +299,7 @@ applicativo, distinguendo attore, sistema i3Guild e componente RAG.
 
 Lo scenario operativo previsto per il prototipo si colloca nel flusso già
 presente in i3Guild. La Figura~\ref{fig:i3guild_guilds_list_screenshot} mostra
-la consultazione dell'archivio delle Gilde, mentre la
+la consultazione dell'archivio delle gilde, mentre la
 Figura~\ref{fig:i3guild_guild_detail_screenshot} riporta il dettaglio di una
 singola Gilda. La Figura~\ref{fig:i3guild_rag_screenshot} mostra invece il
 punto in cui l'utente interroga l'assistente RAG in linguaggio naturale. La
@@ -311,7 +310,7 @@ dell'interfaccia.
 \begin{figure}[ht]
   \centering
   \includegraphics[width=0.95\textwidth]{chapter2/images/gilde.png}
-  \caption{Vista dell'archivio delle Gilde nell'interfaccia i3Guild. La
+  \caption{Vista dell'archivio delle gilde nell'interfaccia i3Guild. La
     schermata mostra il punto di accesso al corpus applicativo usato dal
     sistema RAG.}
   \label{fig:i3guild_guilds_list_screenshot}
@@ -386,7 +385,7 @@ alto livello, suddivisi per categoria.
 \label{subsec:constraints}
 
 I requisiti precedenti si traducono in vincoli architetturali non negoziabili.
-L'esecuzione on-premise è il vincolo più rilevante: i dati delle Gilde, incluse
+L'esecuzione on-premise è il vincolo più rilevante: i dati delle gilde, incluse
 le informazioni sui partecipanti e sui progetti, non possono transitare su
 infrastrutture cloud di terze parti. Il deployment locale diventa quindi la
 condizione tecnica per rispettare i principi di integrità e riservatezza
@@ -513,7 +512,7 @@ motivare la scelta di Qdrant.
 
 Il confronto non si limita alle prestazioni pure: nel contesto i3Guild hanno
 peso anche la semplicità operativa e la possibilità di applicare filtri sui
-metadati delle Gilde. I principali criteri di esclusione e selezione sono i
+metadati delle gilde. I principali criteri di esclusione e selezione sono i
 seguenti:
 
 \begin{itemize}
@@ -524,7 +523,7 @@ seguenti:
     Qdrant in termini di throughput su dataset grandi. In questo progetto hanno
     pesato soprattutto l'assenza di una dashboard integrata e di un payload
     filtering flessibile, che avrebbero reso meno diretta la gestione dei
-    metadati delle Gilde.
+    metadati delle gilde.
   \item \textbf{Milvus} è stato escluso per l'elevata complessità di deploy:
     richiede componenti aggiuntivi (\texttt{etcd}, \texttt{MinIO}), aumentando
     il carico operativo incompatibile con i vincoli del progetto.
@@ -551,12 +550,12 @@ mantenere il sistema manutenibile anche in un contesto prototipale.
 \label{subsec:embedding_choice}
 
 Il modello di embedding converte i documenti testuali in rappresentazioni
-numeriche interrogabili da Qdrant. Nel progetto questa funzione è separata
+numeriche interrogabili in Qdrant. Nel progetto questa funzione è separata
 dall'inferenza generativa: Ollama serve il modello di chat, mentre FastEmbed,
 tramite Haystack, produce le rappresentazioni usate per l'indicizzazione. La
-pipeline genera sia embedding densi sia embedding sparsi, così il retrieval può
+pipeline genera, come anticipato, sia embedding densi sia embedding sparsi, così il retrieval può
 combinare similarità semantica e corrispondenza lessicale su nomi propri,
-tecnologie e termini ricorrenti nelle Gilde.
+tecnologie e termini ricorrenti nelle gilde.
 
 \begin{table}[ht]
   \centering
@@ -608,7 +607,7 @@ molto competitiva e le differenze tra strategie dipendono dal corpus e dalle
 metriche considerate~\cite{bal2026biomedicalretrieval}. Per i3Guild questi
 risultati vanno quindi usati come supporto alla scelta progettuale, non come
 prova sperimentale locale: la componente sparsa è motivata soprattutto dalla
-presenza di nomi di Gilde, ruoli, modalità di partecipazione e termini tecnici
+presenza di nomi di gilde, ruoli, modalità di partecipazione e termini tecnici
 che hanno valore informativo letterale.
 
 \subsection{Server di inferenza LLM e selezione del modello di chat}
@@ -616,11 +615,11 @@ che hanno valore informativo letterale.
 
 Il componente di generazione del testo è gestito da \textbf{Ollama}, server di
 inferenza locale che supporta modelli in formato GGUF e consente l'uso di
-varianti quantizzate a 4 e 8 bit. Nel prototipo aziendale la scelta del modello
+varianti quantizzate a 4 e 8 bit. Nel prototipo realizzato la scelta del modello
 di chat è stata condizionata da un vincolo operativo preciso: l'intero stack
-Docker dispone di risorse limitate e deve eseguire, nello stesso ambiente,
-PostgreSQL, Qdrant, il servizio Next.js, la pipeline RAG e Ollama. Per questo
-la selezione non mira a identificare il modello migliore in senso assoluto, ma
+Docker dispone di risorse limitate (12GB di RAM) e deve eseguire, nello stesso ambiente,
+PostgreSQL, Qdrant, il servizio Next.js, la pipeline RAG, Ollama e tutti gli altri microservizi sviluppati nel tempo. 
+Per questo la selezione non mira a identificare il modello migliore in senso assoluto, ma
 un modello sufficientemente stabile per validare l'integrazione end-to-end.
 
 \noindent Il modello adottato nel prototipo è \texttt{gemma3:4b}, distribuito
@@ -628,7 +627,7 @@ in Ollama come \texttt{gemma3:latest}. La scelta deriva da prove preliminari
 interne su modelli disponibili nel registry Ollama, valutati rispetto a latenza
 percepita, consumo di memoria e qualità minima delle risposte in presenza di
 contesto RAG. Il modello resta caricabile nello stesso ambiente dei servizi
-PostgreSQL, Qdrant, Next.js e FastAPI, ma offre un margine qualitativo maggiore
+PostgreSQL, Qdrant, Next.js e FastAPI, ma offre una prestazione qualitativa maggiore
 rispetto a modelli da circa 1B parametri. Le risposte non sono usate come prova
 generale della qualità del modello; sono sufficienti per validare il flusso
 applicativo quando il contesto recuperato da Qdrant è pertinente.
@@ -809,7 +808,7 @@ vettoriale con i dati applicativi. Il job batch esegue le seguenti fasi:
 \begin{enumerate}
   \item \textbf{Extract}: connessione a PostgreSQL e query SQL con JOIN su
     \texttt{Epoch}, \texttt{GuildUserRelation} ed \texttt{ExternalUser} per
-    estrarre tutti i campi semantici delle Gilde insieme ai nomi dei
+    estrarre tutti i campi semantici delle gilde insieme ai nomi dei
     partecipanti.
   \item \textbf{Transform}: normalizzazione HTML tramite \texttt{BeautifulSoup},
     composizione di documenti Haystack con sezioni marcate e chunking con
@@ -836,8 +835,8 @@ La pipeline di retrieval usa l'indice ibrido Qdrant per recuperare i documenti
 più pertinenti alla query e restituisce al livello applicativo un contesto già
 filtrato. La query viene trasformata sia in embedding denso sia in embedding
 sparso; le due rappresentazioni alimentano \texttt{QdrantHybridRetriever}. Il
-sistema non adotta un valore
-\texttt{top\_k} fisso: una soglia rigida rischierebbe infatti di includere
+sistema sviluppato non adotta un valore
+\texttt{top\_k} fisso, una soglia rigida rischierebbe di includere
 documenti marginali nelle query semplici o di tagliare informazioni utili nelle
 query più ampie. Per questo viene applicato un approccio adattivo in tre stadi:
 
@@ -846,7 +845,7 @@ query più ampie. Per questo viene applicato un approccio adattivo in tre stadi:
     esclude documenti semanticamente non pertinenti.
   \item \textbf{Rilevamento del calo relativo}: se la caduta percentuale tra
     due score consecutivi supera una soglia configurabile (default: 0.08), la
-    lista viene troncata al confine naturale della rilevanza.
+    lista viene troncata.
   \item \textbf{Cap di sicurezza} (default: $\leq 5$ documenti): limite
     massimo per controllare la dimensione del contesto passato al modello
     generativo.
@@ -855,7 +854,7 @@ query più ampie. Per questo viene applicato un approccio adattivo in tre stadi:
 Prima del taglio finale viene applicata una deduplicazione post-retrieval: il
 servizio rimuove documenti ripetuti per ID, fingerprint testuale e similarità
 fuzzy. Una cache in-process con TTL breve riduce inoltre richieste ripetute con
-stessi parametri, senza cambiare il modello dati persistente.
+stessi parametri.
 
 \subsubsection{Query rewriting e Topic-First Search}
 \label{subsubsec:query_rewriting}
@@ -982,7 +981,7 @@ PostgreSQL rimane la sorgente autoritativa; Qdrant è una vista derivata e deve
 essere mantenuto sincronizzato con i dati applicativi. Sono state considerate
 tre strategie, in ordine crescente di complessità: re-indicizzazione completa,
 sincronizzazione incrementale e aggiornamento event-driven. Per il prototipo la
-strategia raccomandata è il \textbf{full re-index periodico}: il job di
+strategia utilizzata è il \textbf{full re-index periodico}: il job di
 embedding ricrea la collection di default e riscrive i documenti con policy di
 overwrite. La scelta è semplice da implementare,
 riduce il rischio di inconsistenze tra indici densi e sparsi e rimane
@@ -994,15 +993,15 @@ attivato dalle operazioni CRUD, è lasciata come sviluppo futuro.
 \section{Sintesi del capitolo}
 \label{sec:requirements_design_summary}
 
-Il capitolo ha trasformato il caso d'uso i3Guild in una proposta architetturale
-coerente con i vincoli aziendali. Il corpus delle Gilde è abbastanza contenuto
+Il capitolo illustra come il caso d'uso i3Guild è stato tradotto in una proposta architetturale
+coerente con i vincoli imposti. Si è notato come il corpus delle gilde è abbastanza contenuto
 da rendere praticabile una reindicizzazione completa, ma abbastanza ricco da
 richiedere una rappresentazione semantica e metadati filtrabili. Da qui deriva
 la scelta di Qdrant come store ibrido, FastEmbed/Haystack per embedding densi e
 sparsi, Ollama per l'inferenza locale e FastAPI come confine applicativo tra
 retrieval e frontend.
 
-Le decisioni principali restano guidate da un criterio pratico: mantenere i
+Le decisioni principali restano guidate dall'esigenza di mantenere i
 dati nel perimetro aziendale e usare componenti sostituibili, senza introdurre
 complessità non necessaria. Il modello di chat \texttt{gemma3:4b}, la soglia di
 similarità pari a 0.5 e il limite di 5 documenti recuperati riflettono questo

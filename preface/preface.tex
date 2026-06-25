@@ -20,14 +20,14 @@ documenti usati e separare il problema della generazione dal problema della
 gestione della conoscenza.
 
 Questa tesi nasce all'interno di Intré S.r.l., una software factory italiana che adotta pratiche 
-di apprendimento organizzativo tra queste troviamo le Gilde, cicli periodici di apprendimento di gruppo: 
+di apprendimento organizzativo tra queste troviamo le gilde, cicli periodici di apprendimento di gruppo: 
 le persone propongono temi, formano gruppi di lavoro, producono risultati e poi condividono l'esperienza con il 
 resto dell'azienda. Nel tempo, la piattaforma interna i3Guild ha raccolto proposte, descrizioni, partecipanti, 
 risultati e materiali collegati. Ne deriva un corpus che ha un chiaro valore come memoria organizzativa, ma che 
 non è sempre semplice da interrogare, perché le informazioni sono distribuite tra database, contenuti testuali, video e blog.
 
 L'obiettivo della tesi è progettare e implementare un sistema RAG integrato in i3Guild, capace di rendere 
-interrogabile il corpus delle Gilde tramite linguaggio naturale. Il sistema deve rispettare tre vincoli principali. 
+interrogabile il corpus delle gilde tramite linguaggio naturale. Il sistema deve rispettare tre vincoli principali. 
 Il primo riguarda la riservatezza: i dati aziendali devono rimanere entro un perimetro controllato, in coerenza con 
 le esigenze di protezione del dato e con il quadro normativo europeo~\cite{gdpr2016}. Il secondo riguarda la sostenibilità 
 infrastrutturale: il prototipo deve poter funzionare con risorse realistiche, senza assumere la disponibilità di 
@@ -40,10 +40,10 @@ e produrre embedding, Qdrant come database vettoriale, Haystack come framework d
 microservizio RAG, Ollama come server di inferenza locale e Next.js come livello applicativo di integrazione. 
 La parte implementativa include anche una fase di query rewriting, la definizione di alcuni filtri strutturati, 
 la deduplicazione dei documenti recuperati e la loro selezione dinamica. Il sistema offre inoltre lo streaming 
-della risposta e la generazione automatica, a partire dalla chat con il modello, di bozze per la proposta di nuove Gilde.
+della risposta e la generazione automatica, a partire dalla chat con il modello, di bozze per la proposta di nuove gilde.
 
 Durante lo sviluppo è stato esplorato anche un workflow agentico per guidare
-l'utente nella proposta di nuove Gilde. Tale workflow è stato implementato e
+l'utente nella proposta di nuove gilde. Tale workflow è stato implementato e
 testato, ma non è stato poi adottato come soluzione finale. La ragione è
 principalmente pratica: a parità di hardware locale, l'approccio agentico introduce più
 passaggi, maggiore costo computazionale e maggiore complessità operativa. La componente agentica rimane
@@ -77,7 +77,7 @@ La tesi è organizzata come segue: Il Capitolo~\ref{chap:background} introduce
 i fondamenti tecnologici: Transformer, LLM, inferenza locale, RAG, embedding,
 database vettoriali, Agentic RAG e Haystack. Il
 Capitolo~\ref{chap:requirements_design} analizza il contesto aziendale di
-Intré, il modello delle Gilde, il caso d'uso specifico, i requisiti e le scelte
+Intré, il modello delle gilde, il caso d'uso specifico, i requisiti e le scelte
 architetturali. Il Capitolo~\ref{chap:implementazione} descrive
 l'implementazione del sistema: la pipeline di ingestione, il microservizio RAG,
 la fase di retrieval, la generazione locale, il workflow agentico sperimentale e l'integrazione

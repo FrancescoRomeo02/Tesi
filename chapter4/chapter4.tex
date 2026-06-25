@@ -22,12 +22,11 @@ realistici nel perimetro hardware scelto.
 La domanda sperimentale è stata formulata nei seguenti termini: quali
 compromessi introduce la quantizzazione MLX su dimensione su disco, uso di
 memoria, latenza di caricamento, time-to-first-token, throughput di decodifica e
-qualità su piccoli
-benchmark, quando modelli tra 3B e 14B parametri vengono eseguiti localmente su
-Apple Silicon consumer? Per rispondere a questa domanda serve un disegno
+qualità, quando modelli tra 3 e 14 miliardi parametri vengono eseguiti localmente su
+Apple Silicon? Per rispondere a questa domanda serve un disegno
 controllato: gli artefatti quantizzati devono derivare dagli stessi snapshot
 Hugging Face, il runtime deve rimanere costante, le impostazioni di generazione
-devono essere deterministiche e i fallimenti devono restare nell'analisi.
+devono essere deterministiche e i fallimenti devono restare nell'analisi e non bloccare il processo di valutazione.
 
 \section{Motivazione e perimetro}
 \label{sec:experimental_motivation_scope}
@@ -41,14 +40,13 @@ tokenizer, KV cache, prompt, buffer intermedi e altri processi applicativi.
 
 Il lavoro si concentra sull'esecuzione MLX locale. RAG, GGUF, llama.cpp e
 workflow Ollama non rientrano nel perimetro operativo dell'esperimento
-principale. Sono componenti rilevanti per il contesto applicativo e per la
+principale; sono componenti rilevanti per il contesto applicativo e per la
 letteratura sull'inferenza locale, ma aggiungerebbero altre variabili: formato
 dei pesi, kernel, template di chat, politiche di memoria e server runtime. Per
 questo il confronto rimane interno a MLX, con il livello di quantizzazione come
 variabile controllata.
 
-Il contributo sperimentale non propone un nuovo metodo di quantizzazione.
-Costruisce invece una catena riproducibile di conversione, quantizzazione e
+Il contributo sperimentale consiste nella realizzazione una catena riproducibile di conversione, quantizzazione e
 benchmark locale su Apple Silicon, e misura come cambiano le metriche di
 sistema passando da FP16 a Q8, Q6 e Q4. Questa impostazione è coerente con gli
 studi recenti su Apple Silicon, che mostrano come dimensione del modello,
@@ -62,8 +60,8 @@ in modo non banale
 La letteratura usata per progettare l'esperimento serve a due scopi. Da un lato
 indica quali metriche osservare e quali ipotesi evitare; dall'altro colloca
 Apple Silicon rispetto ad altre piattaforme di inferenza locale. Il confronto
-con questi lavori è metodologico: aiuta a scegliere misure come memoria, TTFT,
-throughput e stabilità del runtime, ma non viene usato per confrontare
+con questi lavori è puramente metodologico: aiuta a scegliere misure come memoria, TTFT,
+throughput e stabilità del runtime, ma non viene, ovviamete, usato per confrontare
 direttamente valori numerici ottenuti su hardware e modelli diversi.
 
 La quantizzazione è solo una delle tecniche disponibili per la compressione dei modelli
@@ -78,7 +76,7 @@ sul dispositivo locale.
 Il riferimento più diretto è \emph{Benchmarking and Characterization of Large
 Language Model Inference on Apple Silicon}, che misura memoria, prestazioni,
 costo ed energia per LLM eseguiti su hardware Apple e NVIDIA
-~\cite{benazir2025applebenchmark}. Per questa tesi conta soprattutto un dato:
+~\cite{benazir2025applebenchmark}. Per questa tesi conta soprattutto un aspetto:
 la memoria unificata di Apple Silicon può rendere eseguibili modelli che su
 GPU consumer sarebbero limitati dalla VRAM, ma non elimina i colli di bottiglia
 di bandwidth e dequantizzazione. Il preprint \emph{Profiling Large Language
@@ -90,10 +88,9 @@ Il report \emph{Production-Grade Local LLM Inference on Apple Silicon} confronta
 MLX, MLC-LLM, Ollama, llama.cpp e PyTorch MPS, e indica MLX come runtime
 competitivo su hardware Apple recente~\cite{rajesh2025productionlocal}. Questo
 risultato sostiene la scelta MLX-first, ma non dimostra una superiorità
-generale: il setup della tesi usa un M1 Pro con 16 GB, non una macchina Apple
-di fascia alta. Open-TQ-Metal affronta invece il problema della KV cache e
+generale. Open-TQ-Metal affronta invece il problema della KV cache e
 dell'attenzione in dominio compresso per contesti molto lunghi
-~\cite{vegasena2026opentqmetal}. Il tema rimane fuori perimetro, ma chiarisce
+~\cite{vegasena2026opentqmetal}, tale aspetto rimane fuori perimetro, ma chiarisce
 che la sola quantizzazione dei pesi non esaurisce il problema dell'inferenza
 locale. Infine, \emph{Silicon Showdown} evidenzia il compromesso tra throughput
 grezzo delle GPU discrete e capacità di memoria/efficienza energetica di Apple
@@ -130,12 +127,11 @@ multimediali, Secure Enclave e controller di I/O~\cite{apple2021m1pro}. Questa
 integrazione riduce la distanza fisica e logica tra sottosistemi che, in altre
 architetture, comunicano attraverso bus e copie esplicite di memoria.
 
-Per questa tesi non conta la presenza di acceleratori in senso generico, ma il
-modo in cui CPU e GPU condividono il carico dell'inferenza. Un LLM locale legge
-ripetutamente i pesi, esegue calcoli matriciali, gestisce il tokenizer,
+Per questa tesi l'aspetto rilevnate e come CPU e GPU condividono il carico dell'inferenza. 
+Un LLM locale legge ripetutamente i pesi, esegue calcoli matriciali, gestisce il tokenizer,
 alloca la KV cache, esegue il prefill del prompt ed esegue la
 decodifica autoregressiva. Alcune processi restano sul runtime Python e sulla CPU,
-altie vengono delegate a kernel Metal sulla GPU. L'architettura integrata rende
+altri vengono delegati a kernel Metal della GPU. L'architettura integrata rende
 più diretto questo passaggio rispetto ad una situazione dove la memoria di lavoro è su CPU e VRAM
 separatamente, ma i vincoli su bandwidth e concorrenza persistono.
 
@@ -175,15 +171,15 @@ La caratteristica architetturale più rilevante per l'esperimento è la memoria
 unificata. Nei Mac con Apple Silicon, CPU e GPU condividono lo stesso pool di
 memoria fisica; la documentazione Metal descrive questo modello come un caso in
 cui la GPU condivide la memoria con la CPU~\cite{apple2026metalunified}. Il
-MacBook Pro usato nei test dispone di 16 GB di memoria unificata, mentre M1 Pro
+MacBook Pro usato nei test dispone di 16 GB di memoria unificata e
 supporta una bandwidth di memoria fino a 200 GB/s~\cite{apple2021m1prospecs}.
 
 Questa impostazione ha due conseguenze per i modelli locali. Da un lato, non
 esiste una VRAM fissa separata dalla RAM di sistema: un modello che supererebbe
 la memoria video di una GPU consumer può diventare eseguibile su una macchina
 Apple se rientra nel budget complessivo della memoria unificata. Dall'altro, i
-16 GB disponibili non sono dedicati al modello, ma devono ospitare sistema
-operativo, applicazioni aperte, processo Python, runtime MLX, tokenizer, pesi,
+16 GB disponibili non sono dedicati al solo modello, ma devono ospitare sistema
+operativo, applicazioni aperte, processi in esecuzione, runtime MLX, tokenizer, pesi,
 cache e buffer temporanei. Per questo il capitolo misura sia la dimensione su
 disco degli artefatti sia il picco di memoria durante la generazione.
 
@@ -209,13 +205,13 @@ relazione monotona tra numero di bit e prestazioni.
 \subsection{Implicazioni per l'inferenza LLM locale}
 \label{subsec:apple_llm_implications}
 
-Nel contesto dell'inferenza LLM, Apple Silicon va quindi interpretato come una
+Nel contesto dell'inferenza LLM, Apple Silicon va interpretato come una
 piattaforma vincolata dalla memoria e dipendente dal carico. La memoria
 unificata aiuta a caricare modelli più grandi rispetto a una GPU con poca
 VRAM, ma non elimina il costo della decodifica autoregressiva. Ogni token
 generato richiede un nuovo passaggio del modello, accessi ripetuti ai pesi e
 aggiornamento della KV cache. La quantizzazione riduce il footprint dei pesi e
-può ridurre il traffico di memoria, ma non comprime automaticamente tutti gli
+può ridurre il traffico di memoria, ma non comprime, ovviamete, automaticamente tutti gli
 altri costi.
 
 Per un sistema RAG questo aspetto pesa sul comportamento percepito. Il prompt
@@ -313,12 +309,9 @@ artefatti misurati.
   \label{fig:artifact_chain}
 \end{figure}
 
-Le varianti sperimentali sono FP16, Q8, Q6 e Q4: Q8 rappresenta una compressione
-leggera, Q6 una compressione intermedia e Q4 una compressione aggressiva. Il
+Le varianti sperimentali sono, come anticipato, FP16, Q8, Q6 e Q4. Il
 gruppo small esegue il confronto completo contro FP16, mentre per medium e
-large FP16 è trattato come controllo di fattibilità; eventuali fallimenti o
-omissioni per politica sperimentale vengono registrati e non interpretati come
-dati mancanti casuali.
+large FP16 è trattato come controllo di fattibilità.
 La Tabella~\ref{tab:mlx_variants} riassume il significato operativo delle
 varianti considerate.
 
@@ -439,9 +432,9 @@ il numero di token generati resta fisso.
 La qualità viene valutata come controllo secondario, non come benchmark
 esaustivo delle capacità dei modelli. Vengono usati due subset ridotti: 16
 domande stile MMLU e 16 problemi aritmetici stile GSM8K. La dimensione ridotta
-dei test rende la valutazione eseguibile su M1 Pro con 16 GB in tempi accettabili, 
+dei test rende la valutazione eseguibile in tempi accettabili, 
 ma richiede cautela nelle trarre le conclusioni, in quanto una sola risposta cambia 
-il punteggio di 6,25 punti percentuali. I risultati servono quindi a individuare segnali macroscopici 
+il punteggio di oltre il $6.25\%$. I risultati servono quindi a individuare segnali macroscopici 
 di degrado o comportamenti anomali, non a produrre classifiche generali.
 
 Lo scoring è automatico: per MMLU viene estratta la risposta a scelta multipla
@@ -449,16 +442,16 @@ prevista, mentre per GSM8K viene estratto il numero finale. Ogni variante viene
 valutata sugli stessi esempi, con le stesse impostazioni di generazione usate
 nel benchmark prestazionale. Per i modelli piccoli è possibile calcolare il delta
 rispetto alla baseline FP16; per medium e large, dove FP16 non è parte del
-confronto completo, l'analisi rimane descrittiva.
+confronto completo, l'analisi rimane puramente descrittiva.
 
-Il parser è volutamente semplice. MMLU accetta una lettera tra A e D; GSM8K
-usa l'ultimo numero riconosciuto nella risposta. Questa scelta rende il
-benchmark riproducibile e facile da ispezionare, ma lo rende dipendente dal
+MMLU accetta una lettera tra A e D; GSM8K usa l'ultimo numero riconosciuto nella risposta. 
+Questa scelta rende il benchmark riproducibile e facile da ispezionare, ma lo rende dipendente dal
 formato dell'output. Alcuni modelli producono testo ragionativo prima della
 risposta, oppure non rispettano la richiesta di una sola lettera; in questi casi
 lo score automatico può confondere errore di ragionamento ed errore di
 formato. Per questo i risultati di qualità vengono usati come segnale di
-controllo e non come misura definitiva delle capacità dei modelli.
+controllo e non come misura definitiva delle capacità dei modelli, i casi più eclatanti si hanno con i modelli di ragionamento,
+in più di un caso questi terminano i token a loro disposizione prima ancora di formulare una risposta, ottenendo di conseguenza 0 punti.
 
 \section{Riproducibilità}
 \label{sec:experimental_reproducibility}
@@ -518,8 +511,8 @@ di un MacBook Pro M1 Pro con 16 GB di memoria unificata.
 \label{sec:experimental_validity}
 
 Il primo limite è l'hardware singolo: tutte le misure derivano da una sola
-macchina e non possono essere generalizzate direttamente a Mac con più memoria,
-più bandwidth o generazioni diverse di GPU. Il secondo limite è il runtime
+macchina e non possono essere generalizzate direttamente a Mac con più o meno memoria,
+più o meno bandwidth o generazioni diverse di GPU. Il secondo limite è il runtime
 singolo: MLX viene scelto per coerenza con Apple Silicon, ma i risultati non
 dimostrano superiorità rispetto a MLC-LLM, llama.cpp o Ollama.
 
@@ -529,7 +522,7 @@ di ogni singolo errore. Il quarto limite riguarda il contesto: non vengono
 valutati long context, KV-cache quantization o kernel fusi come quelli discussi
 da Open-TQ-Metal. Il quinto limite è l'assenza di una valutazione umana delle
 risposte: l'esperimento misura segnali automatici e metriche di sistema, non
-preferenze qualitative fini.
+preferenze qualitative.
 
 Questi limiti non invalidano l'esperimento, ma ne definiscono il perimetro. Il
 Capitolo~\ref{chap:evaluation} va quindi letto come una valutazione controllata
@@ -539,9 +532,9 @@ come benchmark universale dei modelli considerati.
 \section{Sintesi del capitolo}
 \label{sec:experimental_summary}
 
-Il capitolo ha definito un protocollo sperimentale circoscritto: modelli
-open-weight tra 3B e 14B parametri, runtime MLX, hardware Apple M1 Pro con
-16 GB di memoria unificata e varianti FP16, Q8, Q6 e Q4 quando disponibili. La
+Il capitolo ha definito un protocollo sperimentale molto circoscritto: modelli
+open-weight tra i 3 e i 14 miliardi di parametri, runtime MLX, hardware Apple M1 Pro con
+16 GB di memoria unificata e varianti FP16, Q8, Q6 e Q4. La
 separazione tra misure di sistema e controlli qualitativi ridotti evita di
 ridurre il problema a una sola metrica. Memoria e dimensione dell'artefatto
 stabiliscono la fattibilità, TTFT e throughput descrivono la reattività, MMLU e

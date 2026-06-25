@@ -1,7 +1,7 @@
 \chapter*{Conclusioni e Sviluppi Futuri}
 
 Questa tesi ha affrontato la progettazione, l'implementazione e la valutazione di un sistema RAG aziendale integrato in i3Guild. 
-Il lavoro parte da un problema concreto: rendere interrogabile in linguaggio naturale il corpus delle Gilde di Intré, mantenendo 
+Il lavoro parte da un problema concreto: rendere interrogabile in linguaggio naturale il corpus delle gilde di Intré, mantenendo 
 i dati entro il perimetro aziendale e usando risorse hardware limitate.
 
 Il primo risultato riguarda l'architettura del sistema. La tesi dimostra che il corpus di i3Guild può essere trasformato in 
@@ -9,7 +9,7 @@ una knowledge base RAG ben strutturata. PostgreSQL resta la sorgente autoritativ
 e genera i documenti; Qdrant conserva rappresentazioni dense, sparse e metadati; il microservizio FastAPI espone retrieval e 
 generazione; Next.js integra il servizio nel flusso applicativo. Questa separazione consente di aggiornare o sostituire i singoli componenti senza dover riscrivere l'intera soluzione.
 
-Il secondo risultato riguarda il retrieval. Nel contesto delle Gilde, la sola ricerca vettoriale non basta 
+Il secondo risultato riguarda il retrieval. Nel contesto delle gilde, la sola ricerca vettoriale non basta 
 a sfruttare tutti i segnali disponibili nel dominio. Per questo il prototipo integra query rewriting, filtri 
 strutturati, deduplicazione, cache e selezione dinamica dei documenti. Queste scelte riducono il rumore nel contesto 
 inviato al modello e aiutano a produrre risposte più aderenti ai contenuti effettivamente interessanti per gli utenti. 
@@ -20,7 +20,7 @@ direttamente la qualità dell'output.
 
 Il terzo risultato riguarda la scelta tra approccio RAG classico e
 agentico. Durante il progetto è stato implementato un workflow agentico per
-guidare la proposta di nuove Gilde. L'esperimento ha chiarito che tale approccio
+guidare la proposta di nuove gilde. L'esperimento ha chiarito che tale approccio
 può essere utile per organizzare passaggi complessi, ma nel perimetro hardware
 disponibile introduce più chiamate al modello, maggiore latenza e maggiore
 complessità di controllo. La soluzione finale privilegia quindi un RAG più
@@ -62,7 +62,7 @@ allucinazioni. Le metriche automatiche usate nella
 parte di valutazione dell'inferenza locale sono utili per controllare segnali di qualità a livello generale, ma non
 sostituiscono una valutazione end-to-end del caso d'uso i3Guild.
 
-Il secondo limite riguarda il corpus. I dati delle Gilde sono eterogenei:
+Il secondo limite riguarda il corpus. I dati delle gilde sono eterogenei:
 descrizioni, risultati, metadati, partecipanti, epoch e contenuti editoriali non
 sempre hanno la stessa granularità o lo stesso livello di dettaglio. La
 normalizzazione testuale riduce parte del problema, ma non elimina la necessità
@@ -112,7 +112,7 @@ termico e latenza percepita dall'utente. Solo questa verifica può stabilire se
 il miglior compromesso sperimentale rimane valido anche nel sistema end-to-end.
 
 Infine, la componente agentica può essere ripresa dopo aver consolidato il RAG
-di base. Un agente potrebbe supportare la proposta di nuove Gilde, guidare la
+di base. Un agente potrebbe supportare la proposta di nuove gilde, guidare la
 raccolta di requisiti, suggerire collegamenti con iniziative passate o produrre
 bozze strutturate più complete. Tuttavia, l'adozione di un workflow agentico
 dovrebbe essere subordinata a criteri misurabili: riduzione del carico per
@@ -123,3 +123,12 @@ nella sua forma attuale, risulta già utilizzabile dagli utenti finali.
 
 Il lavoro svolto lascia quindi un prototipo funzionante e un quadro sperimentale
 per valutarne la sostenibilità.
+
+\paragraph{Dichiarazione sull'uso di strumenti di intelligenza artificiale.}
+Durante la redazione sono stati usati strumenti di intelligenza artificiale
+generativa, in particolare GPT-5.5, come supporto alla revisione stilistica,
+alla correzione di bozze e ad alcune attività di assistenza alla
+programmazione. L'uso di tali strumenti non ha sostituito il lavoro
+progettuale, implementativo e critico: le scelte metodologiche, l'analisi dei
+risultati, il codice sviluppato e le conclusioni sono contributi originali
+dell'autore.

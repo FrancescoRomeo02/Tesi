@@ -8,19 +8,18 @@ Capitolo~\ref{chap:requirements_design}, ma mostrare come tali scelte siano
 state tradotte in componenti eseguibili: una pipeline di ingestione per
 popolare Qdrant, un microservizio FastAPI per il retrieval e la generazione,
 un'integrazione applicativa lato Next.js e una generazione controllata delle
-bozze di nuove Gilde. Durante lo sviluppo è stato anche implementato ed
+bozze di nuove gilde. Durante lo sviluppo è stato anche implementato ed
 esplorato un workflow agentico; viene documentato come soluzione sperimentale,
 ma non come scelta finale, perché a parità di risorse hardware introduceva un
 costo computazionale più elevato e un vantaggio limitato rispetto a un flusso
 RAG più classico.
 
-La realizzazione è distribuita su tre repository applicativi, ciascuno
+La realizzazione è distribuita su tre repository, ciascuno
 associato a una responsabilità precisa. Il repository principale i3Guild
-contiene l'applicazione web Next.js e il database
-PostgreSQL; la pipeline di embedding gestisce
+contiene l'applicazione web Next.js e il database PostgreSQL; la pipeline di embedding gestisce
 l'estrazione dei dati, la normalizzazione testuale, la generazione di embedding
 densi e sparsi con FastEmbed/Haystack e l'upsert su Qdrant; il microservizio
-RAG espone infine le API Python per retrieval e chat. La separazione riduce
+RAG espone le API Python per retrieval e chat. La separazione riduce
 l'accoppiamento tra applicazione e componente RAG: i3Guild rimane la sorgente
 autoritativa dei dati, Qdrant conserva la knowledge base ibrida e Ollama viene
 usato solo per la generazione LLM~\cite{qdrant2023,ollama2023}.
@@ -41,7 +40,7 @@ end-to-end prima della descrizione dei singoli componenti.
 % -------------------------------------------------------------
 
 La suddivisione dei moduli segue il flusso dei dati. PostgreSQL contiene le
-Gilde, le epoche e le relazioni con gli utenti; la pipeline di embedding legge
+gilde, le epoche e le relazioni con gli utenti; la pipeline di embedding legge
 queste informazioni e produce documenti Haystack~\cite{haystack2023}; Qdrant
 memorizza vettori densi, rappresentazioni sparse e metadati; il microservizio
 RAG interroga l'indice ibrido e, quando richiesto, invoca Ollama per generare la
@@ -52,7 +51,7 @@ L'applicazione web contiene il client TypeScript che dialoga con il
 microservizio RAG e gestisce lo streaming verso l'interfaccia. La pipeline di
 embedding svolge il lavoro batch: estrae i dati da PostgreSQL, normalizza i
 testi, produce embedding densi e sparsi e aggiorna Qdrant. Il microservizio
-Python concentra invece retrieval, ranking, chiamate a Ollama e formato di
+Python gestisce invece retrieval, ranking, chiamate a Ollama e formato di
 risposta. La parte agentica è rimasta isolata dal flusso principale: è stata
 utile per valutare una generazione più guidata della proposta di Gilda, ma non
 è stata adottata come architettura finale.
@@ -87,9 +86,8 @@ definiscono la connessione a PostgreSQL, l'endpoint e la collection Qdrant, i
 modelli FastEmbed e la dimensione del vettore denso. A questi si aggiungono
 opzioni operative per ricreare l'indice, controllare la dimensione dei batch e
 stabilire quando applicare il chunking con overlap. La generazione degli
-embedding usa i modelli riportati nella Tabella~\ref{tab:embedding_models} e
-rimane quindi separata da Ollama. La Tabella~\ref{tab:ingestion_configuration}
-riporta i parametri che rendono riproducibile questa fase.
+embedding usa i modelli riportati nella Tabella~\ref{tab:embedding_models}.
+La Tabella~\ref{tab:ingestion_configuration} riporta i parametri che rendono riproducibile questa fase.
 
 \begin{table}[ht]
   \centering
@@ -102,7 +100,7 @@ riporta i parametri che rendono riproducibile questa fase.
     \midrule
     \breakcode{DB_URL}
       & PostgreSQL
-      & Connessione alla sorgente autoritativa delle Gilde. \\
+      & Connessione alla sorgente autoritativa delle gilde. \\
     \breakcode{QDRANT_URL}
       & Qdrant
       & Endpoint del vector database usato in scrittura. \\
@@ -145,7 +143,7 @@ valore usato per la componente densa è 768.
 \subsection{Estrazione dei dati da PostgreSQL}
 \label{subsec:implementation_postgres_extract}
 
-La fase di estrazione recupera le informazioni semantiche delle Gilde tramite
+La fase di estrazione recupera le informazioni semantiche delle gilde tramite
 una query SQL con join su \texttt{Epoch},
 \texttt{GuildUserRelation} ed \texttt{ExternalUser}. Il risultato include i
 campi testuali principali della Gilda, i riferimenti all'epoca, la modalità di
@@ -329,7 +327,7 @@ riscritta nel campo \texttt{topic\_query}, così il frontend può mostrarla o
 usarla per diagnostica.
 
 In parallelo, un estrattore di filtri cerca vincoli espressi in linguaggio
-naturale: epoca, Gilde individuali o di gruppo, modalità di
+naturale: epoca, gilde individuali o di gruppo, modalità di
 partecipazione e partecipanti. Se l'utente passa anche filtri espliciti, il
 servizio li combina con quelli estratti tramite un operatore \texttt{AND}. Questo
 permette di usare la ricerca vettoriale senza perdere vincoli strutturati
@@ -432,20 +430,16 @@ Appendice~\ref{app:B}, Listato~\ref{lst:ndjson_standard}.
 % -------------------------------------------------------------
 
 Durante il progetto è stata esplorata anche una modalità agentica per guidare
-l'utente nella proposta di nuove Gilde. Questa linea non costituisce però il
-flusso finale del prototipo: il servizio RAG rimane centrato su retrieval
-ibrido, chat e generazione controllata, mentre la compilazione della bozza viene
-gestita lato applicazione attraverso prompt strutturati e validazione del
-risultato.
+l'utente nella proposta di nuove gilde. Questo approccio non costituisce però il
+risultato finale del prototipo.
 
 La scelta è coerente con i vincoli osservati durante lo sviluppo. Un agente che
 mantiene stato, pianifica passaggi e invoca più volte il modello introduce
-maggiore latenza e maggiore consumo di memoria, soprattutto con LLM locali di
-piccole dimensioni. Il flusso finale privilegia quindi un approccio più
+maggiore latenza e maggiore consumo di memoria. Il flusso finale privilegia quindi un approccio più
 deterministico: il retrieval recupera contesto quando serve; la generazione
 strutturata viene attivata solo per produrre una bozza; la validazione resta nel
 codice applicativo. La componente agentica rimane una possibile direzione
-futura, da rivalutare con modelli locali più capaci o con hardware più ampio.
+futura, da rivalutare con modelli locali più capaci e con hardware più ampio.
 
 % -------------------------------------------------------------
 \section{Integrazione lato Next.js}
@@ -509,8 +503,7 @@ domanda utente, risposta generata e fonti recuperate.
 Accanto alla chat RAG, i3Guild include un flusso per generare una bozza di
 Gilda a partire dalla conversazione. La funzionalità è documentata come
 \emph{Guild Draft Generation} e si attiva dal pulsante "Proponi bozza" nella
-chat. Il flusso non crea direttamente una nuova Gilda e non invia l'utente alla
-pagina di creazione: produce invece un oggetto strutturato che rappresenta un
+chat. Il flusso produce un oggetto strutturato che rappresenta un
 draft, modificabile e verificabile prima di qualunque salvataggio applicativo.
 
 Il formato atteso è \texttt{GuildDraft}. Include nome, sommario, obiettivi,
@@ -579,7 +572,7 @@ senza sovrascrivere quella precedente.
 
 Questa soluzione migliora soprattutto la stabilità configurativa e riduce la
 quantità di testo serializzata nelle richieste. Non va però interpretata come un
-riuso effettivo della KV Cache del modello: il system prompt incorporato nella
+riuso effettivo della KV Cache del modello in quanto il system prompt incorporato nella
 definizione del modello rende più pulita la configurazione, ma non elimina di
 per sé il costo computazionale del prompt durante l'inferenza.
 
@@ -587,14 +580,7 @@ La soluzione ha anche limiti operativi. Se il system prompt cambia spesso, i
 modelli derivati possono accumularsi nello storage di Ollama e richiedere una
 policy di pulizia. In un deployment multi replica, più processi potrebbero
 tentare di creare lo stesso modello derivato nello stesso momento; un lock
-locale è sufficiente nel prototipo, ma non basta come garanzia distribuita. Un
-miglioramento futuro consiste nel versionare esplicitamente i prompt, salvare
-metadati di creazione e usare una procedura di cleanup controllata. Un secondo
-miglioramento riguarda la misurazione: per le risposte non streaming Ollama
-espone metriche finali come token di prompt e durate, mentre nello streaming
-sarebbe utile emettere un evento conclusivo con le stesse statistiche. In questo
-modo diventerebbe possibile confrontare payload, latenza e costo del prompt
-senza introdurre strumenti esterni.
+locale è sufficiente nel prototipo, ma non basta come garanzia distribuita.
 
 \subsection{Tracciabilità}
 \label{subsec:implementation_tracing}
@@ -612,21 +598,21 @@ se il collo di bottiglia si trova nel retrieval o nella generazione.
 \label{sec:implementation_summary}
 % -------------------------------------------------------------
 
-Il sistema implementato combina componenti relativamente semplici, ma separati
-con attenzione. La pipeline di embedding prepara l'indice ibrido a partire da
-PostgreSQL; il microservizio RAG espone retrieval e generazione; Qdrant gestisce
-vettori densi, rappresentazioni sparse e metadati; Ollama mantiene l'inferenza
-generativa in locale; Next.js integra chat, generazione della bozza e fallback
-applicativi. Il contributo implementativo risiede soprattutto nella
-normalizzazione del corpus i3Guild, nel retrieval ibrido con query rewriting,
-cache e deduplicazione, e nella separazione tra chat RAG e generazione
-strutturata senza retrieval. Il workflow agentico è stato trattato come una
-linea sperimentale e non come soluzione finale, perché a parità di hardware
-introduceva maggiore complessità e maggiore costo computazionale. Nel complesso,
-queste scelte rendono il prototipo coerente con i vincoli di privacy e di
-risorse discussi nei capitoli precedenti, lasciando aperti margini di evoluzione
-su sincronizzazione incrementale, agenti più flessibili e valutazione
-sistematica della qualità delle risposte.
+Il sistema implementato combina componenti relativamente semplici, ma organizzati 
+in modo da facilitarne la manutenzione e gli aggiornamenti futuri. La pipeline di 
+embedding costruisce l'indice ibrido a partire dai dati presenti in PostgreSQL; il
+microservizio RAG espone le funzionalità di retrieval e generazione; Qdrant 
+gestisce vettori densi, rappresentazioni sparse e metadati; Ollama mantiene 
+locale l'inferenza generativa; Next.js integra la chat, la generazione della 
+bozza e i fallback applicativi.
+
+Il workflow agentico è stato trattato come una linea 
+sperimentale, non come soluzione finale, perché a parità di hardware 
+introduceva più complessità e un costo computazionale maggiore. Nel 
+complesso, queste scelte mantengono il prototipo coerente con i vincoli 
+di privacy e di risorse discussi nei capitoli precedenti, lasciando aperti 
+margini di evoluzione sulla sincronizzazione incrementale, su agenti più 
+flessibili e su una valutazione più sistematica della qualità delle risposte.
 
 L'esperienza aziendale porta anche a un problema più generale, che supera il
 solo caso i3Guild: quando un sistema RAG deve essere eseguito localmente, la

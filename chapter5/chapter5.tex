@@ -10,10 +10,8 @@ JSONL e CSV restano la base riproducibile dell'analisi.
 
 L'obiettivo è individuare, per il contesto hardware considerato, quale
 compromesso tra qualità delle risposte, latenza, throughput e memoria renda
-praticabile l'uso locale dei modelli nel sistema RAG. Il capitolo quindi non
-costruisce una graduatoria assoluta dei modelli, ma valuta l'effetto della
-quantizzazione MLX su Apple Silicon con 16 GB di memoria unificata. Per i
-modelli piccoli il confronto è tra FP16 e Q8/Q6/Q4. Per i modelli medi e grandi
+praticabile l'uso locale dei modelli nel sistema RAG. Il capitolo ha lo scopo di valutare l'effetto della
+quantizzazione MLX. Per i modelli piccoli il confronto è tra FP16 e Q8/Q6/Q4. Per i modelli medi e grandi
 l'analisi riguarda soprattutto la fattibilità delle varianti quantizzate: la
 baseline FP16 resta utile come riferimento di dimensione e come controllo
 metodologico, ma non viene trattata come configurazione completa quando la
@@ -708,7 +706,7 @@ crescere della taglia del modello.
 
 Le metriche raccolte non hanno tutte lo stesso peso decisionale. In un sistema
 RAG locale, la dimensione dell'artefatto e il picco di memoria sono vincoli
-duri: se il modello non lascia spazio agli altri servizi, la configurazione non
+duri: se il modello non lascia spazio agli altri servizi la configurazione non
 è utilizzabile anche quando l'accuratezza è buona. TTFT, decode ed end-to-end
 throughput descrivono invece la reattività percepita; un modello con decode
 elevato ma TTFT alto può risultare fluido dopo l'avvio dello streaming, ma
@@ -818,18 +816,17 @@ conservative, ma nei dati raccolti non offrono un vantaggio qualitativo
 misurabile sufficiente a compensare il footprint maggiore.
 
 La seconda riguarda i modelli medi e grandi, per i quali la quantizzazione serve
-soprattutto a rendere il modello eseguibile nelle condizioni descritte in precedeza.
+soprattutto a rendere il modello eseguibile nelle condizioni descritte in precedenza.
 Qwen3 8B e Mistral 7B diventano utilizzabili con throughput Q4 intorno a 32--35 tok/s 
 e picco inferiore a 5 GB, mentre Gemma 3 12B e Qwen3 14B rimangono eseguibili in 
 Q4 con circa 18 tok/s, ma con TTFT superiore al secondo e maggiore pressione sulla memoria. 
 In un'applicazione locale interattiva, questi modelli richiedono una valutazione
 caso per caso: sono possibili, ma non necessariamente preferibili ai modelli
-piccoli Q4.
+piccoli con quantizzazione Q4.
 
 La terza riguarda le metriche automatiche di qualità. I risultati nulli di
 Qwen3 8B e Qwen3 14B su MMLU ridotto indicano un problema reale per il setup di
-valutazione, ma da soli non separano errore di ragionamento, errore di formato
-ed errore di parsing. Per una tesi su sistemi questo punto è centrale: non
+valutazione. Per una valutazione di questo tipo non
 basta che un modello \emph{sappia} produrre la risposta; deve produrla in un
 formato che la pipeline possa usare.
 La Tabella~\ref{tab:best_tradeoff_summary} sintetizza questa lettura per
@@ -909,14 +906,14 @@ matrice decisionale per il prototipo.
   \end{tabular}
 \end{table}
 
-La matrice non sostituisce test end-to-end sul prototipo. Serve a ridurre lo
+La matrice non sostituisce test end-to-end sul prototipo, serve più che altro a ridurre lo
 spazio delle opzioni prima della validazione applicativa: i modelli piccoli Q4
 sono il punto di partenza ragionevole, Mistral 7B Q4 è il candidato da
 confrontare quando la qualità delle risposte diventa prioritaria, mentre i
 modelli large richiedono un caso d'uso più specifico. Nel perimetro della tesi
 questa distinzione è più utile di una classifica unica, perché il vincolo
 principale non è il punteggio assoluto su benchmark generali, ma la capacità di
-fornire risposte utili dentro un sistema locale con risorse condivise.
+fornire risposte utili dentro un sistema locale con risorse condivise e limitate.
 
 \section{Implicazioni per un sistema RAG locale}
 \label{sec:evaluation_rag_implications}
@@ -953,8 +950,7 @@ qualità: 16 esempi per MMLU e 16 per GSM8K sono sufficienti per un controllo
 leggero, ma non per stimare accuratamente capacità generali. Il secondo è
 l'assenza di valutazione umana o RAG end-to-end: non vengono misurate
 groundedness, completezza o allucinazioni nel corpus aziendale. Il terzo è
-l'hardware singolo: i valori non devono essere trasferiti direttamente a M2
-Ultra, M3 Ultra o GPU NVIDIA. Il quarto riguarda il parser automatico: per
+l'hardware singolo a disposizione per i test. Il quarto riguarda il parser automatico: per
 modelli che producono output ragionativi o formati inattesi, parte del punteggio
 può riflettere incompatibilità di estrazione più che errore semantico.
 
@@ -970,3 +966,27 @@ Questi limiti non cambiano la lettura complessiva. Nel perimetro misurato, la
 quantizzazione MLX consente una maggiore flessibilità di scelta tra molte 
 classi di modelli su Apple Silicon consumer e, su modelli piccoli, aumenta efficienza e 
 throughput senza perdita di qualità osservabile nei controlli automatici realizzati.
+
+\section{Sintesi del capitolo}
+\label{sec:evaluation_summary}
+
+Il capitolo ha applicato il protocollo sperimentale definito in precedenza ai
+modelli selezionati e alle loro varianti MLX. Le misure raccolte mostrano che
+la quantizzazione ha inciso sulla praticabilità dei modelli in ambiente locale,
+non soltanto sulla dimensione degli artefatti. Per i modelli piccoli, Q4 ha
+ridotto in modo marcato dimensione e picco di memoria, aumentando al tempo
+stesso il throughput di decodifica senza un peggioramento osservabile nei
+controlli automatici usati. Per i modelli medi e grandi, invece, la
+quantizzazione è stata soprattutto una condizione di fattibilità: ha permesso
+di eseguire modelli altrimenti troppo pesanti per il budget hardware, ma con
+latenza e margine di memoria meno favorevoli.
+
+La valutazione conferma che, in un sistema RAG locale, la scelta del modello non
+può dipendere da un solo indicatore. Dimensione dell'artefatto, memoria di
+picco, TTFT, throughput e formato dell'output incidono tutti sulla possibilità
+di integrare il modello in un'applicazione interattiva. Ne deriva una lettura
+operativa: i modelli piccoli in Q4 sono il punto di partenza più solido per una
+chat RAG locale; Mistral 7B Q4 è un candidato utile quando serve maggiore
+capacità generativa entro un budget ancora gestibile; i modelli più grandi
+rimangono possibili, ma richiedono casi d'uso meno sensibili alla latenza e una
+validazione con il sistema completo in esecuzione.

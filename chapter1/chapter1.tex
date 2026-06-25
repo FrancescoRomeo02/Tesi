@@ -27,23 +27,23 @@ capitoli successivi.
 
 \subsection{Dalle reti neurali ricorrenti ai Transformer}
 Il modello Transformer, introdotto da Vaswani et al.\ nel
-2017~\cite{vaswani2017attention}, costituisce il punto di svolta da cui derivano
+2017~\cite{vaswani2017attention}, è il punto di svolta da cui derivano
 gli attuali modelli linguistici. Prima della sua introduzione, gran parte dei
 sistemi di trattamento del linguaggio naturale (\textit{Natural Language
-Processing}, NLP) si basava su reti neurali ricorrenti (\textit{Recurrent
-Neural Networks}, RNN) e, in particolare, su architetture LSTM (\textit{Long
+Processing}, NLP) si basava sulle reti neurali ricorrenti (\textit{Recurrent
+Neural Networks}, RNN) e, in particolare, sull'architettura LSTM (\textit{Long
 Short-Term Memory})~\cite{hochreiter1997lstm}. Tali modelli elaboravano la
-sequenza un elemento alla volta, aggiornando progressivamente uno stato nascosto.
-Questa impostazione era coerente con la natura ordinata del testo, ma introduceva
-due limiti rilevanti: la scarsa parallelizzabilità dell'addestramento e la
-difficoltà nel preservare dipendenze informative tra elementi molto distanti
-nella sequenza (\textit{vanishing gradient}).
+sequenza un elemento alla volta, aggiornando di volta in volta uno stato nascosto.
+Questa filosofia di lavoro era coerente con la natura ordinata del testo, ma introduceva
+due limiti significativi: la scarsa parallelizzabilità dell'addestramento e la
+difficoltà nel preservare le dipendenze tra elementi distanti
+nel testo (problema noto come \textit{vanishing gradient}).
 
-Il Transformer affronta tali limiti sostituendo la ricorrenza con un meccanismo
+Il Transformer affronta,e risolve, queste limitazioni sostituendo la ricorrenza con un meccanismo
 di \textit{self-attention} globale, che mette ogni token in relazione diretta
-con tutti gli altri token della sequenza, indipendentemente dalla loro distanza
-posizionale. Da questa impostazione derivano sia la maggiore efficienza in
-addestramento sia la capacità dei modelli successivi di costruire
+con tutti gli altri token della sequenza, indipendentemente dalla loro distanza. 
+Da questa intuizione derivano sia la maggiore efficienza in
+addestramento sia la capacità dei modelli di costruire
 rappresentazioni contestuali più ricche.
 
 \subsection{Il meccanismo di Self-Attention}
@@ -94,7 +94,8 @@ produrre la sequenza di output. Questa struttura è particolarmente adatta a
 compiti \textit{sequence-to-sequence}, come la traduzione
 automatica~\cite{vaswani2017attention}.
 
-I modelli linguistici generativi contemporanei adottano prevalentemente un'architettura \textit{decoder-only}, nella quale l'attenzione è applicata in modo
+I modelli linguistici generativi contemporanei adottano prevalentemente un'architettura 
+\textit{decoder-only}, nella quale l'attenzione è applicata in modo
 \textit{causale} (o \textit{masked}): ogni token dipende esclusivamente dai
 precedenti. Questo vincolo è necessario per l'addestramento autoregressivo,
 nel quale il modello impara a predire il token successivo dato il contesto.
@@ -217,7 +218,8 @@ deliberato, in particolare in ambiti scientifici e logico-matematici
 proprietarie o servizi enterprise collegati.
 
 \paragraph{Claude 4.x (Anthropic).}
-I modelli Claude adottano approcci come la \textit{Constitutional AI}~\cite{bai2022constitutional}, un protocollo di addestramento guidato da principi
+I modelli Claude adottano approcci come la \textit{Constitutional AI}~\cite{bai2022constitutional}, 
+un protocollo di addestramento guidato da principi
 per migliorare l'allineamento. Anche questi modelli sono erogati in modalità
 cloud; Anthropic documenta l'uso dei propri modelli anche tramite Amazon
 Bedrock e altre piattaforme enterprise, con opzioni di routing e gestione dati
@@ -293,13 +295,13 @@ Capitoli~\ref{chap:ottimizzazione} e~\ref{chap:evaluation}, Qwen3 è incluso
 proprio per valutare questo equilibrio.
 
 \paragraph{Llama 3.2, Mistral 7B e Phi-3.5 mini.}
-Accanto a Gemma e Qwen, il panorama locale comprende modelli compatti come
+Accanto a Gemma e Qwen, il panorama dei modelli locali offre altre soluzioni come
 Llama 3.2 3B, Mistral 7B Instruct v0.3 e Phi-3.5 mini. Queste famiglie non
 sono equivalenti per licenza, lingua, template di chat e comportamento di
 output, ma appartengono alla fascia più realistica per una macchina aziendale
-senza GPU server dedicata. Per questo compaiono nella matrice sperimentale
-successiva: non come classifica definitiva, ma come campione rappresentativo di
-modelli eseguibili entro un budget locale.
+senza GPU dedicata. Per questo motivo compaiono nella matrice sperimentale
+successiva, che non è da intendersi come una classifica definitiva, ma come un campione rappresentativo di
+modelli eseguibili localmente su hardware non dedicato.
 
 \subsection{Inferenza locale nel prototipo aziendale}
 
@@ -311,9 +313,9 @@ aziendali a servizi esterni. La conseguenza pratica è che la scelta del modello
 non può basarsi solo sulla qualità linguistica, ma deve considerare memoria
 disponibile, latenza di caricamento, tempo al primo token e throughput.
 
-La quantizzazione viene quindi introdotta qui come motivazione tecnica generale:
-ridurre la precisione dei pesi può diminuire l'occupazione di memoria e rendere
-eseguibili modelli altrimenti troppo costosi. Tuttavia, l'effetto reale dipende
+La quantizzazione viene introdotta qui come motivazione tecnica generale,
+essa ridurre la precisione dei pesi e può di conseguenza diminuire la quantità di 
+memoria necessaria per l'esecuzione dei modelli. Tuttavia, l'effetto reale dipende
 dal runtime, dal formato del modello e dal costo di dequantizzazione. Per questo
 l'analisi sistematica della quantizzazione viene separata dal progetto
 aziendale e ripresa nei capitoli finali, dedicati all'inferenza locale su Apple
@@ -360,11 +362,11 @@ evoluzione.
 \label{subsec:rag_arch}
 
 Dal punto di vista architetturale, un sistema RAG separa il momento in cui la
-conoscenza viene preparata dal momento in cui viene interrogata. Ne derivano due
+conoscenza viene preparata dal momento in cui viene interrogata. Sono necessarie quindi due
 pipeline distinte, messe a confronto nella Tabella~\ref{tab:rag_pipelines} e
 illustrate nella Figura~\ref{fig:rag_pipeline}: la pipeline di
 \textbf{ingestione}, eseguita offline, e la pipeline di \textbf{inferenza},
-attivata in tempo reale a ogni richiesta utente.
+attivata in tempo reale a ogni nuova richiesta utente.
 
 \begin{table}[ht]
   \centering
@@ -397,10 +399,10 @@ attivata in tempo reale a ogni richiesta utente.
 \subsubsection{Pipeline di ingestione}
 
 La pipeline di ingestione trasforma i documenti grezzi in una rappresentazione
-adatta alla ricerca semantica. Il risultato non è più soltanto un archivio di
-testi, ma un indice interrogabile per similarità. Il documento viene anzitutto
-normalizzato e, quando necessario, suddiviso in unità testuali di dimensione
-controllata. La granularità del chunking incide direttamente sulla qualità del
+adatta alla ricerca semantica. Il risultato non è quindi un archivio di
+testi, ma un indice interrogabile per similarità. Ogni documento viene
+normalizzato e, se necessario, suddiviso in unità testuali di dimensione
+ridotte. La granularità del chunking incide direttamente sulla qualità del
 retrieval: chunk troppo piccoli perdono contesto, mentre chunk troppo grandi
 possono diluire il segnale semantico o superare la finestra del modello di
 embedding~\cite{chen2023benchmarking}.
@@ -433,16 +435,16 @@ Capitolo~\ref{chap:progettazione}.
 \subsubsection{Pipeline di inferenza}
 
 La pipeline di inferenza utilizza l'indice costruito offline per rispondere a
-una query utente. A differenza dell'ingestione, questa fase è vincolata dalla
-latenza percepita e deve bilanciare qualità del recupero, numero di documenti
+una query utente. A differenza dell'ingestione, questa fase è strettamente vincolata dalla
+latenza percepita dall'utente e deve bilanciare qualità del recupero, numero di documenti
 restituiti e costo della generazione. La query viene trasformata nelle stesse
 due rappresentazioni usate in indicizzazione: un embedding denso per la
 similarità semantica e una rappresentazione sparsa per il matching lessicale.
-Su queste rappresentazioni si esegue una ricerca ibrida in Qdrant, combinando
+Su queste rappresentazioni si esegue poi una ricerca ibrida in Qdrant, combinando
 il punteggio denso e quello sparso; quando la query contiene vincoli
 strutturati, il retrieval può essere limitato tramite \textit{metadata
 filtering}, ad esempio ai documenti appartenenti a una specifica epoca
-temporale. Il contesto recuperato viene quindi concatenato alla query nel prompt
+temporale. Il contesto recuperato viene poi concatenato alla query nel prompt
 inviato all'LLM, che genera la risposta usando sia la propria conoscenza
 parametrica sia le informazioni esterne fornite dal sistema.
 
@@ -578,24 +580,21 @@ Capitolo~\ref{chap:progettazione}.
 Un database vettoriale è un sistema di storage specializzato per vettori densi
 ad alta dimensionalità, progettato per rispondere a query di tipo
 \textit{k-nearest neighbor} (kNN). A differenza dei database relazionali,
-dove le query sono esatte, la ricerca vettoriale è per natura approssimata:
-si cercano i vettori più vicini accettando un trade-off tra richiamo
+dove le query sono esatte, la ricerca vettoriale è per natura approssimata,
+si cercano infatti i vettori più vicini accettando un trade-off tra richiamo
 (\textit{recall}) e velocità (\textit{throughput}).
 
 L'algoritmo HNSW costruisce un grafo gerarchico multi-livello nello spazio
 vettoriale~\cite{malkov2018efficient}. Ogni punto è collegato a un numero
 limitato di vicini; i livelli superiori contengono meno nodi e consentono salti
-lunghi, mentre i livelli inferiori raffinano la ricerca nella regione più
-promettente. La query parte da un nodo di ingresso, si muove verso vicini più
-simili e scende progressivamente di livello fino a individuare un insieme di
-candidati. Il parametro $M$ controlla il numero massimo di collegamenti per
-nodo, mentre $ef$ regola ampiezza e accuratezza della ricerca: valori più alti
-aumentano il richiamo, ma richiedono più memoria e più confronti.
+più lunghi, mentre i livelli inferiori raffinano la ricerca nella regione più
+promettente. La query parte da un nodo di ingresso, si muove verso i vicini più
+simili e scende progressivamente di livello in livello fino a individuare un insieme di
+candidati.
 
 Rispetto alla scansione lineare, che confronta la query con tutti i vettori e
-ha costo $O(n)$, HNSW riduce drasticamente il numero di confronti necessari. La
-complessità effettiva dipende dalla struttura del grafo e dai parametri scelti,
-ma nella pratica rende possibile l'Approximate Nearest Neighbor su collezioni
+ha costo $O(n)$, HNSW riduce il numero di confronti necessari riducendo il costo a $O(\log n)$. 
+rendendo possibile l'Approximate Nearest Neighbor su collezioni
 molto più ampie di quelle gestibili con ricerca esatta. Qdrant usa HNSW per la
 componente vettoriale densa e lo combina con indici di payload per applicare
 filtri strutturati prima o durante il retrieval.
@@ -648,16 +647,13 @@ documentali estesi.
 Il collegamento tra LLM e conoscenza aziendale può essere realizzato in modi
 diversi. RAG mantiene separati i pesi del modello e il corpus documentale;
 il fine-tuning, invece, modifica il modello affinché si adatti a un dominio o a
-uno stile di risposta specifico. Questa sezione introduce le principali tecniche
-di adattamento a parametri ridotti, utili per inquadrare una scelta progettuale
-del lavoro: mantenere il corpus aziendale esterno ai pesi del modello e
-aggiornabile tramite pipeline di ingestione.
+uno stile di risposta specifico.
 
 \subsubsection{Fine-tuning con adattatori: LoRA}
 
-Il fine-tuning completo di un LLM richiede risorse computazionali elevate; per
+Il fine-tuning completo di un LLM richiede risorse computazionali e temporali elevate; per
 ridurre questo costo, Hu et al.~\cite{hu2022lora} hanno proposto
-\textit{Low-Rank Adaptation} (LoRA), che vincola gli aggiornamenti dei pesi a
+\textit{Low-Rank Adaptation} (LoRA), che vincola gli aggiornamenti dei pesi alle sole
 matrici di rango basso. Dato un layer lineare con matrice
 $\mathbf{W}_0 \in \mathbb{R}^{m \times n}$, LoRA introduce:
 
