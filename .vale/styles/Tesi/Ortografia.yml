@@ -1,0 +1,28 @@
+extends: substitution
+message: "Valuta '%s' al posto di '%s'."
+level: warning
+ignorecase: false
+swap:
+  "un pò": "un po'"
+  "Un pò": "Un po'"
+  "qual'è": "qual è"
+  "Qual'è": "Qual è"
+  "perchè": "perché"
+  "Perchè": "Perché"
+  "poichè": "poiché"
+  "Poichè": "Poiché"
+  "affinchè": "affinché"
+  "Affinchè": "Affinché"
+  "cosi": "così"
+  "Cosi": "Così"
+  "obbiettivo": "obiettivo"
+  "Obbiettivo": "Obiettivo"
+  "obbiettivi": "obiettivi"
+  "Obbiettivi": "Obiettivi"
+  "migliorare tra": "migliore tra"
+  "realizzatp": "realizzato"
+  "possiibile": "possibile"
+  "indipendete": "indipendente"
+  "cambaidno": "cambiando"
+  "esmepio": "esempio"
+  "anin oltreche": "anche"

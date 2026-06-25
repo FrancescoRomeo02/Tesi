@@ -38,16 +38,6 @@ la privacy dei dati dell'azienda deve essere garantita, il prototipo deve
 funzionare su hardware locale, non dedicato, e l'architettura deve inserirsi nell'applicazione 
 esistente mantenendo separati database applicativo, indice vettoriale, retrieval e generazione.
 
-La scelta del RAG dipende direttamete da un limite noto degli LLM . Un modello
-pre-addestrato è in grado di produrre testo coerente ma non dispone dei dati privati e
-aggiornati di un'organizzazione. Se non riceve fonti esplicite, può formulare
-risposte plausibili ma difficili da verificare. Nel sistema realizzato, invece,
-la domanda dell'utente attiva una fase di recupero: i documenti pertinenti
-vengono cercati nella base di conoscenza e inseriti nel prompt del modello
-generativo. La risposta dipende quindi sia dal modello sia dal contesto
-recuperato. In questo modo la conoscenza può essere aggiornata modificando il
-corpus o l'indice, senza intervenire sui pesi del modello garantendo in oltre che le 
-risposte fornite siano sempre verificabli.
 
 La decisione di utilizzare il RAG deriva dalla natura stessa degli LLM. 
 Un qualsiasi modello pretrained riesce ad elaborare dei testi 
@@ -63,7 +53,7 @@ aggiornare la base di conoscenza mentre non viene toccato il modello.
 \section*{Fondamenti tecnici e requisiti}
 
 La prima parte della tesi descrive i concetti tecnici necessari per comprendere il
-prototipo realizzatp. I Transformer sono l'elemento fondamentale sia nei modelli linguistici generativi,
+prototipo realizzato. I Transformer sono alla base sia dei modelli linguistici generativi,
 sia nei modelli di embedding. Attraverso la self-attention, il modello mette in
 relazione i token di una sequenza e costruisce rappresentazioni contestuali del
 testo. Questo meccanismo permette di eliminare diversi limiti delle architetture ricorrenti;
@@ -92,7 +82,7 @@ elementi indicizzati ed utilizzati come filtri.
 I requisiti del sistema derivano direttamente dalle considerazioni espresse sopra. Il prototipo deve
 recuperare informazioni dal corpus di gilde, formulare risposte in linguaggio
 naturale, conservare traccia del contesto usato, supportare filtri strutturati
-e integrarsi con il frontend già presente. Deve anin oltreche ridurre la
+e integrarsi con il frontend già presente. Deve anche ridurre la
 dipendenza da servizi esterni. La soluzione prevede di usare PostgreSQL come sorgente
 autoritativa, Qdrant come database vettoriale, Haystack come orchestratore della
 pipeline di retrieval, FastAPI per esporre il microservizio RAG, Ollama per
@@ -107,8 +97,8 @@ Haystack. In Qdrant si salvano le rappresentazioni dense e sparse degli embeddin
 strutturato. FastAPI mette a disposizione gli endpoint per recuperare ed utilizzare la chat, 
 sia in modifica sincrona che streaming e per il retrieval dei documenti. 
 L'applicazione Next.js utilizza il servizio attraverso gli specifici client.
-Grazie a questa separazione è possiibile operare su ogni componente in modo indipendete ad esempio
-aggiornando il corpus dei dati o cambaidno il modello di Ollama senza preoccuparsi che qualcosa 
+Grazie a questa separazione è possibile operare su ogni componente in modo indipendente, ad esempio
+aggiornando il corpus dei dati o cambiando il modello di Ollama senza preoccuparsi che qualcosa
 possa smettere di funzionare nel modo desiderato.
 
 
@@ -183,9 +173,9 @@ Sui modelli di dimensioni ridotte, Q4 si rivela essere il compromesso ottimale n
 misurato, esso riduce la dimensione degli artefatti di circa il 70\%, abbassa il
 picco di memoria di circa 67--70\% e aumenta il throughput di decodifica di
 circa 2.6--2.8 volte rispetto a FP16. Nei controlli automatici non si
-osserva un degrado significativo. Q8 e Q6 restano opzioni più conservative, ma
+osserva un degrado misurabile. Q8 e Q6 restano opzioni più conservative, ma
 dai dati raccolti non mostrano un vantaggio qualitativo sufficiente a compensare
-il maggiore uso di memoria e gli svantaggi ad esso collegati, come ad esmepio una 
+il maggiore uso di memoria e gli svantaggi ad esso collegati, come ad esempio una
 minor finestra di contesto utilizzabile.
 
 Per i modelli medi e grandi, la quantizzazione ha soprattutto una funzione di

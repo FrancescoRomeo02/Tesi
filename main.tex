@@ -121,7 +121,7 @@ Questa tesi presenta la progettazione, l'implementazione e la valutazione di
 un sistema \emph{Retrieval-Augmented Generation} integrato in i3Guild, la
 piattaforma usata da Intré S.r.l.\ per gestire le gilde aziendali. Il problema
 affrontato riguarda la consultazione di un corpus interno, composto
-da descrizioni, obiettivi, risultati, partecipanti e metadati delle gilde. tale corpus contiene
+da descrizioni, obiettivi, risultati, partecipanti e metadati delle gilde. Tale corpus contiene
 conoscenza utile ma non sempre facilmente recuperabile tramite strumenti
 tradizionali.
 
@@ -135,9 +135,9 @@ e genera gli embedding; Qdrant gestisce il retrieval denso, sparso e ibrido; Hay
 coordina l'orchestrazione; FastAPI espone il servizio RAG; Ollama supporta l'inferenza 
 locale; Next.js collega il sistema all'applicazione esistente.
 
-La tesi analizza in oltre le scelte intraprese per rendere il retrieval più
-pertinente al dominio specifico, grazie a; query rewriting, filtri strutturati, deduplicazione
-e soglie di similarità. È stato in oltre esplorato e testato un workflow agentico 
+La tesi analizza inoltre le scelte adottate per rendere il retrieval più
+pertinente al dominio specifico, grazie a query rewriting, filtri strutturati, deduplicazione
+e soglie di similarità. È stato inoltre esplorato e testato un workflow agentico
 per la proposta di nuove gilde, ma non è stato adottato come nucleo della soluzione finale poiché
 ha mostrato un costo computazionale superiore rispetto a un RAG più deterministico.
 
@@ -146,7 +146,7 @@ Apple Silicon. I test effettuati confrontano modelli open-weight tra 3B e 14B
 parametri in diverse varianti di quantizzazione MLX, misurando dimensione su
 disco, memoria di picco raggiunta, tempo di caricamento impiegato, time-to-first-token, throughput
 di decodifica e qualità, analizzata su subset ridotti MMLU e GSM8K. I risultati indicano
-che, sui modelli piccoli, la quantizzazione Q4 offre il compromesso migliorare
+che, sui modelli piccoli, la quantizzazione Q4 offre il compromesso migliore
 tra memoria occupata, velocità di risposta e qualità osservata della stessa; sui modelli medi e
 grandi, invece, la quantizzazione è soprattutto una condizione di fattibilità
 entro il vincolo dei 16 GB di memoria unificata disponibili.

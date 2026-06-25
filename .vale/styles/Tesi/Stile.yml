@@ -1,0 +1,12 @@
+extends: existence
+message: "Termine spesso generico o enfatico: valuta se serve davvero nel registro della tesi."
+level: suggestion
+ignorecase: true
+tokens:
+  - "\\bcruciale\\b"
+  - "\\bfondamentale\\b"
+  - "\\bsignificativo\\b"
+  - "\\bpanorama\\b"
+  - "\\bmette in luce\\b"
+  - "\\bevidenzia\\b"
+  - "\\bsottolinea\\b"

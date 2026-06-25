@@ -1,0 +1,6 @@
+extends: existence
+message: "Se non indica una quantità, usa 'inoltre' invece di 'in oltre'."
+level: warning
+ignorecase: true
+tokens:
+  - "\\bin oltre\\s+(?!(?:\\d+|uno|due|tre|quattro|cinque|sei|sette|otto|nove|dieci|undici|dodici|tredici|quattordici|quindici|sedici|diciassette|diciotto|diciannove|venti|trenta|quaranta|cinquanta|sessanta|settanta|ottanta|novanta|cento)\\b)"

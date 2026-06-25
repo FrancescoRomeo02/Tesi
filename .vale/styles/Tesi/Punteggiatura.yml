@@ -1,0 +1,8 @@
+extends: existence
+message: "Punteggiatura anomala: usa una virgola o riformula."
+level: warning
+nonword: true
+tokens:
+  - "grazie a;"
+  - "dovuto a;"
+  - "rispetto a;"
